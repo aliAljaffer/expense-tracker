@@ -21,7 +21,7 @@ type stubAuth struct {
 func (s stubAuth) Authenticate(*http.Request) (auth.Identity, error) { return s.id, s.err }
 
 func newTestServer(a Authenticator) http.Handler {
-	return New(nil, a, 1<<20, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return New(nil, a, 1<<20, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func TestHealthIsPublic(t *testing.T) {
@@ -35,7 +35,7 @@ func TestHealthIsPublic(t *testing.T) {
 
 func TestProtectedRoutesRejectMissingToken(t *testing.T) {
 	h := newTestServer(stubAuth{err: auth.ErrUnauthenticated})
-	for _, path := range []string{"/api/me", "/api/imports/1"} {
+	for _, path := range []string{"/api/me", "/api/imports/1", "/api/explainers/status"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != http.StatusUnauthorized {
@@ -46,6 +46,11 @@ func TestProtectedRoutesRejectMissingToken(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/imports", nil))
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("upload status = %d, want 401", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/explanations", nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("explanation status = %d, want 401", rec.Code)
 	}
 }
 
@@ -75,7 +80,7 @@ func TestOwnerCanReadIdentity(t *testing.T) {
 }
 
 func TestUploadRejectsOversizedFile(t *testing.T) {
-	h := New(nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024,
+	h := New(nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024, nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)

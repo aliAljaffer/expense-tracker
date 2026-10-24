@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aliAljaffer/expense-tracker/internal/auth"
+	"github.com/aliAljaffer/expense-tracker/internal/explain"
 	"github.com/aliAljaffer/expense-tracker/internal/importer"
 )
 
@@ -24,13 +25,16 @@ type Server struct {
 	auth      Authenticator
 	maxUpload int64
 	log       *slog.Logger
+	// explain is optional. A nil explainer reports disabled and refuses
+	// explanations, so the feature can never go live by accident.
+	explain *explain.Explainer
 }
 
-func New(svc *importer.Service, a Authenticator, maxUpload int64, log *slog.Logger) http.Handler {
+func New(svc *importer.Service, a Authenticator, maxUpload int64, ex *explain.Explainer, log *slog.Logger) http.Handler {
 	if maxUpload <= 0 {
 		maxUpload = 16 << 20
 	}
-	s := &Server{svc: svc, auth: a, maxUpload: maxUpload, log: log}
+	s := &Server{svc: svc, auth: a, maxUpload: maxUpload, explain: ex, log: log}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
@@ -39,6 +43,8 @@ func New(svc *importer.Service, a Authenticator, maxUpload int64, log *slog.Logg
 	mux.Handle("GET /api/imports/{id}", s.protect(s.get))
 	mux.Handle("POST /api/imports/{id}/commit", s.protect(s.commit))
 	mux.Handle("DELETE /api/imports/{id}", s.protect(s.cancel))
+	mux.Handle("GET /api/explainers/status", s.protect(s.explainStatus))
+	mux.Handle("POST /api/explanations", s.protect(s.explanation))
 	return http.TimeoutHandler(mux, 90*time.Second, `{"error":"request timed out"}`)
 }
 
