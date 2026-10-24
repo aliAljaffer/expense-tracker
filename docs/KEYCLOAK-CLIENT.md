@@ -1,45 +1,120 @@
-# Keycloak client for grooszy
+# Enable grooszy to authenticate with Keycloak
 
-VERDICT: YES.
+This runbook configures the grooszy app to authenticate users against the homelab Keycloak realm using OIDC.
 
-The KeycloakOIDCClient CRD can create a dedicated client in the existing homelab realm through Git.
+## What changes
 
-## Evidence
+The Keycloak operator deploys a new OIDC client (`grooszy`) and configures access token audience mapping. The feature flag `client-admin-api:v2` restarts the three Keycloak pods one at a time (rolling restart). The shared auth gate (`kubernetes/components/oauth2-proxy`) allows multiple apps to use the same homelab realm without per-app secrets.
 
-- Installed operator version is 26.7.1. There is no channel, the version is pinned by the ref 26.7.1 in kubernetes/infrastructure/keycloak-operator/kustomization.yaml:3. That ref ships the KeycloakOIDCClient CRD at version v2alpha1 and the controller.
-- The operator code for that version requires the Keycloak CR feature client-admin-api:v2 before it creates clients. The Keycloak CR at kubernetes/infrastructure/keycloak/keycloak.yaml has no features block, so that flag must be set first.
-- The operator also needs the Secret `keycloak-admin` in namespace `keycloak`, with keys `client-id` and `client-secret`, to call that API. The Keycloak guide says this Secret is created by hand during bootstrap. Seal it like the other secrets so no plaintext enters Git.
-- The homelab realm is created by KeycloakRealmImport at kubernetes/infrastructure/keycloak/keycloak-realm-homelab.yaml:2. The import creates a realm only. It does not update or delete an existing realm, so a later client creation will survive a re-import.
+## Setup: create the Keycloak service account (one-time, manual)
 
-## Recommended shape
+The operator needs a master-realm service account with admin privileges to create clients via the Admin API v2. Do this once on the live cluster using the admin console (accessible at https://kc.alialjaffer.com/admin/master/console/ on the LAN):
 
-```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
-kind: KeycloakOIDCClient
-metadata:
-  name: grooszy
-  namespace: keycloak
-spec:
-  keycloakCRName: keycloak
-  realm: homelab
-  client:
-    enabled: true
-    protocol: openid-connect
-    redirectUris:
-      - https://grooszy.alialjaffer.com/oauth2/callback
-    auth:
-      method: client-secret
-      secretRef:
-        name: grooszy-secret
-        key: CLIENT_SECRET
+1. Log in as the bootstrap admin (credentials in `kubectl get secret keycloak-initial-admin -n keycloak -o go-template='{{.data.username | base64decode}}:{.data.password | base64decode}}'`).
+2. Go to Realm Settings for the `master` realm.
+3. Create a client:
+   - Name: `keycloak-admin`.
+   - Client authentication: enabled.
+   - Service accounts enabled: enabled.
+   - Standard flow disabled.
+   - Direct access grants disabled.
+4. Copy the client ID and secret (Credentials tab, Client secret field).
+5. Grant roles to the service account (Service account roles tab):
+   - Add `manage-clients` and `manage-realms` roles from the `realm-management` client (search for `manage-` and the available realm roles appear).
+6. Back on your local machine, seal the secret:
+   - Create `/tmp/keycloak-admin.json`:
+     ```json
+     {
+       "client-id": "<client-id-from-step-4>",
+       "client-secret": "<secret-from-step-4>"
+     }
+     ```
+   - Seal it: `kubectl create secret generic keycloak-admin -n keycloak --from-file=/tmp/keycloak-admin.json --dry-run=client -o yaml | kubeseal -o yaml > kubernetes/infrastructure/keycloak/keycloak-admin.sealed.yaml`.
+   - Add the sealed secret to `kubernetes/infrastructure/keycloak/kustomization.yaml`.
+   - Commit to the homelab repo.
+
+## Setup: configure OIDC in the operator (one-time, GitOps)
+
+1. Merge the keycloak-grooszy-client branch to main in the homelab repo. This enables the `client-admin-api:v2` feature flag and creates the grooszy OIDC client.
+2. ArgoCD reconciles the changes. The Keycloak Deployment rolls (3 pods, one at a time). The KeycloakOIDCClient creates the `grooszy` client in the `homelab` realm.
+3. Once stable, verify the client exists: log in to https://kc.alialjaffer.com/admin/master/console/, go to Clients, and find `grooszy`.
+
+## Configuration note: access token audience
+
+The grooszy Go API validates access tokens by checking the `aud` (audience) claim equals the client ID. Keycloak must be configured to include the client ID in the `aud` claim. This requires an Audience protocol mapper on the client.
+
+The KeycloakOIDCClient CRD (v2alpha1) does not expose protocol mappers, so this step is manual:
+
+1. In the admin console, open the grooszy client.
+2. Go to Mappers.
+3. Create a mapper:
+   - Name: `grooszy-audience`.
+   - Type: `Audience`.
+   - Included Client Audience: `grooszy`.
+   - Add to access token: enabled.
+   - Save.
+
+Alternative: use `kcadm.sh` from inside a Keycloak pod to add the mapper programmatically:
+```bash
+kubectl exec -it keycloak-0 -n keycloak -- kcadm.sh create clients/CLIENT_ID/protocol-mappers/models \
+  -r homelab \
+  --server https://localhost:8443 \
+  --realm master \
+  --user admin \
+  --password <ADMIN_PASSWORD> \
+  -s name=grooszy-audience \
+  -s protocol=openid-connect \
+  -s protocolMapper=oidc-audience-mapper \
+  -s 'config."included.client.audience"=grooszy' \
+  -s 'config."add.access.token.claim"=true'
 ```
 
-metadata.name is the client ID. The secret is referenced by name only. The
-`client` block is illustrative: the fields follow the Admin API v2 client
-reference, so check the final shape against it before applying.
+Replace `<ADMIN_PASSWORD>` with the bootstrap admin password and `CLIENT_ID` with the UUID of the grooszy client (from the client details page).
 
-The file belongs at kubernetes/apps/grooszy/keycloak-oidc-client.yaml. Add it to the app kustomization.
+## Deploy: app settings
 
-## Open fact
+Once the OIDC client is ready and the protocol mapper is in place, configure the grooszy Deployment:
 
-Whether the Keycloak 26.7.1 server accepts the client-admin-api:v2 feature flag the operator checks for. Not determinable from the repo.
+Set environment variables in `kubernetes/apps/grooszy/api-deployment.yaml`:
+- `OIDC_ISSUER=https://kc.alialjaffer.com/realms/homelab`: Keycloak issuer URL (public endpoint).
+- `OIDC_CLIENT_ID=grooszy`: Client name from the Keycloak admin console.
+- `OIDC_AUDIENCE=grooszy`: Same as client ID (required by the API token validator).
+- `OIDC_OWNER_SUBJECT`: The Keycloak user's `sub` claim (opaque user ID from the Keycloak admin console: open the user, scroll to ID at the top, copy it). This identifies the owner of the expense data.
+- `APP_ORIGIN=https://grooszy.alialjaffer.com`: The public app URL (used for OIDC redirect validation).
+
+Example:
+```yaml
+env:
+  - name: OIDC_ISSUER
+    value: https://kc.alialjaffer.com/realms/homelab
+  - name: OIDC_CLIENT_ID
+    value: grooszy
+  - name: OIDC_AUDIENCE
+    value: grooszy
+  - name: OIDC_OWNER_SUBJECT
+    value: <user-id-from-keycloak>
+  - name: APP_ORIGIN
+    value: https://grooszy.alialjaffer.com
+```
+
+## Order of operations
+
+1. Create the keycloak-admin secret (manual, one-time).
+2. Seal and commit the secret to the homelab repo.
+3. Merge keycloak-grooszy-client to homelab main.
+4. Wait for ArgoCD to reconcile Keycloak (feature flag activates, client is created).
+5. Add the Audience protocol mapper to the grooszy client (manual).
+6. Set OIDC environment variables in the app Deployment.
+7. Deploy the app.
+8. Test: navigate to https://grooszy.alialjaffer.com, verify login redirects to https://kc.alialjaffer.com/realms/homelab/protocol/openid-connect/auth and returns to the app.
+
+## Rollback
+
+To revert to app-only auth (no Keycloak):
+
+1. Remove OIDC_* environment variables from the Deployment.
+2. Revert keycloak-grooszy-client in homelab main (delete the KeycloakOIDCClient, HTTPRoute, and feature flag).
+3. Remove the keycloak-admin secret from homelab main.
+4. Commit and push. ArgoCD reconciles.
+
+The Keycloak pods restart as the feature flag is removed. The grooszy client persists in the homelab realm (realm import does not delete), but the app ignores it.
