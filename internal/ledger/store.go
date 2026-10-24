@@ -248,12 +248,13 @@ type TransactionResult struct {
 }
 
 type TransactionFilter struct {
-	From, To  string
-	AccountID int64
-	Bucket    string
-	Kind      string
-	Limit     int
-	Offset    int
+	From, To   string
+	AccountID  int64
+	MerchantID int64
+	Bucket     string
+	Kind       string
+	Limit      int
+	Offset     int
 }
 
 var transactionKinds = map[string]bool{
@@ -342,6 +343,9 @@ func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (Transact
 	}
 	if f.AccountID != 0 {
 		add(f.AccountID, "account_id = $%d")
+	}
+	if f.MerchantID != 0 {
+		add(f.MerchantID, "merchant_id = $%d")
 	}
 	if f.Kind != "" {
 		add(f.Kind, "kind = $%d")

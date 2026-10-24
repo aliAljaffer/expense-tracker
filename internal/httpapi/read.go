@@ -80,6 +80,18 @@ func (s *Server) transactions(w http.ResponseWriter, r *http.Request, id auth.Id
 		}
 		f.AccountID = accID
 	}
+	if v := q.Get("merchant_id"); v != "" {
+		merID, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "merchant_id must be an integer")
+			return
+		}
+		if merID <= 0 {
+			writeError(w, http.StatusBadRequest, "merchant_id must be positive")
+			return
+		}
+		f.MerchantID = merID
+	}
 	if v := q.Get("limit"); v != "" {
 		limit, err := strconv.Atoi(v)
 		if err != nil {

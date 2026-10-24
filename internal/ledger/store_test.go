@@ -161,6 +161,9 @@ func TestFiltersAreValidatedBeforeAnyQuery(t *testing.T) {
 	if _, err := s.Transactions(context.Background(), TransactionFilter{Limit: 501}); !errors.Is(err, ErrBadFilter) {
 		t.Fatalf("oversized limit error = %v", err)
 	}
+	if _, err := s.Transactions(context.Background(), TransactionFilter{Offset: -1}); !errors.Is(err, ErrBadFilter) {
+		t.Fatalf("negative offset error = %v", err)
+	}
 }
 
 func TestMonthlySeparatesSpendingFromTransfersAndCardPayments(t *testing.T) {
@@ -402,5 +405,65 @@ func TestAccountBalanceIsLatestBalanceAfter(t *testing.T) {
 func TestAccountWithNoTransactionsShowsEmptyMask(t *testing.T) {
 	if got := MaskNumber(""); got != "" {
 		t.Fatalf("mask of empty number = %q", got)
+	}
+}
+
+func TestTransactionFilterByMerchantID(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000008")
+	imp := seedImport(t, s, acc)
+	var cat1, cat2 int64
+	if err := s.db.QueryRow(`insert into category (name) values ('groceries') returning id`).Scan(&cat1); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.db.QueryRow(`insert into category (name) values ('fuel') returning id`).Scan(&cat2); err != nil {
+		t.Fatal(err)
+	}
+	var merch1, merch2 int64
+	if err := s.db.QueryRow(`insert into merchant (canonical_name) values ('Market A') returning id`).Scan(&merch1); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.db.QueryRow(`insert into merchant (canonical_name) values ('Gas Station B') returning id`).Scan(&merch2); err != nil {
+		t.Fatal(err)
+	}
+	seedTransaction(t, s, acc, imp, "2026-07-01", 1000, 0, "card_purchase", idp(0), txOpts{merchantID: &merch1, categoryID: &cat1})
+	seedTransaction(t, s, acc, imp, "2026-07-02", 500, 0, "card_purchase", idp(0), txOpts{merchantID: &merch1, categoryID: &cat1})
+	seedTransaction(t, s, acc, imp, "2026-07-03", 800, 0, "card_purchase", idp(0), txOpts{merchantID: &merch2, categoryID: &cat2})
+
+	res, err := s.Transactions(ctx, TransactionFilter{MerchantID: merch1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.TotalCount != 2 {
+		t.Fatalf("merchant 1 count = %d, want 2", res.TotalCount)
+	}
+	if res.TotalDebit != 1500 {
+		t.Fatalf("merchant 1 debit = %d, want 1500", res.TotalDebit)
+	}
+	if len(res.Rows) != 2 {
+		t.Fatalf("merchant 1 rows = %d, want 2", len(res.Rows))
+	}
+
+	res, err = s.Transactions(ctx, TransactionFilter{MerchantID: merch2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.TotalCount != 1 {
+		t.Fatalf("merchant 2 count = %d, want 1", res.TotalCount)
+	}
+	if res.TotalDebit != 800 {
+		t.Fatalf("merchant 2 debit = %d, want 800", res.TotalDebit)
+	}
+
+	res, err = s.Transactions(ctx, TransactionFilter{From: "2026-07-01", To: "2026-07-02", MerchantID: merch1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.TotalCount != 2 {
+		t.Fatalf("filtered by merchant and date count = %d, want 2", res.TotalCount)
+	}
+	if res.TotalDebit != 1500 {
+		t.Fatalf("filtered by merchant and date debit = %d, want 1500", res.TotalDebit)
 	}
 }

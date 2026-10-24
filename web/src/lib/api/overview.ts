@@ -38,6 +38,7 @@ export interface GetTransactionsParams {
   bucket?: string;
   kind?: string;
   account_id?: number;
+  merchant_id?: number;
   limit?: number;
   offset?: number;
 }
@@ -52,6 +53,7 @@ export async function getTransactions(
   if (params?.bucket) url.searchParams.set("bucket", params.bucket);
   if (params?.kind) url.searchParams.set("kind", params.kind);
   if (params?.account_id) url.searchParams.set("account_id", params.account_id.toString());
+  if (params?.merchant_id) url.searchParams.set("merchant_id", params.merchant_id.toString());
   if (params?.limit) url.searchParams.set("limit", params.limit.toString());
   if (params?.offset) url.searchParams.set("offset", params.offset.toString());
 

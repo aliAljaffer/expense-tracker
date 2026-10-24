@@ -12,6 +12,9 @@ interface TransactionsPageProps {
     month?: string;
     bucket?: string;
     account?: string;
+    merchant?: string;
+    from?: string;
+    to?: string;
     limit?: string;
     offset?: string;
   }>;
@@ -27,6 +30,11 @@ export default async function TransactionsPage(props: TransactionsPageProps) {
         {searchParams.month && (
           <p className="text-sm text-[var(--color-text-secondary)]">
             {searchParams.bucket && `${searchParams.bucket} for `}{searchParams.month}
+          </p>
+        )}
+        {searchParams.merchant && (
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Merchant filter {searchParams.from && `from ${searchParams.from}`} {searchParams.to && `to ${searchParams.to}`}
           </p>
         )}
       </div>

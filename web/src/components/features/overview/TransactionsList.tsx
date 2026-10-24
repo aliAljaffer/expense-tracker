@@ -11,6 +11,9 @@ interface TransactionsListProps {
     month?: string;
     bucket?: string;
     account?: string;
+    merchant?: string;
+    from?: string;
+    to?: string;
     limit?: string;
     offset?: string;
   };
@@ -29,15 +32,21 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
         const params: GetTransactionsParams = {};
 
-        if (searchParams.month) {
+        if (searchParams.from) {
+          params.from = searchParams.from;
+        } else if (searchParams.month) {
           const [year, month] = searchParams.month.split("-");
           const fromDate = `${year}-${month}-01`;
+          params.from = fromDate;
+        }
+
+        if (searchParams.to) {
+          params.to = searchParams.to;
+        } else if (searchParams.month) {
+          const [year, month] = searchParams.month.split("-");
           const nextMonth = parseInt(month) === 12 ? "01" : (parseInt(month) + 1).toString().padStart(2, "0");
           const nextYear = parseInt(month) === 12 ? (parseInt(year) + 1).toString() : year;
-          const toDate = new Date(Date.parse(`${nextYear}-${nextMonth}-01`) - 86400000).toISOString().split("T")[0];
-
-          params.from = fromDate;
-          params.to = toDate;
+          params.to = new Date(Date.parse(`${nextYear}-${nextMonth}-01`) - 86400000).toISOString().split("T")[0];
         }
 
         if (searchParams.bucket) {
@@ -46,6 +55,13 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
         if (searchParams.account) {
           params.account_id = parseInt(searchParams.account, 10);
+        }
+
+        if (searchParams.merchant) {
+          const merchantId = parseInt(searchParams.merchant, 10);
+          if (!isNaN(merchantId) && merchantId > 0) {
+            params.merchant_id = merchantId;
+          }
         }
 
         params.limit = parseInt(searchParams.limit || "100", 10);

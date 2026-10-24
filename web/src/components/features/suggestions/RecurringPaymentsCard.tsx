@@ -55,7 +55,7 @@ export function RecurringPaymentsCard({ data }: RecurringPaymentsCardProps) {
                   <tr key={s.merchant_id} className={idx !== series.length - 1 ? "border-b border-[var(--color-border-default)]" : ""}>
                     <td className="px-3 py-2 text-[var(--color-text-primary)]">
                       <Link
-                        href={`/overview/transactions?kind=&account_id=&bucket=all`}
+                        href={`/overview/transactions?merchant=${s.merchant_id}&from=${s.first_date}&to=${s.last_date}`}
                         className="text-[var(--color-action-primary)] hover:text-[var(--color-action-primary-hover)] underline"
                       >
                         {s.merchant}

@@ -214,6 +214,7 @@ halalas. Only `uncovered_share` is a ratio.
 | `from` | no | First posting date, `YYYY-MM-DD`, inclusive |
 | `to` | no | Last posting date, `YYYY-MM-DD`, inclusive |
 | `account_id` | no | Only this account |
+| `merchant_id` | no | Only this merchant (positive integer); combined with other filters by AND |
 | `bucket` | no | One of the buckets below. Default `all` |
 | `kind` | no | One transaction kind |
 | `limit` | no | Page size, default 100, maximum 500 |

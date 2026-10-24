@@ -67,4 +67,14 @@ describe("RecurringPaymentsCard", () => {
     expect(screen.getByText("3,500.00 SAR")).toBeInTheDocument();
     expect(screen.getByText("42,000.00 SAR")).toBeInTheDocument();
   });
+
+  it("links to filtered transactions with merchant and date range", () => {
+    render(<RecurringPaymentsCard data={mockOkResponse} />);
+
+    const link = screen.getByRole("link", { name: "Rent Agency" });
+    expect(link).toHaveAttribute(
+      "href",
+      "/overview/transactions?merchant=1&from=2026-02-01&to=2026-12-01"
+    );
+  });
 });
