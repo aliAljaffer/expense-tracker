@@ -347,6 +347,43 @@ describe("oidc", () => {
     });
   });
 
+  describe("issuer with a path", () => {
+    let server: http.Server;
+    let origin: string;
+
+    beforeEach(
+      () =>
+        new Promise<void>((resolve) => {
+          resetDiscoveryCache();
+          server = http.createServer((req, res) => {
+            if (req.url === "/realms/homelab/.well-known/openid-configuration") {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ issuer: `${origin}/realms/homelab` }));
+            } else {
+              res.writeHead(404);
+              res.end();
+            }
+          });
+          server.listen(0, () => {
+            origin = `http://localhost:${(server.address() as AddressInfo).port}`;
+            resolve();
+          });
+        })
+    );
+
+    afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+    it("keeps the realm path when the issuer has no trailing slash", async () => {
+      const discovery = await fetchDiscovery(`${origin}/realms/homelab`);
+      expect(discovery.issuer).toBe(`${origin}/realms/homelab`);
+    });
+
+    it("accepts a trailing slash on the issuer", async () => {
+      const discovery = await fetchDiscovery(`${origin}/realms/homelab/`);
+      expect(discovery.issuer).toBe(`${origin}/realms/homelab`);
+    });
+  });
+
   describe("refreshToken", () => {
     let server: http.Server;
     let serverUrl: string;
@@ -355,7 +392,19 @@ describe("oidc", () => {
       () =>
         new Promise<void>((resolve) => {
           server = http.createServer((req, res) => {
-            if (req.url === "/protocol/openid-connect/token" && req.method === "POST") {
+            if (req.url === "/realms/homelab/.well-known/openid-configuration") {
+              const origin = `http://localhost:${(server.address() as AddressInfo).port}`;
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  issuer: `${origin}/realms/homelab`,
+                  authorization_endpoint: `${origin}/realms/homelab/auth`,
+                  token_endpoint: `${origin}/realms/homelab/protocol/openid-connect/token`,
+                })
+              );
+              return;
+            }
+            if (req.url === "/realms/homelab/protocol/openid-connect/token" && req.method === "POST") {
               let body = "";
               req.on("data", (chunk) => {
                 body += chunk;
@@ -398,7 +447,7 @@ describe("oidc", () => {
 
     it("posts grant_type=refresh_token and returns new tokens", async () => {
       const tokens = await refreshToken({
-        issuer: serverUrl,
+        issuer: `${serverUrl}realms/homelab`,
         clientId: "client",
         refreshToken: "refresh-token-value",
       });

@@ -38,8 +38,8 @@ export async function fetchDiscovery(issuer: string): Promise<OIDCDiscoveryDocum
     return cached.data;
   }
 
-  const discoveryUrl = new URL(".well-known/openid-configuration", issuer);
-  const response = await fetch(discoveryUrl.toString());
+  const discoveryUrl = `${issuer.replace(/\/+$/, "")}/.well-known/openid-configuration`;
+  const response = await fetch(discoveryUrl);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch OIDC discovery: ${response.status}`);
@@ -151,7 +151,8 @@ export async function refreshToken(options: {
 }): Promise<TokenResponse> {
   const { issuer, clientId, clientSecret, refreshToken: token } = options;
 
-  const tokenUrl = new URL("protocol/openid-connect/token", issuer);
+  const discovery = await fetchDiscovery(issuer);
+  const tokenUrl = new URL(discovery.token_endpoint);
 
   const body = new URLSearchParams({
     grant_type: "refresh_token",
