@@ -221,7 +221,7 @@ func (s *Store) History(ctx context.Context, accountID int64) ([]HistoryRow, err
 		return nil, fmt.Errorf("read history: %w", err)
 	}
 	defer rows.Close()
-	var out []HistoryRow
+	out := []HistoryRow{}
 	for rows.Next() {
 		var h HistoryRow
 		if err := rows.Scan(&h.ID, &h.PostedDate, &h.Debit, &h.Credit, &h.Kind,

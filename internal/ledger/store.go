@@ -78,7 +78,7 @@ func (s *Store) Accounts(ctx context.Context) ([]Account, error) {
 		return nil, fmt.Errorf("read accounts: %w", err)
 	}
 	defer rows.Close()
-	var out []Account
+	out := []Account{}
 	for rows.Next() {
 		var a Account
 		var raw string
@@ -189,7 +189,7 @@ func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month
 		return nil, fmt.Errorf("read monthly overview: %w", err)
 	}
 	defer rows.Close()
-	var out []Month
+	out := []Month{}
 	for rows.Next() {
 		var m Month
 		var creditTotal, salary, transfersIn, refunds int64
@@ -325,7 +325,7 @@ func (f *TransactionFilter) normalize() error {
 // The totals use the same where clause as the page, so total_count and the
 // money sums never disagree with the locked filter the URL selected.
 func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (TransactionResult, error) {
-	var out TransactionResult
+	out := TransactionResult{Rows: []TransactionRow{}}
 	if err := f.normalize(); err != nil {
 		return out, err
 	}

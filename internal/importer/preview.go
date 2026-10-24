@@ -154,6 +154,7 @@ func newPreview(rec *ImportRecord) *Preview {
 		PeriodEnd:      deref(rec.PeriodEnd),
 		Reconciliation: rec.Reconciliation,
 		Summary:        Summary{Rows: rec.ParsedRowCount},
+		Rows:           []Row{},
 	}
 }
 

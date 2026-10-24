@@ -78,7 +78,7 @@ export interface ImportPreview {
   period_end: string;
   header: Header;
   reconciliation: Reconciliation;
-  rows: ImportRow[] | null;
+  rows: ImportRow[];
   summary: Summary;
 }
 

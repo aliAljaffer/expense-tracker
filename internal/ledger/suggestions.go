@@ -46,6 +46,7 @@ type CardCoverageResult struct {
 
 func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (CardCoverageResult, error) {
 	var out CardCoverageResult
+	out.Evidence.Months = []CardCoverageMonth{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
 
@@ -62,6 +63,7 @@ func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (Ca
 				PurchasesRecorded: m.CreditCardCoverage.PurchasesRecorded,
 				Uncovered:         m.CreditCardCoverage.Uncovered,
 				UncoveredShare:    m.CreditCardCoverage.UncoveredShare,
+				TransactionIDs:    []int64{},
 			}
 
 			rows, queryErr := s.db.QueryContext(ctx, `
@@ -83,9 +85,6 @@ func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (Ca
 				month.TransactionIDs = append(month.TransactionIDs, id)
 			}
 			rows.Close()
-			if month.TransactionIDs == nil {
-				month.TransactionIDs = []int64{}
-			}
 			out.Evidence.Months = append(out.Evidence.Months, month)
 		}
 	}
@@ -140,6 +139,7 @@ type RecurringResult struct {
 
 func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (RecurringResult, error) {
 	var out RecurringResult
+	out.Evidence.Series = []RecurringSeries{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
 
@@ -187,6 +187,7 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 			return out, fmt.Errorf("read recurring row: %w", err)
 		}
 		series.MedianAmount = int64(math.Round(median))
+		series.TransactionIDs = []int64{}
 
 		dateAmountRows, dateErr := s.db.QueryContext(ctx, `
 			select t.posted_date, t.debit from transaction t
@@ -245,9 +246,6 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 			series.TransactionIDs = append(series.TransactionIDs, id)
 		}
 		txRows.Close()
-		if series.TransactionIDs == nil {
-			series.TransactionIDs = []int64{}
-		}
 		out.Evidence.Series = append(out.Evidence.Series, series)
 	}
 	if err := rows.Err(); err != nil {
@@ -346,6 +344,7 @@ type BNPLResult struct {
 
 func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult, error) {
 	var out BNPLResult
+	out.Evidence.Months = []BNPLMonth{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
 
@@ -380,9 +379,10 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 	}
 	defer rows.Close()
 
-	var monthData []BNPLMonth
+	monthData := []BNPLMonth{}
 	for rows.Next() {
 		var m BNPLMonth
+		m.TransactionIDs = []int64{}
 		if err := rows.Scan(&m.Month, &m.BNPLOutflow, &m.PaymentCount); err != nil {
 			return out, fmt.Errorf("read bnpl row: %w", err)
 		}
@@ -408,9 +408,6 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 			m.TransactionIDs = append(m.TransactionIDs, id)
 		}
 		txRows.Close()
-		if m.TransactionIDs == nil {
-			m.TransactionIDs = []int64{}
-		}
 		monthData = append(monthData, m)
 	}
 	if err := rows.Err(); err != nil {
