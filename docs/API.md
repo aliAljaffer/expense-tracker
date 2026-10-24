@@ -15,11 +15,11 @@ owner's access token.
 | `OIDC_OWNER_SUBJECT` | yes | Keycloak subject of the only allowed user |
 | `LISTEN_ADDR` | no | Default `:8080` |
 | `MAX_UPLOAD_BYTES` | no | Default 16 MiB |
-| `EXPENSE_EXPLAIN_PROVIDER` | no | `openai` or `anthropic`. `openai` is assumed when a base URL is set |
-| `EXPENSE_EXPLAIN_BASE_URL` | no | Provider API root. No value is built in |
-| `EXPENSE_EXPLAIN_MODEL` | no | Model name the provider expects. No value is built in |
-| `EXPENSE_EXPLAIN_API_KEY` | no | Provider key. Never returned by the API and never logged |
-| `EXPENSE_EXPLAIN_TIMEOUT` | no | Whole seconds. Default 30 |
+| `GROOSZY_EXPLAIN_PROVIDER` | no | `openai` or `anthropic`. `openai` is assumed when a base URL is set |
+| `GROOSZY_EXPLAIN_BASE_URL` | no | Provider API root. No value is built in |
+| `GROOSZY_EXPLAIN_MODEL` | no | Model name the provider expects. No value is built in |
+| `GROOSZY_EXPLAIN_API_KEY` | no | Provider key. Never returned by the API and never logged |
+| `GROOSZY_EXPLAIN_TIMEOUT` | no | Whole seconds. Default 30 |
 
 The API refuses to start when a required value is missing. There is no
 authentication bypass.

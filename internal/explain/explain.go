@@ -38,21 +38,21 @@ type Config struct {
 	MaxOutputTokens int
 }
 
-// ConfigFromEnv reads the EXPENSE_EXPLAIN_* variables. Enabled is true only
+// ConfigFromEnv reads the GROOSZY_EXPLAIN_* variables. Enabled is true only
 // when a base URL, a model, and an API key are all set.
 func ConfigFromEnv() Config {
 	c := Config{
-		Provider:        os.Getenv("EXPENSE_EXPLAIN_PROVIDER"),
-		BaseURL:         os.Getenv("EXPENSE_EXPLAIN_BASE_URL"),
-		Model:           os.Getenv("EXPENSE_EXPLAIN_MODEL"),
-		APIKey:          os.Getenv("EXPENSE_EXPLAIN_API_KEY"),
+		Provider:        os.Getenv("GROOSZY_EXPLAIN_PROVIDER"),
+		BaseURL:         os.Getenv("GROOSZY_EXPLAIN_BASE_URL"),
+		Model:           os.Getenv("GROOSZY_EXPLAIN_MODEL"),
+		APIKey:          os.Getenv("GROOSZY_EXPLAIN_API_KEY"),
 		Timeout:         DefaultTimeout,
 		MaxOutputTokens: DefaultMaxOutputTokens,
 	}
 	if c.Provider == "" {
 		c.Provider = ProviderOpenAI
 	}
-	if v := os.Getenv("EXPENSE_EXPLAIN_TIMEOUT"); v != "" {
+	if v := os.Getenv("GROOSZY_EXPLAIN_TIMEOUT"); v != "" {
 		if s, err := strconv.Atoi(v); err == nil && s > 0 {
 			c.Timeout = time.Duration(s) * time.Second
 		}

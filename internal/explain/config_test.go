@@ -8,11 +8,11 @@ import (
 func clearExplainEnv(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{
-		"EXPENSE_EXPLAIN_PROVIDER",
-		"EXPENSE_EXPLAIN_BASE_URL",
-		"EXPENSE_EXPLAIN_MODEL",
-		"EXPENSE_EXPLAIN_API_KEY",
-		"EXPENSE_EXPLAIN_TIMEOUT",
+		"GROOSZY_EXPLAIN_PROVIDER",
+		"GROOSZY_EXPLAIN_BASE_URL",
+		"GROOSZY_EXPLAIN_MODEL",
+		"GROOSZY_EXPLAIN_API_KEY",
+		"GROOSZY_EXPLAIN_TIMEOUT",
 	} {
 		t.Setenv(name, "")
 	}
@@ -31,11 +31,11 @@ func TestConfigFromEnvEmptyEnvironmentIsDisabled(t *testing.T) {
 
 func TestConfigFromEnvEnablesWithAllThree(t *testing.T) {
 	clearExplainEnv(t)
-	t.Setenv("EXPENSE_EXPLAIN_BASE_URL", "https://local.test/v1")
-	t.Setenv("EXPENSE_EXPLAIN_MODEL", "local-model")
-	t.Setenv("EXPENSE_EXPLAIN_API_KEY", "local-key")
-	t.Setenv("EXPENSE_EXPLAIN_PROVIDER", "anthropic")
-	t.Setenv("EXPENSE_EXPLAIN_TIMEOUT", "45")
+	t.Setenv("GROOSZY_EXPLAIN_BASE_URL", "https://local.test/v1")
+	t.Setenv("GROOSZY_EXPLAIN_MODEL", "local-model")
+	t.Setenv("GROOSZY_EXPLAIN_API_KEY", "local-key")
+	t.Setenv("GROOSZY_EXPLAIN_PROVIDER", "anthropic")
+	t.Setenv("GROOSZY_EXPLAIN_TIMEOUT", "45")
 
 	cfg := ConfigFromEnv()
 	if !cfg.Enabled {
@@ -51,9 +51,9 @@ func TestConfigFromEnvEnablesWithAllThree(t *testing.T) {
 
 func TestConfigFromEnvDefaultsProviderToOpenAI(t *testing.T) {
 	clearExplainEnv(t)
-	t.Setenv("EXPENSE_EXPLAIN_BASE_URL", "https://local.test/v1")
-	t.Setenv("EXPENSE_EXPLAIN_MODEL", "local-model")
-	t.Setenv("EXPENSE_EXPLAIN_API_KEY", "local-key")
+	t.Setenv("GROOSZY_EXPLAIN_BASE_URL", "https://local.test/v1")
+	t.Setenv("GROOSZY_EXPLAIN_MODEL", "local-model")
+	t.Setenv("GROOSZY_EXPLAIN_API_KEY", "local-key")
 
 	if got := ConfigFromEnv().Provider; got != ProviderOpenAI {
 		t.Fatalf("provider = %q, want openai", got)
@@ -62,8 +62,8 @@ func TestConfigFromEnvDefaultsProviderToOpenAI(t *testing.T) {
 
 func TestConfigFromEnvPartialSettingIsDisabled(t *testing.T) {
 	clearExplainEnv(t)
-	t.Setenv("EXPENSE_EXPLAIN_BASE_URL", "https://local.test/v1")
-	t.Setenv("EXPENSE_EXPLAIN_MODEL", "local-model")
+	t.Setenv("GROOSZY_EXPLAIN_BASE_URL", "https://local.test/v1")
+	t.Setenv("GROOSZY_EXPLAIN_MODEL", "local-model")
 
 	if cfg := ConfigFromEnv(); cfg.Enabled {
 		t.Fatal("missing key must keep the explainer disabled")

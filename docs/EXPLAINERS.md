@@ -57,11 +57,11 @@ carry only success or failure and a duration.
 
 | Variable | Meaning |
 |---|---|
-| `EXPENSE_EXPLAIN_PROVIDER` | `openai` (default when a base URL is set) or `anthropic` |
-| `EXPENSE_EXPLAIN_BASE_URL` | API root of the provider |
-| `EXPENSE_EXPLAIN_MODEL` | Model name the provider expects |
-| `EXPENSE_EXPLAIN_API_KEY` | Key for the provider. A local server may accept any placeholder value |
-| `EXPENSE_EXPLAIN_TIMEOUT` | Whole seconds, default 30 |
+| `GROOSZY_EXPLAIN_PROVIDER` | `openai` (default when a base URL is set) or `anthropic` |
+| `GROOSZY_EXPLAIN_BASE_URL` | API root of the provider |
+| `GROOSZY_EXPLAIN_MODEL` | Model name the provider expects |
+| `GROOSZY_EXPLAIN_API_KEY` | Key for the provider. A local server may accept any placeholder value |
+| `GROOSZY_EXPLAIN_TIMEOUT` | Whole seconds, default 30 |
 
 There is no built-in endpoint, model, or key. All three of base URL, model, and
 key must be non-empty before the feature turns on.
@@ -73,10 +73,10 @@ URL is the root that sits before `/chat/completions`. For Ollama, which serves
 that path under `/v1`:
 
 ```
-export EXPENSE_EXPLAIN_PROVIDER="openai"
-export EXPENSE_EXPLAIN_BASE_URL="http://127.0.0.1:11434/v1"
-export EXPENSE_EXPLAIN_MODEL="<the model you pulled>"
-export EXPENSE_EXPLAIN_API_KEY="local"
+export GROOSZY_EXPLAIN_PROVIDER="openai"
+export GROOSZY_EXPLAIN_BASE_URL="http://127.0.0.1:11434/v1"
+export GROOSZY_EXPLAIN_MODEL="<the model you pulled>"
+export GROOSZY_EXPLAIN_API_KEY="local"
 ```
 
 A local server keeps every figure on your machine. It still needs a model name
@@ -89,20 +89,20 @@ any compatible gateway, uses the `openai` provider and the base URL printed in
 that provider's documentation:
 
 ```
-export EXPENSE_EXPLAIN_PROVIDER="openai"
-export EXPENSE_EXPLAIN_BASE_URL="<provider API root>"
-export EXPENSE_EXPLAIN_MODEL="<provider model name>"
-export EXPENSE_EXPLAIN_API_KEY="<provider key>"
+export GROOSZY_EXPLAIN_PROVIDER="openai"
+export GROOSZY_EXPLAIN_BASE_URL="<provider API root>"
+export GROOSZY_EXPLAIN_MODEL="<provider model name>"
+export GROOSZY_EXPLAIN_API_KEY="<provider key>"
 ```
 
 The Anthropic messages endpoint uses the `anthropic` provider and the provider
 root as the base URL. The app appends `/v1/messages` itself:
 
 ```
-export EXPENSE_EXPLAIN_PROVIDER="anthropic"
-export EXPENSE_EXPLAIN_BASE_URL="https://api.anthropic.com"
-export EXPENSE_EXPLAIN_MODEL="<provider model name>"
-export EXPENSE_EXPLAIN_API_KEY="<provider key>"
+export GROOSZY_EXPLAIN_PROVIDER="anthropic"
+export GROOSZY_EXPLAIN_BASE_URL="https://api.anthropic.com"
+export GROOSZY_EXPLAIN_MODEL="<provider model name>"
+export GROOSZY_EXPLAIN_API_KEY="<provider key>"
 ```
 
 ## Check it
