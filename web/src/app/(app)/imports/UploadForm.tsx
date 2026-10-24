@@ -60,9 +60,11 @@ export function UploadForm({ onUploadComplete, onError }: UploadFormProps) {
         setIsLoading(false);
       });
 
+      const formData = new FormData();
+      formData.append("file", file);
+
       xhr.open("POST", "/api/imports");
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-      xhr.send(file);
+      xhr.send(formData);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       onError(message);

@@ -129,14 +129,11 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request, id auth.Identity
 	}
 
 	s.log.Info("import preview", "import_id", preview.ImportID, "rows", len(preview.Rows), "status", preview.Status)
+	status := http.StatusOK
 	if preview.Status == "rejected" {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-			"error":   "statement did not reconcile",
-			"preview": preview,
-		})
-		return
+		status = http.StatusUnprocessableEntity
 	}
-	writeJSON(w, http.StatusOK, preview)
+	writeJSON(w, status, preview)
 }
 
 func (s *Server) get(w http.ResponseWriter, r *http.Request, id auth.Identity) {
