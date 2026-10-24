@@ -81,7 +81,12 @@ export async function GET(request: NextRequest) {
 
   let idTokenClaims;
   try {
-    idTokenClaims = parseIdToken(tokenResponse.id_token, pkceData.nonce);
+    idTokenClaims = parseIdToken(
+      tokenResponse.id_token,
+      pkceData.nonce,
+      config.oidcIssuer,
+      config.oidcClientId
+    );
   } catch {
     return NextResponse.redirect(new URL("/signin?error=invalid_token", config.appOrigin));
   }

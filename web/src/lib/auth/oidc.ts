@@ -10,6 +10,8 @@ interface IdTokenClaims {
   sub: string;
   nonce: string;
   exp: number;
+  iss: string;
+  aud: string | string[];
 }
 
 interface TokenResponse {
@@ -145,7 +147,12 @@ export async function refreshToken(options: {
   return response.json();
 }
 
-export function parseIdToken(idToken: string, expectedNonce: string): IdTokenClaims {
+export function parseIdToken(
+  idToken: string,
+  expectedNonce: string,
+  expectedIssuer: string,
+  expectedClientId: string
+): IdTokenClaims {
   const parts = idToken.split(".");
   if (parts.length !== 3) {
     throw new Error("Invalid token format");
@@ -154,6 +161,22 @@ export function parseIdToken(idToken: string, expectedNonce: string): IdTokenCla
   const payload = parts[1];
   const decoded = Buffer.from(payload, "base64").toString("utf-8");
   const claims = JSON.parse(decoded) as IdTokenClaims;
+
+  if (claims.iss !== expectedIssuer) {
+    throw new Error("Issuer mismatch");
+  }
+
+  const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (!aud.includes(expectedClientId)) {
+    throw new Error("Audience mismatch");
+  }
+
+  const expiresAt = claims.exp * 1000;
+  const now = Date.now();
+  const skewToleranceMs = 60 * 1000;
+  if (expiresAt + skewToleranceMs < now) {
+    throw new Error("Token expired");
+  }
 
   if (claims.nonce !== expectedNonce) {
     throw new Error("Nonce mismatch");

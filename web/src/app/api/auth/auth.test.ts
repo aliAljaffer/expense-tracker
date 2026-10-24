@@ -2,43 +2,113 @@ import { describe, it, expect } from "vitest";
 import { parseIdToken } from "@/lib/auth/oidc";
 import { generateVerifier, generateS256Challenge, generateState, generateNonce } from "@/lib/auth/pkce";
 
+const TEST_ISSUER = "https://auth.example.com";
+const TEST_CLIENT_ID = "test-client-id";
+const TEST_NONCE = "test-nonce";
+
 function encodeJWT(payload: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.signature`;
 }
 
+function createValidToken(overrides?: Record<string, unknown>): string {
+  return encodeJWT({
+    sub: "user-123",
+    nonce: TEST_NONCE,
+    iss: TEST_ISSUER,
+    aud: TEST_CLIENT_ID,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    ...overrides,
+  });
+}
+
 describe("auth functions", () => {
   describe("parseIdToken", () => {
-    it("parses ID token and validates nonce", () => {
-      const nonce = "test-nonce";
-      const token = encodeJWT({
-        sub: "user-123",
-        nonce,
-        exp: Math.floor(Date.now() / 1000) + 3600,
-      });
+    it("parses valid ID token with all claims", () => {
+      const token = createValidToken();
 
-      const claims = parseIdToken(token, nonce);
+      const claims = parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
 
       expect(claims.sub).toBe("user-123");
-      expect(claims.nonce).toBe(nonce);
+      expect(claims.nonce).toBe(TEST_NONCE);
+      expect(claims.iss).toBe(TEST_ISSUER);
+      expect(claims.aud).toBe(TEST_CLIENT_ID);
     });
 
-    it("rejects token with mismatched nonce", () => {
-      const token = encodeJWT({
-        sub: "user-123",
-        nonce: "wrong-nonce",
-        exp: Math.floor(Date.now() / 1000) + 3600,
+    it("rejects token with mismatched issuer", () => {
+      const token = createValidToken({
+        iss: "https://wrong-issuer.com",
       });
 
       expect(() => {
-        parseIdToken(token, "expected-nonce");
+        parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+      }).toThrow("Issuer mismatch");
+    });
+
+    it("rejects token with mismatched audience", () => {
+      const token = createValidToken({
+        aud: "wrong-client-id",
+      });
+
+      expect(() => {
+        parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+      }).toThrow("Audience mismatch");
+    });
+
+    it("accepts token with audience as array containing client ID", () => {
+      const token = createValidToken({
+        aud: ["other-client", TEST_CLIENT_ID, "another-client"],
+      });
+
+      const claims = parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+
+      expect(claims.aud).toEqual(["other-client", TEST_CLIENT_ID, "another-client"]);
+    });
+
+    it("rejects token with audience array not containing client ID", () => {
+      const token = createValidToken({
+        aud: ["other-client", "another-client"],
+      });
+
+      expect(() => {
+        parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+      }).toThrow("Audience mismatch");
+    });
+
+    it("rejects expired token", () => {
+      const token = createValidToken({
+        exp: Math.floor(Date.now() / 1000) - 120,
+      });
+
+      expect(() => {
+        parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+      }).toThrow("Token expired");
+    });
+
+    it("allows token expiring within skew tolerance (60 seconds)", () => {
+      const token = createValidToken({
+        exp: Math.floor(Date.now() / 1000) - 30,
+      });
+
+      const claims = parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
+
+      expect(claims.sub).toBe("user-123");
+    });
+
+    it("rejects token with mismatched nonce", () => {
+      const token = createValidToken({
+        nonce: "wrong-nonce",
+      });
+
+      expect(() => {
+        parseIdToken(token, TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
       }).toThrow("Nonce mismatch");
     });
 
     it("rejects malformed token", () => {
       expect(() => {
-        parseIdToken("not.a.valid.token", "nonce");
+        parseIdToken("not.a.valid.token", TEST_NONCE, TEST_ISSUER, TEST_CLIENT_ID);
       }).toThrow();
     });
   });
