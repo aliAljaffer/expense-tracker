@@ -59,7 +59,7 @@
     "rows": [
       {
         "posted_date": "2026-01-26",
-        "description_raw": "SAR 500.00 تم الشراء مع Mada Card *0630 في UNUSUAL INTERNATIONAL على 01-03-2026",
+        "description_raw": "SAR 500.00 \u062a\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0645\u0639 Mada Card *0630 \u0641\u064a UNUSUAL INTERNATIONAL \u0639\u0644\u0649 01-03-2026",
         "debit": 50000,
         "credit": 0,
         "balance_after": 750000,
@@ -70,7 +70,8 @@
         "anomaly": {
           "score": 8,
           "reason": "first payment to this merchant; amount is more than five times your usual purchase"
-        }
+        },
+        "default_selected": false
       }
     ],
     "summary": {
@@ -142,7 +143,7 @@
     "rows": [
       {
         "posted_date": "2026-01-05",
-        "description_raw": "SAR 25.75 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE CO على 05-01-2026 في 10:00AM",
+        "description_raw": "SAR 25.75 \u062a\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0645\u0639 Apple Pay App \u0628\u0648\u0627\u0633\u0637\u0629 Mada Card *0630 \u0641\u064a SAMPLE CO \u0639\u0644\u0649 05-01-2026 \u0641\u064a 10:00AM",
         "debit": 2575,
         "credit": 0,
         "balance_after": 97425,
@@ -157,7 +158,8 @@
           "matches": [
             1
           ]
-        }
+        },
+        "default_selected": false
       },
       {
         "posted_date": "2026-01-05",
@@ -175,7 +177,8 @@
           "matches": [
             2
           ]
-        }
+        },
+        "default_selected": false
       }
     ],
     "summary": {
@@ -262,7 +265,8 @@
           "matches": [
             36
           ]
-        }
+        },
+        "default_selected": false
       }
     ],
     "summary": {
@@ -341,7 +345,8 @@
         "balance_after": 97425,
         "kind": "card_purchase",
         "merchant_raw": "SAMPLE STORE TRADING",
-        "fingerprint": "c439cd49d21bd8aa3c8f722030bd799f"
+        "fingerprint": "c439cd49d21bd8aa3c8f722030bd799f",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-06",
@@ -351,7 +356,8 @@
         "balance_after": 96425,
         "kind": "online_purchase",
         "merchant_raw": "SAMPLE ONLINE",
-        "fingerprint": "f412ac5a854bc81781fa0eeae5a9d902"
+        "fingerprint": "f412ac5a854bc81781fa0eeae5a9d902",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-07",
@@ -362,7 +368,8 @@
         "kind": "bill_payment",
         "biller_code": "153",
         "biller_account": "10000000001",
-        "fingerprint": "0f7cd31540360c67e32c7eac80a0e8d2"
+        "fingerprint": "0f7cd31540360c67e32c7eac80a0e8d2",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-08",
@@ -371,7 +378,8 @@
         "credit": 0,
         "balance_after": 46367,
         "kind": "fee",
-        "fingerprint": "3c9f5bb8576b5cb3f7691cf09fbaa88f"
+        "fingerprint": "3c9f5bb8576b5cb3f7691cf09fbaa88f",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-09",
@@ -380,7 +388,8 @@
         "credit": 100000,
         "balance_after": 146367,
         "kind": "salary",
-        "fingerprint": "c59209bd4bde1889b37b961ec72dc144"
+        "fingerprint": "c59209bd4bde1889b37b961ec72dc144",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-10",
@@ -389,7 +398,8 @@
         "credit": 0,
         "balance_after": 145867,
         "kind": "unknown",
-        "fingerprint": "bf42c34ae97efcaf6bd281595827046c"
+        "fingerprint": "bf42c34ae97efcaf6bd281595827046c",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-11",
@@ -399,7 +409,8 @@
         "balance_after": 44567,
         "kind": "card_payment",
         "card_last4": "0000",
-        "fingerprint": "c860df98c29b9a427b51aa8192d90634"
+        "fingerprint": "c860df98c29b9a427b51aa8192d90634",
+        "default_selected": true
       }
     ],
     "summary": {
@@ -536,7 +547,8 @@
         "credit": 0,
         "balance_after": 97425,
         "kind": "unknown",
-        "fingerprint": "ff85f93ddeb486a0ef3c2d2318351556"
+        "fingerprint": "ff85f93ddeb486a0ef3c2d2318351556",
+        "default_selected": true
       },
       {
         "posted_date": "2026-01-07",
@@ -545,7 +557,8 @@
         "credit": 1000,
         "balance_after": 98425,
         "kind": "unknown",
-        "fingerprint": "a83cfb4835c4653ae503d3415e66d9bd"
+        "fingerprint": "a83cfb4835c4653ae503d3415e66d9bd",
+        "default_selected": true
       }
     ],
     "summary": {
