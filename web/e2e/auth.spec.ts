@@ -292,3 +292,18 @@ test("(h) tampered state on callback shows error=invalid_state", async ({
     expect(page.url()).toContain("error=invalid_state");
   }
 });
+
+// Test (i): Sign-in error parameter displays readable message
+test("(i) visiting /signin?error=invalid_state shows error message", async ({
+  page,
+}) => {
+  const response = await page.goto("/signin?error=invalid_state");
+
+  expect(response?.status()).toBe(200);
+
+  const htmlContent = await page.content();
+
+  expect(htmlContent).toContain('role="alert"');
+  expect(htmlContent).toContain("Sign-in could not be verified");
+  expect(htmlContent).toContain('class="alert__text"');
+});

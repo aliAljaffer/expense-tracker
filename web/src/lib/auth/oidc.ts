@@ -22,7 +22,22 @@ interface TokenResponse {
   id_token?: string;
 }
 
+interface CacheEntry {
+  data: OIDCDiscoveryDocument;
+  expiresAt: number;
+}
+
+const discoveryCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 export async function fetchDiscovery(issuer: string): Promise<OIDCDiscoveryDocument> {
+  const now = Date.now();
+  const cached = discoveryCache.get(issuer);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const discoveryUrl = new URL(".well-known/openid-configuration", issuer);
   const response = await fetch(discoveryUrl.toString());
 
@@ -30,7 +45,22 @@ export async function fetchDiscovery(issuer: string): Promise<OIDCDiscoveryDocum
     throw new Error(`Failed to fetch OIDC discovery: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  discoveryCache.set(issuer, {
+    data,
+    expiresAt: now + CACHE_TTL_MS,
+  });
+
+  return data;
+}
+
+export function resetDiscoveryCache(issuer?: string): void {
+  if (issuer) {
+    discoveryCache.delete(issuer);
+  } else {
+    discoveryCache.clear();
+  }
 }
 
 export function buildAuthorizationUrl(options: {

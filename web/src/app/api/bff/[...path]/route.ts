@@ -7,7 +7,7 @@ async function handler(request: NextRequest, props: { params: Promise<{ path: st
 
   const path = "/api/" + pathSegments.join("/");
 
-  if (pathSegments.join("/") === "imports" || pathSegments.join("/") === "api/imports") {
+  if (pathSegments.join("/") === "imports") {
     return NextResponse.json({ error: "Use /api/imports directly" }, { status: 400 });
   }
 

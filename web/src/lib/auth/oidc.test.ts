@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as http from "node:http";
 import { AddressInfo } from "node:net";
-import { buildAuthorizationUrl, fetchDiscovery, exchangeCode, refreshToken } from "./oidc";
+import { buildAuthorizationUrl, fetchDiscovery, exchangeCode, refreshToken, resetDiscoveryCache } from "./oidc";
 
 describe("oidc", () => {
   const issuer = "https://keycloak.example.com/realms/homelab/";
@@ -137,6 +137,132 @@ describe("oidc", () => {
     it("rejects with error on non-200 response", async () => {
       const badServerUrl = "http://localhost:0/"; // invalid port
       await expect(fetchDiscovery(badServerUrl)).rejects.toThrow();
+    });
+
+    it("caches discovery result for 5 minutes", async () => {
+      resetDiscoveryCache();
+
+      let requestCount = 0;
+      const server2 = http.createServer((req, res) => {
+        if (req.url === "/.well-known/openid-configuration") {
+          requestCount++;
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              authorization_endpoint: "https://auth.example.com/auth",
+              token_endpoint: "https://auth.example.com/token",
+              jwks_uri: "https://auth.example.com/jwks",
+              issuer: "https://auth.example.com",
+            })
+          );
+        } else {
+          res.writeHead(404);
+          res.end();
+        }
+      });
+
+      return new Promise<void>((resolve) => {
+        server2.listen(0, async () => {
+          const addr = server2.address() as AddressInfo;
+          const url = `http://localhost:${addr.port}/`;
+
+          const doc1 = await fetchDiscovery(url);
+          const doc2 = await fetchDiscovery(url);
+
+          expect(requestCount).toBe(1);
+          expect(doc1).toEqual(doc2);
+
+          server2.close(() => {
+            resetDiscoveryCache();
+            resolve();
+          });
+        });
+      });
+    });
+
+    it("does not cache failed discovery requests", async () => {
+      resetDiscoveryCache();
+
+      let requestCount = 0;
+      const server2 = http.createServer((req, res) => {
+        requestCount++;
+        res.writeHead(500);
+        res.end();
+      });
+
+      return new Promise<void>((resolve) => {
+        server2.listen(0, async () => {
+          const addr = server2.address() as AddressInfo;
+          const url = `http://localhost:${addr.port}/`;
+
+          try {
+            await fetchDiscovery(url);
+          } catch {
+            // Expected
+          }
+
+          expect(requestCount).toBe(1);
+
+          try {
+            await fetchDiscovery(url);
+          } catch {
+            // Expected
+          }
+
+          expect(requestCount).toBe(2);
+
+          server2.close(() => {
+            resetDiscoveryCache();
+            resolve();
+          });
+        });
+      });
+    });
+
+    it("resets cache for specific issuer", async () => {
+      resetDiscoveryCache();
+
+      let requestCount = 0;
+      const server2 = http.createServer((req, res) => {
+        if (req.url === "/.well-known/openid-configuration") {
+          requestCount++;
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              authorization_endpoint: "https://auth.example.com/auth",
+              token_endpoint: "https://auth.example.com/token",
+              jwks_uri: "https://auth.example.com/jwks",
+              issuer: "https://auth.example.com",
+            })
+          );
+        } else {
+          res.writeHead(404);
+          res.end();
+        }
+      });
+
+      return new Promise<void>((resolve) => {
+        server2.listen(0, async () => {
+          const addr = server2.address() as AddressInfo;
+          const url = `http://localhost:${addr.port}/`;
+
+          await fetchDiscovery(url);
+          expect(requestCount).toBe(1);
+
+          await fetchDiscovery(url);
+          expect(requestCount).toBe(1);
+
+          resetDiscoveryCache(url);
+
+          await fetchDiscovery(url);
+          expect(requestCount).toBe(2);
+
+          server2.close(() => {
+            resetDiscoveryCache();
+            resolve();
+          });
+        });
+      });
     });
   });
 

@@ -37,7 +37,7 @@ describe("BFF route handler", () => {
     } as unknown as NextRequest;
 
     const mockParams: RouteParams = {
-      params: Promise.resolve({ path: ["api", "imports"] }),
+      params: Promise.resolve({ path: ["imports"] }),
     };
 
     const response = await GET(mockRequest, mockParams);
