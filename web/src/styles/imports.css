@@ -258,3 +258,129 @@
     flex: none;
   }
 }
+
+.rows-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rows-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.rows-table__action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.btn--sm {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  min-height: auto;
+}
+
+.table__wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table__header-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table thead {
+  background-color: var(--color-surface-secondary);
+}
+
+.table th {
+  padding: var(--space-3);
+  text-align: left;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.table th:last-child {
+  text-align: right;
+}
+
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: var(--color-surface-secondary);
+}
+
+.table-cell--tabular {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reconciliation-summary {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-secondary);
+  padding: var(--space-3);
+}
+
+.reconciliation-summary__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.reconciliation-summary__trigger:hover {
+  color: var(--color-action-primary);
+}
+
+.reconciliation-summary__trigger::marker {
+  display: none;
+}
+
+.reconciliation-summary__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-feedback-success-icon);
+}
+
+.reconciliation-summary__text {
+  flex: 1;
+}
+
+details[open] .reconciliation-summary__icon {
+  transform: rotate(180deg);
+}
+
+.reconciliation-summary__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}

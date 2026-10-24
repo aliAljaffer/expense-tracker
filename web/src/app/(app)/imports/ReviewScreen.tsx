@@ -44,6 +44,14 @@ export function ReviewScreen({ preview, onReset }: ReviewScreenProps) {
     setSelectedIds(newIds);
   }
 
+  function handleSelectAllRows(indices: number[]) {
+    setSelectedIds(new Set(indices));
+  }
+
+  function handleClearSelection() {
+    setSelectedIds(new Set());
+  }
+
   async function handleCommit() {
     setIsCommitting(true);
     setError(null);
@@ -176,6 +184,9 @@ export function ReviewScreen({ preview, onReset }: ReviewScreenProps) {
               rows={preview.rows}
               selectedIds={selectedIds}
               onToggle={handleToggle}
+              onSelectAllRows={handleSelectAllRows}
+              onClearSelection={handleClearSelection}
+              enablePagination={true}
             />
           </div>
         </>

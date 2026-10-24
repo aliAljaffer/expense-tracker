@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { displaySAR } from "@/lib/api/types";
 import { getTransactions } from "@/lib/api/overview";
 import type { TransactionsResponse, Transaction } from "@/lib/api/types";
 import type { GetTransactionsParams } from "@/lib/api/overview";
+import { Pagination } from "@/components/ui/pagination";
+import { calculatePagination, clampPage, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
 
 interface TransactionsListProps {
   searchParams: {
@@ -14,8 +17,8 @@ interface TransactionsListProps {
     merchant?: string;
     from?: string;
     to?: string;
-    limit?: string;
-    offset?: string;
+    page?: string;
+    per_page?: string;
   };
 }
 
@@ -23,6 +26,12 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const currentSearchParams = useSearchParams();
+
+  const page = Math.max(1, parseInt(searchParams.page || "1", 10));
+  const perPage = parseInt(searchParams.per_page || DEFAULT_PER_PAGE.toString(), 10);
+  const validPerPage = PER_PAGE_OPTIONS.includes(perPage) ? perPage : DEFAULT_PER_PAGE;
 
   useEffect(() => {
     async function loadTransactions() {
@@ -64,8 +73,8 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
           }
         }
 
-        params.limit = parseInt(searchParams.limit || "100", 10);
-        params.offset = parseInt(searchParams.offset || "0", 10);
+        params.limit = validPerPage;
+        params.offset = (page - 1) * validPerPage;
 
         const result = await getTransactions(params);
         setData(result);
@@ -78,7 +87,29 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
     }
 
     loadTransactions();
-  }, [searchParams]);
+  }, [searchParams, page, validPerPage]);
+
+  const pageInfo = data ? calculatePagination({
+    total: data.total_count,
+    page,
+    perPage: validPerPage,
+  }) : null;
+
+  const clampedPage = pageInfo ? pageInfo.clampedPage : page;
+  const pageCount = pageInfo ? pageInfo.pageCount : 0;
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set("page", newPage.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handlePerPageChange = (newPerPage: number) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set("per_page", newPerPage.toString());
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
+  };
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -140,13 +171,13 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
                 <td>
                   {transaction.category_name || "-"}
                 </td>
-                <td>
+                <td className="table-cell--tabular">
                   {transaction.debit > 0 ? displaySAR(transaction.debit) : "-"}
                 </td>
-                <td>
+                <td className="table-cell--tabular">
                   {transaction.credit > 0 ? displaySAR(transaction.credit) : "-"}
                 </td>
-                <td>
+                <td className="table-cell--tabular">
                   {displaySAR(transaction.balance_after)}
                 </td>
               </tr>
@@ -154,6 +185,15 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        total={data.total_count}
+        page={clampedPage}
+        perPage={validPerPage}
+        perPageOptions={PER_PAGE_OPTIONS}
+        onPageChange={handlePageChange}
+        onPerPageChange={handlePerPageChange}
+      />
     </div>
   );
 }

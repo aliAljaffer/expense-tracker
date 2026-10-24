@@ -469,6 +469,122 @@ const server = createServer((req, res) => {
       return;
     }
 
+    let rowCount = 6;
+    let hasExactDuplicates = false;
+    let hasAnomalies = false;
+
+    let rows = [
+      {
+        "posted_date": "2026-01-30",
+        "description_raw": "Transfer to Savings Account",
+        "debit": 50000,
+        "credit": 0,
+        "balance_after": 50000,
+        "kind": "external_transfer_out",
+        "fingerprint": "abc1",
+        "default_selected": true
+      },
+      {
+        "posted_date": "2026-01-20",
+        "description_raw": "Shopping Center Purchase",
+        "debit": 5000,
+        "credit": 0,
+        "balance_after": 95000,
+        "kind": "card_purchase",
+        "merchant_raw": "SHOPPING CENTER",
+        "card_last4": "1234",
+        "fingerprint": "abc2",
+        "default_selected": true
+      },
+      {
+        "posted_date": "2026-01-15",
+        "description_raw": "Salary Monthly Deposit",
+        "debit": 0,
+        "credit": 100000,
+        "balance_after": 100000,
+        "kind": "salary",
+        "fingerprint": "abc3",
+        "default_selected": true
+      },
+      {
+        "posted_date": "2026-01-10",
+        "description_raw": "Grocery Store Payment",
+        "debit": 4567,
+        "credit": 0,
+        "balance_after": 99567,
+        "kind": "card_purchase",
+        "merchant_raw": "SUPERMARKET",
+        "card_last4": "1234",
+        "fingerprint": "abc4",
+        "default_selected": true
+      },
+      {
+        "posted_date": "2026-01-05",
+        "description_raw": "Coffee Shop Transaction",
+        "debit": 433,
+        "credit": 0,
+        "balance_after": 104000,
+        "kind": "card_purchase",
+        "merchant_raw": "COFFEE SHOP",
+        "card_last4": "1234",
+        "fingerprint": "abc5",
+        "default_selected": true
+      },
+      {
+        "posted_date": "2026-01-02",
+        "description_raw": "ATM Cash Withdrawal",
+        "debit": 1000,
+        "credit": 0,
+        "balance_after": 105000,
+        "kind": "cash_withdrawal",
+        "fingerprint": "abc6",
+        "default_selected": true
+      }
+    ];
+
+    if (req.headers["content-length"] > 10000 || req.url.includes("large=true")) {
+      rowCount = 120;
+      hasExactDuplicates = true;
+      hasAnomalies = true;
+
+      const extraRows = Array.from({ length: 114 }, (_, i) => {
+        const isExactDuplicate = i === 20;
+        const hasAnomaly = i === 50;
+        const base = {
+          "description_raw": `Transaction ${i + 1}`,
+          "debit": i % 2 === 0 ? Math.floor(Math.random() * 50000) + 1000 : 0,
+          "credit": i % 2 === 0 ? 0 : Math.floor(Math.random() * 50000) + 1000,
+          "balance_after": 100000 - (i + 1) * 500,
+          "kind": ["card_purchase", "online_purchase", "salary", "bill_payment"][i % 4],
+          "merchant_raw": ["STORE", "VENDOR", "MERCHANT"][i % 3],
+          "card_last4": "1234",
+          "fingerprint": isExactDuplicate ? "abc5" : `fp${100 + i}`,
+          "posted_date": `2026-01-${String((30 - Math.floor(i / 5)) % 30 || 1).padStart(2, '0')}`,
+          "default_selected": !isExactDuplicate && !hasAnomaly
+        };
+
+        if (isExactDuplicate) {
+          base.duplicate = {
+            exact: true,
+            score: 100,
+            reason: "Exact fingerprint match"
+          };
+        }
+
+        if (hasAnomaly) {
+          base.anomaly = {
+            score: 8.5,
+            reason: "Unusual amount for this merchant"
+          };
+          base.default_selected = false;
+        }
+
+        return base;
+      });
+
+      rows = [...rows, ...extraRows];
+    }
+
     const preview = {
       "import_id": 1,
       "status": "pending",
@@ -502,79 +618,12 @@ const server = createServer((req, res) => {
         "parsed_debit_count": 3,
         "parsed_credit_count": 1
       },
-      "rows": [
-        {
-          "posted_date": "2026-01-30",
-          "description_raw": "Transfer to Savings Account",
-          "debit": 50000,
-          "credit": 0,
-          "balance_after": 50000,
-          "kind": "external_transfer_out",
-          "fingerprint": "abc1",
-          "default_selected": true
-        },
-        {
-          "posted_date": "2026-01-20",
-          "description_raw": "Shopping Center Purchase",
-          "debit": 5000,
-          "credit": 0,
-          "balance_after": 95000,
-          "kind": "card_purchase",
-          "merchant_raw": "SHOPPING CENTER",
-          "card_last4": "1234",
-          "fingerprint": "abc2",
-          "default_selected": true
-        },
-        {
-          "posted_date": "2026-01-15",
-          "description_raw": "Salary Monthly Deposit",
-          "debit": 0,
-          "credit": 100000,
-          "balance_after": 100000,
-          "kind": "salary",
-          "fingerprint": "abc3",
-          "default_selected": true
-        },
-        {
-          "posted_date": "2026-01-10",
-          "description_raw": "Grocery Store Payment",
-          "debit": 4567,
-          "credit": 0,
-          "balance_after": 99567,
-          "kind": "card_purchase",
-          "merchant_raw": "SUPERMARKET",
-          "card_last4": "1234",
-          "fingerprint": "abc4",
-          "default_selected": true
-        },
-        {
-          "posted_date": "2026-01-05",
-          "description_raw": "Coffee Shop Transaction",
-          "debit": 433,
-          "credit": 0,
-          "balance_after": 104000,
-          "kind": "card_purchase",
-          "merchant_raw": "COFFEE SHOP",
-          "card_last4": "1234",
-          "fingerprint": "abc5",
-          "default_selected": true
-        },
-        {
-          "posted_date": "2026-01-02",
-          "description_raw": "ATM Cash Withdrawal",
-          "debit": 1000,
-          "credit": 0,
-          "balance_after": 105000,
-          "kind": "cash_withdrawal",
-          "fingerprint": "abc6",
-          "default_selected": true
-        }
-      ],
+      "rows": rows,
       "summary": {
-        "rows": 6,
-        "exact_duplicates": 0,
-        "needs_review": 0,
-        "default_rows": 6,
+        "rows": rowCount,
+        "exact_duplicates": hasExactDuplicates ? 1 : 0,
+        "needs_review": hasAnomalies ? 1 : 0,
+        "default_rows": rowCount - (hasExactDuplicates ? 1 : 0) - (hasAnomalies ? 1 : 0),
         "history_rows": 25,
         "anomaly_ready": true
       }

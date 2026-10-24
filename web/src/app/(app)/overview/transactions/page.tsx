@@ -15,8 +15,8 @@ interface TransactionsPageProps {
     merchant?: string;
     from?: string;
     to?: string;
-    limit?: string;
-    offset?: string;
+    page?: string;
+    per_page?: string;
   }>;
 }
 
