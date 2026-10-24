@@ -1,0 +1,390 @@
+{
+  "alinma_ok": {
+    "import_id": 2,
+    "status": "pending",
+    "already_imported": false,
+    "bank": "Alinma",
+    "account_number": "****0001",
+    "parser": "alinma",
+    "parser_version": "1",
+    "period_start": "2026-01-01",
+    "period_end": "2026-01-31",
+    "header": {
+      "opening_balance": 100000,
+      "closing_balance": 97000,
+      "stated_debit_total": 3000,
+      "stated_credit_total": 0,
+      "stated_debit_count": 2,
+      "stated_credit_count": 0
+    },
+    "reconciliation": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "pass",
+          "parsed": "30.00",
+          "stated": "30.00"
+        },
+        {
+          "name": "credit_total",
+          "status": "pass",
+          "parsed": "0.00",
+          "stated": "0.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "2",
+          "stated": "2"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "0",
+          "stated": "0"
+        },
+        {
+          "name": "balance_walk",
+          "status": "pass",
+          "parsed": "970.00",
+          "stated": "970.00"
+        }
+      ],
+      "parsed_debit_total": 3000,
+      "parsed_credit_total": 0,
+      "parsed_debit_count": 2,
+      "parsed_credit_count": 0
+    },
+    "rows": [
+      {
+        "posted_date": "2026-01-05",
+        "description_raw": "SAR 25.75 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE CO على 05-01-2026 في 10:00AM",
+        "debit": 2575,
+        "credit": 0,
+        "balance_after": 97425,
+        "kind": "card_purchase",
+        "merchant_raw": "SAMPLE CO",
+        "card_last4": "0630",
+        "fingerprint": "256cde574476859d8ee0b315dae966a9",
+        "duplicate": {
+          "score": 10,
+          "exact": true,
+          "reason": "this row is already imported",
+          "matches": [
+            1
+          ]
+        }
+      },
+      {
+        "posted_date": "2026-01-05",
+        "description_raw": "SAR 25.75 purchase was made with Apple Pay App by Mada Card *0630 at SAMPLE CO On 05-01-2026 at 10:00AM",
+        "debit": 425,
+        "credit": 0,
+        "balance_after": 97000,
+        "kind": "roundup_sweep",
+        "merchant_raw": "SAMPLE CO",
+        "fingerprint": "19fed64e24f47b5a5ab0b31e8819579e",
+        "duplicate": {
+          "score": 10,
+          "exact": true,
+          "reason": "this row is already imported",
+          "matches": [
+            2
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "rows": 2,
+      "exact_duplicates": 2,
+      "needs_review": 2,
+      "default_rows": 0,
+      "history_rows": 15,
+      "anomaly_ready": false
+    }
+  },
+  "alrajhi_ok": {
+    "import_id": 3,
+    "status": "pending",
+    "already_imported": false,
+    "bank": "Al Rajhi",
+    "account_number": "****0001",
+    "iban": "SA0080000001234567890123",
+    "parser": "alrajhi",
+    "parser_version": "1",
+    "period_start": "2026-01-01",
+    "period_end": "2026-03-31",
+    "header": {
+      "opening_balance": 0,
+      "closing_balance": 44567,
+      "stated_debit_total": 55433,
+      "stated_credit_total": 100000,
+      "stated_debit_count": 6,
+      "stated_credit_count": 1
+    },
+    "reconciliation": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "pass",
+          "parsed": "554.33",
+          "stated": "554.33"
+        },
+        {
+          "name": "credit_total",
+          "status": "pass",
+          "parsed": "1000.00",
+          "stated": "1000.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "6",
+          "stated": "6"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "1",
+          "stated": "1"
+        },
+        {
+          "name": "balance_walk",
+          "status": "pass",
+          "parsed": "445.67",
+          "stated": "445.67"
+        }
+      ],
+      "parsed_debit_total": 55433,
+      "parsed_credit_total": 100000,
+      "parsed_debit_count": 6,
+      "parsed_credit_count": 1
+    },
+    "rows": [
+      {
+        "posted_date": "2026-01-05",
+        "description_raw": "2026/01/05 Time:10:00:00, Notes:(1234567890123456-123456789012) SAMPLE STORE TRADING, ANY CITY, SA",
+        "debit": 2575,
+        "credit": 0,
+        "balance_after": 97425,
+        "kind": "card_purchase",
+        "merchant_raw": "SAMPLE STORE TRADING",
+        "fingerprint": "c439cd49d21bd8aa3c8f722030bd799f"
+      },
+      {
+        "posted_date": "2026-01-06",
+        "description_raw": "2026/01/06 Time:10:00:00, Notes:Online Purchase from SAMPLE ONLINE",
+        "debit": 1000,
+        "credit": 0,
+        "balance_after": 96425,
+        "kind": "online_purchase",
+        "merchant_raw": "SAMPLE ONLINE",
+        "fingerprint": "f412ac5a854bc81781fa0eeae5a9d902"
+      },
+      {
+        "posted_date": "2026-01-07",
+        "description_raw": "2026/01/07 Time:09:02:51, Notes:W#153-4000000001 -10000000001",
+        "debit": 50000,
+        "credit": 0,
+        "balance_after": 46425,
+        "kind": "bill_payment",
+        "biller_code": "153",
+        "biller_account": "10000000001",
+        "fingerprint": "0f7cd31540360c67e32c7eac80a0e8d2"
+      },
+      {
+        "posted_date": "2026-01-08",
+        "description_raw": "2026/01/08 Time:09:03:48, Notes:9000000000000001/SAMPLE CUSTOMER",
+        "debit": 58,
+        "credit": 0,
+        "balance_after": 46367,
+        "kind": "fee",
+        "fingerprint": "3c9f5bb8576b5cb3f7691cf09fbaa88f"
+      },
+      {
+        "posted_date": "2026-01-09",
+        "description_raw": "2026/01/09 Time:09:03:48, Notes:SAMPLE EMPLOYER Some New Type",
+        "debit": 0,
+        "credit": 100000,
+        "balance_after": 146367,
+        "kind": "salary",
+        "fingerprint": "c59209bd4bde1889b37b961ec72dc144"
+      },
+      {
+        "posted_date": "2026-01-10",
+        "description_raw": "2026/01/10 Time:09:03:48, Notes:SOMETHING",
+        "debit": 500,
+        "credit": 0,
+        "balance_after": 145867,
+        "kind": "unknown",
+        "fingerprint": "bf42c34ae97efcaf6bd281595827046c"
+      },
+      {
+        "posted_date": "2026-01-11",
+        "description_raw": "2026/01/11 Time:21:31:39, Notes:W - Advance payment for Card ending - 0000",
+        "debit": 1300,
+        "credit": 0,
+        "balance_after": 44567,
+        "kind": "card_payment",
+        "card_last4": "0000",
+        "fingerprint": "c860df98c29b9a427b51aa8192d90634"
+      }
+    ],
+    "summary": {
+      "rows": 7,
+      "exact_duplicates": 0,
+      "needs_review": 0,
+      "default_rows": 7,
+      "history_rows": 0,
+      "anomaly_ready": false
+    }
+  },
+  "already_imported": {
+    "import_id": 1,
+    "status": "accepted",
+    "already_imported": true,
+    "bank": "Alinma",
+    "account_number": "****0001",
+    "parser": "alinma",
+    "parser_version": "1",
+    "period_start": "2026-01-01",
+    "period_end": "2026-01-31",
+    "header": {},
+    "reconciliation": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "pass",
+          "parsed": "624.00",
+          "stated": "624.00"
+        },
+        {
+          "name": "credit_total",
+          "status": "pass",
+          "parsed": "810.00",
+          "stated": "810.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "12",
+          "stated": "12"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "3",
+          "stated": "3"
+        },
+        {
+          "name": "balance_walk",
+          "status": "pass",
+          "parsed": "1186.00",
+          "stated": "1186.00"
+        }
+      ],
+      "parsed_debit_total": 62400,
+      "parsed_credit_total": 81000,
+      "parsed_debit_count": 12,
+      "parsed_credit_count": 3
+    },
+    "rows": null,
+    "summary": {
+      "rows": 15,
+      "exact_duplicates": 0,
+      "needs_review": 0,
+      "default_rows": 0,
+      "history_rows": 0,
+      "anomaly_ready": false
+    }
+  },
+  "rejected": {
+    "import_id": 4,
+    "status": "rejected",
+    "already_imported": false,
+    "bank": "Alinma",
+    "account_number": "****0003",
+    "parser": "alinma",
+    "parser_version": "1",
+    "period_start": "2026-01-01",
+    "period_end": "2026-01-31",
+    "header": {
+      "opening_balance": 100000,
+      "closing_balance": 118600,
+      "stated_debit_total": 62500,
+      "stated_credit_total": 81000,
+      "stated_debit_count": 1,
+      "stated_credit_count": 1
+    },
+    "reconciliation": {
+      "ok": false,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "fail",
+          "parsed": "25.75",
+          "stated": "625.00"
+        },
+        {
+          "name": "credit_total",
+          "status": "fail",
+          "parsed": "10.00",
+          "stated": "810.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "1",
+          "stated": "1"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "1",
+          "stated": "1"
+        },
+        {
+          "name": "balance_walk",
+          "status": "fail",
+          "parsed": "984.25",
+          "stated": "1186.00"
+        }
+      ],
+      "parsed_debit_total": 2575,
+      "parsed_credit_total": 1000,
+      "parsed_debit_count": 1,
+      "parsed_credit_count": 1
+    },
+    "rows": [
+      {
+        "posted_date": "2026-01-05",
+        "description_raw": "SAR 25.75 purchase",
+        "debit": 2575,
+        "credit": 0,
+        "balance_after": 97425,
+        "kind": "unknown",
+        "fingerprint": "ff85f93ddeb486a0ef3c2d2318351556"
+      },
+      {
+        "posted_date": "2026-01-07",
+        "description_raw": "SAR 10.00 refund",
+        "debit": 0,
+        "credit": 1000,
+        "balance_after": 98425,
+        "kind": "unknown",
+        "fingerprint": "a83cfb4835c4653ae503d3415e66d9bd"
+      }
+    ],
+    "summary": {
+      "rows": 2,
+      "exact_duplicates": 0,
+      "needs_review": 0,
+      "default_rows": 2,
+      "history_rows": 0,
+      "anomaly_ready": false
+    }
+  }
+}
