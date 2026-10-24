@@ -1,4 +1,6 @@
 @import "../../design/theme.css";
+@import "../styles/primitives.css";
+@import "../styles/imports.css";
 
 :root {
   color-scheme: light;

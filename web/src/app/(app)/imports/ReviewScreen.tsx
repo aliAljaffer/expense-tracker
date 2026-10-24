@@ -81,38 +81,38 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
 
   if (commitResult) {
     return (
-      <div className="space-y-4 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-medium">Import successful</h2>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            {commitResult.inserted} row{commitResult.inserted === 1 ? "" : "s"} imported successfully.
-          </p>
+      <div className="card">
+        <div className="stack--snug">
+          <div>
+            <h2 className="section__title">Import successful</h2>
+            <p className="note">
+              {commitResult.inserted} row{commitResult.inserted === 1 ? "" : "s"} imported successfully.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/imports")}
+            className="btn btn--primary"
+          >
+            Done
+          </button>
         </div>
-        <button
-          onClick={() => router.push("/imports")}
-          className="inline-block px-4 py-2 rounded-md bg-[var(--color-action-primary)] text-[var(--color-text-on-action)] hover:bg-[var(--color-action-primary-hover)] active:bg-[var(--color-action-primary-active)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)]"
-        >
-          Done
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="stack--loose">
       {error && (
-        <div className="rounded-lg border border-[var(--color-feedback-error-border)] bg-[var(--color-feedback-error-bg)] p-4">
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 text-[var(--color-feedback-error-icon)]">
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="text-sm text-[var(--color-feedback-error-text)]">{error}</div>
+        <div className="banner banner--error">
+          <svg className="banner__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <div className="banner__content">
+            <p className="banner__text">{error}</p>
           </div>
         </div>
       )}
@@ -129,13 +129,13 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
         <StatusBanner variant="ready" showCommitControl={true} />
       )}
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium">Statement details</h2>
+      <div className="stack--snug">
+        <h2 className="section__title">Statement details</h2>
         <HeaderFigures header={preview.header} />
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium">Reconciliation</h2>
+      <div className="stack--snug">
+        <h2 className="section__title">Reconciliation</h2>
         <ReconciliationChecks reconciliation={preview.reconciliation} />
       </div>
 
@@ -146,8 +146,8 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
             historyRows={preview.summary.history_rows}
           />
 
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium">Transactions</h2>
+          <div className="stack--snug">
+            <h2 className="section__title">Transactions</h2>
             <RowsTable
               rows={preview.rows}
               selectedIds={selectedIds}
@@ -158,26 +158,18 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
       )}
 
       {canShowCommit && (
-        <div className="flex gap-3">
+        <div className="cluster--normal">
           <button
             onClick={handleCommit}
             disabled={isCommitting || isCancelling}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-              isCommitting || isCancelling
-                ? "bg-[var(--color-surface-disabled)] text-[var(--color-text-disabled)] cursor-not-allowed"
-                : "bg-[var(--color-action-primary)] text-[var(--color-text-on-action)] hover:bg-[var(--color-action-primary-hover)] active:bg-[var(--color-action-primary-active)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)]"
-            }`}
+            className="btn btn--primary"
           >
             {isCommitting ? "Committing..." : "Commit"}
           </button>
           <button
             onClick={handleCancel}
             disabled={isCommitting || isCancelling}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-              isCommitting || isCancelling
-                ? "bg-[var(--color-surface-disabled)] text-[var(--color-text-disabled)] cursor-not-allowed"
-                : "bg-[var(--color-action-secondary)] text-[var(--color-text-on-dark)] hover:bg-[var(--color-action-secondary-hover)] active:bg-[var(--color-action-secondary-active)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)]"
-            }`}
+            className="btn btn--secondary"
           >
             {isCancelling ? "Cancelling..." : "Cancel"}
           </button>

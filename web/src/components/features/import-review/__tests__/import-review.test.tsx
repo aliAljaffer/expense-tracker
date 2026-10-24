@@ -79,7 +79,7 @@ describe("ReconciliationChecks", () => {
     );
 
     const passChecks = container.querySelectorAll(
-      "div[class*='bg-\\[var\\(--color-feedback-success-bg\\)\\]']"
+      "div[class*='bg-feedback-success']"
     );
     expect(passChecks.length).toBeGreaterThan(0);
   });
@@ -91,7 +91,7 @@ describe("ReconciliationChecks", () => {
     );
 
     const failChecks = container.querySelectorAll(
-      "div[class*='bg-\\[var\\(--color-feedback-error-bg\\)\\]']"
+      "div[class*='bg-feedback-error']"
     );
     expect(failChecks.length).toBeGreaterThan(0);
   });

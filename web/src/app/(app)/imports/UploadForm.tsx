@@ -73,12 +73,10 @@ export function UploadForm({ onUploadComplete, onError }: UploadFormProps) {
     }
   }
 
-  const buttonState = isLoading ? "loading" : "ready";
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label htmlFor="statement-file" className="block text-sm font-medium">
+    <form onSubmit={handleSubmit} className="stack--normal">
+      <div className="field">
+        <label htmlFor="statement-file" className="field__label">
           Statement file
         </label>
         <input
@@ -87,23 +85,23 @@ export function UploadForm({ onUploadComplete, onError }: UploadFormProps) {
           type="file"
           accept=".xlsx,.pdf"
           disabled={isLoading}
-          className="block w-full text-sm"
+          className="import-file-input"
           required
         />
-        <p className="text-xs text-[var(--color-text-tertiary)]">
+        <p className="field__hint">
           Upload an Alinma XLSX or Al Rajhi PDF export
         </p>
       </div>
 
       {isLoading && uploadProgress > 0 && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
+        <div className="import-upload-progress">
+          <div className="import-upload-progress__info">
             <span>Uploading...</span>
             <span>{Math.round(uploadProgress)}%</span>
           </div>
-          <div className="h-2 w-full rounded-full bg-[var(--color-surface-sunken)]">
+          <div className="import-upload-progress__bar">
             <div
-              className="h-2 rounded-full bg-[var(--color-action-primary)]"
+              className="import-upload-progress__fill"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -113,11 +111,7 @@ export function UploadForm({ onUploadComplete, onError }: UploadFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className={`px-4 py-2 rounded-md font-medium transition-colors ${
-          buttonState === "loading"
-            ? "bg-[var(--color-surface-disabled)] text-[var(--color-text-disabled)] cursor-not-allowed"
-            : "bg-[var(--color-action-primary)] text-[var(--color-text-on-action)] hover:bg-[var(--color-action-primary-hover)] active:bg-[var(--color-action-primary-active)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)]"
-        }`}
+        className={`btn btn--primary ${isLoading ? "disabled" : ""}`}
       >
         {isLoading ? "Uploading..." : "Upload"}
       </button>

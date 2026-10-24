@@ -12,26 +12,20 @@ export function ReconciliationChecks({
   reconciliation,
 }: ReconciliationChecksProps) {
   return (
-    <div className="space-y-2">
+    <div className="stack--snug">
       {reconciliation.checks.map((check) => {
         const isPassed = check.status === "pass";
-        const iconColor = isPassed
-          ? "text-[var(--color-feedback-success-icon)]"
-          : "text-[var(--color-feedback-error-icon)]";
-        const bgColor = isPassed
-          ? "bg-[var(--color-feedback-success-bg)]"
-          : "bg-[var(--color-feedback-error-bg)]";
 
         return (
           <div
             key={check.name}
-            className={`flex items-start gap-3 rounded-[var(--radius-md)] border p-3 ${bgColor} ${
-              isPassed
-                ? "border-[var(--color-feedback-success-border)]"
-                : "border-[var(--color-feedback-error-border)]"
+            className={`import-check border rounded-md ${
+              isPassed 
+                ? "border-success bg-feedback-success" 
+                : "border-error bg-feedback-error"
             }`}
           >
-            <div className={`flex-shrink-0 pt-0.5 ${iconColor}`}>
+            <div className={`import-check__icon pt-0-5 flex-shrink-0 ${isPassed ? "text-[var(--color-feedback-success-icon)]" : "text-[var(--color-feedback-error-icon)]"}`}>
               {isPassed ? (
                 <svg
                   className="h-5 w-5"
@@ -60,12 +54,12 @@ export function ReconciliationChecks({
                 </svg>
               )}
             </div>
-            <div className="flex-1">
+            <div className="import-check__body flex-1">
               <p
-                className={`text-[var(--text-sm)] font-[var(--weight-medium)] ${
+                className={`import-check__name text-sm font-medium ${
                   isPassed
-                    ? "text-[var(--color-feedback-success-text)]"
-                    : "text-[var(--color-feedback-error-text)]"
+                    ? "text-feedback-success"
+                    : "text-feedback-error"
                 }`}
               >
                 {check.name.replace(/_/g, " ").replace(/\b\w/g, (l) =>
@@ -73,10 +67,10 @@ export function ReconciliationChecks({
                 )}
               </p>
               <p
-                className={`mt-1 text-[var(--text-xs)] ${
+                className={`import-check__detail text-xs ${
                   isPassed
-                    ? "text-[var(--color-feedback-success-text)]"
-                    : "text-[var(--color-feedback-error-text)]"
+                    ? "text-feedback-success"
+                    : "text-feedback-error"
                 }`}
               >
                 Parsed: {check.parsed} | Stated: {check.stated}

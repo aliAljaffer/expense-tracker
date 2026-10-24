@@ -40,16 +40,16 @@ export function HeaderFigures({ header }: HeaderFiguresProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="import-grid">
       {figures.map((figure) => (
         <div
           key={figure.label}
-          className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-4"
+          className="import-figure"
         >
-          <p className="text-[var(--text-sm)] font-[var(--weight-medium)] text-[var(--color-text-secondary)]">
+          <p className="import-figure__label">
             {figure.label}
           </p>
-          <p className="mt-2 text-[var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--color-text-primary)]">
+          <p className="import-figure__value">
             {figure.isCount ? figure.value : displaySAR(figure.value)}
           </p>
         </div>
