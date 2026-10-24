@@ -9,6 +9,17 @@ export function SiteHeader() {
           <span className="wordmark__mark" aria-hidden="true" />
           Expense Tracker
         </Link>
+        <nav className="flex gap-6">
+          <Link href="/health" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">
+            Health
+          </Link>
+          <Link href="/imports" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">
+            Import
+          </Link>
+          <Link href="/overview" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">
+            Overview
+          </Link>
+        </nav>
         <ThemeToggle />
       </div>
     </header>

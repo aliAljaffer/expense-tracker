@@ -1,0 +1,39 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { TransactionsList } from "@/components/features/overview/TransactionsList";
+import TransactionsLoading from "./loading";
+import TransactionsError from "./error";
+
+export const metadata: Metadata = { title: "Transactions" };
+export const dynamic = "force-dynamic";
+
+interface TransactionsPageProps {
+  searchParams: Promise<{
+    month?: string;
+    bucket?: string;
+    account?: string;
+    limit?: string;
+    offset?: string;
+  }>;
+}
+
+export default async function TransactionsPage(props: TransactionsPageProps) {
+  const searchParams = await props.searchParams;
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-medium">Transactions</h1>
+        {searchParams.month && (
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            {searchParams.bucket && `${searchParams.bucket} for `}{searchParams.month}
+          </p>
+        )}
+      </div>
+
+      <Suspense fallback={<TransactionsLoading />} fallback-error={<TransactionsError error={new Error("Failed to load transactions")} reset={() => {}} />}>
+        <TransactionsList searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}

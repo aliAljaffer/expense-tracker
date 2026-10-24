@@ -108,3 +108,91 @@ export function displaySAR(halalas: number): string {
   const formattedRiyals = parseInt(riyals, 10).toLocaleString("en-US");
   return `${formattedRiyals}.${fils} SAR`;
 }
+
+export interface Account {
+  id: number;
+  bank: string;
+  masked_number: string;
+  kind: string;
+  currency: string;
+  balance: number | null;
+  balance_date: string | null;
+}
+
+export interface AccountsResponse {
+  accounts: Account[];
+}
+
+export interface IncomeSplit {
+  salary: number;
+  transfers_in: number;
+  refunds: number;
+  other: number;
+  total: number;
+}
+
+export interface SpendingSplit {
+  card_purchase: number;
+  online_purchase: number;
+  intl_purchase: number;
+  bill_payment: number;
+  cash_withdrawal: number;
+  fee: number;
+  total: number;
+}
+
+export interface TransfersSplit {
+  internal: number;
+  external_out: number;
+  roundup_sweeps: number;
+  total: number;
+}
+
+export interface CreditCardCoverage {
+  card_payments: number;
+  purchases_recorded: number;
+  uncovered: number;
+  uncovered_share: number;
+}
+
+export interface MonthlyOverview {
+  month: string;
+  income: IncomeSplit;
+  spending: SpendingSplit;
+  transfers: TransfersSplit;
+  card_payments: number;
+  uncategorised_spending: number;
+  outflow_total: number;
+  credit_card_coverage: CreditCardCoverage;
+  transaction_count: number;
+}
+
+export interface MonthlyResponse {
+  months: MonthlyOverview[];
+}
+
+export interface Transaction {
+  id: number;
+  account_id: number;
+  posted_date: string;
+  posted_time: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance_after: number;
+  kind: string;
+  counts_as_spending: boolean;
+  merchant_id: number | null;
+  merchant_name: string | null;
+  category_id: number | null;
+  category_name: string | null;
+  fx_currency: string | null;
+  fx_amount: number | null;
+}
+
+export interface TransactionsResponse {
+  rows: Transaction[];
+  total_count: number;
+  total_debit: number;
+  total_credit: number;
+}
