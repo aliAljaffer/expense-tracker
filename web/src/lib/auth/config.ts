@@ -2,7 +2,6 @@ import "server-only";
 
 interface AuthConfig {
   oidcIssuer: string;
-  oidcIssuerBrowser: string;
   oidcClientId: string;
   oidcClientSecret: string | undefined;
   sessionSecret: string;
@@ -36,16 +35,8 @@ export function getAuthConfig(): AuthConfig {
     throw new Error("Missing required environment variable: API_BASE_URL");
   }
 
-  let oidcIssuerBrowser = process.env.OIDC_ISSUER_BROWSER || oidcIssuer;
-
-  if (!process.env.OIDC_ISSUER_BROWSER && appOrigin.includes("127.0.0.1") && oidcIssuer.includes(".svc")) {
-    const issuerUrl = new URL(oidcIssuer);
-    oidcIssuerBrowser = `http://127.0.0.1:${issuerUrl.port || 8900}`;
-  }
-
   return {
     oidcIssuer,
-    oidcIssuerBrowser,
     oidcClientId,
     oidcClientSecret: process.env.OIDC_CLIENT_SECRET,
     sessionSecret,

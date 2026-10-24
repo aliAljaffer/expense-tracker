@@ -54,13 +54,9 @@ export async function GET() {
   let authUrl;
   try {
     const discovery = await fetchDiscovery(config.oidcIssuer);
-    const authorizationEndpoint = discovery.authorization_endpoint.replace(
-      config.oidcIssuer,
-      config.oidcIssuerBrowser
-    );
     authUrl = buildAuthorizationUrl({
-      issuer: config.oidcIssuerBrowser,
-      authorizationEndpoint,
+      issuer: config.oidcIssuer,
+      authorizationEndpoint: discovery.authorization_endpoint,
       clientId: config.oidcClientId,
       redirectUri: callbackUrl.toString(),
       codeChallenge: challenge,
