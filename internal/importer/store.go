@@ -229,6 +229,10 @@ func (s *Store) History(ctx context.Context, accountID int64) ([]HistoryRow, err
 }
 
 // Commit stores the chosen rows and accepts the import in one transaction.
+// For each row with a non-empty merchant_raw, it finds or creates the merchant,
+// records an alias for the raw string when it differs from canonical, sets is_bnpl,
+// and sets transaction.merchant_id. Rows with empty merchant_raw leave merchant_id null.
+// Exact duplicates (fingerprint match) are skipped and do not create merchants.
 func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, selected []int) (CommitResult, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -256,18 +260,28 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 			return CommitResult{}, fmt.Errorf("row %d is out of range", i)
 		}
 		t := preview.Rows[i].Transaction
+
+		var merchantID *int64
+		if t.MerchantRaw != "" {
+			mid, err := s.findOrCreateMerchant(ctx, tx, t.MerchantRaw, t.BillerCode, t.BillerAccount)
+			if err != nil {
+				return CommitResult{}, err
+			}
+			merchantID = &mid
+		}
+
 		batch.Queue(`
 			insert into transaction (
 				account_id, import_id, posted_date, description_raw, debit, credit,
-				balance_after, kind, merchant_raw, biller_code, biller_account,
+				balance_after, kind, merchant_raw, merchant_id, biller_code, biller_account,
 				card_last4, fx_currency, fx_amount, fx_rate, fx_fee
 			) values (
-				$1, $2, $3, $4, $5, $6, $7, $8, nullif($9, ''), nullif($10, ''),
+				$1, $2, $3, $4, $5, $6, $7, $8, nullif($9, ''), $17, nullif($10, ''),
 				nullif($11, ''), nullif($12, ''), nullif($13, ''), $14, $15, $16
 			) on conflict (fingerprint) do nothing`,
 			accountID, importID, t.PostedDate, t.DescriptionRaw, t.Debit, t.Credit,
 			t.BalanceAfter, string(t.Kind), t.MerchantRaw, t.BillerCode, t.BillerAccount,
-			t.CardLast4, t.FxCurrency, t.FxAmount, nullIfEmpty(t.FxRate), t.FxFee)
+			t.CardLast4, t.FxCurrency, t.FxAmount, nullIfEmpty(t.FxRate), t.FxFee, merchantID)
 	}
 
 	result := CommitResult{ImportID: importID}
@@ -299,6 +313,61 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 		return CommitResult{}, fmt.Errorf("commit import: %w", err)
 	}
 	return result, nil
+}
+
+// findOrCreateMerchant finds or creates a merchant by canonical name or biller identity.
+// It first tries to find by biller_code and biller_account if both are present.
+// Otherwise, it normalizes merchant_raw to get canonical_name and finds or creates by that.
+// If created, it sets is_bnpl and records an alias for the raw string when it differs.
+func (s *Store) findOrCreateMerchant(ctx context.Context, tx pgx.Tx, merchantRaw, billerCode, billerAccount string) (int64, error) {
+	if billerCode != "" && billerAccount != "" {
+		var id int64
+		err := tx.QueryRow(ctx, `
+			select id from merchant
+			where biller_code = $1 and biller_account = $2`,
+			billerCode, billerAccount).Scan(&id)
+		if err == nil {
+			return id, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return 0, fmt.Errorf("find merchant by biller: %w", err)
+		}
+	}
+
+	canonical := NormalizeMerchant(merchantRaw)
+	var id int64
+	err := tx.QueryRow(ctx, `
+		select id from merchant where canonical_name = $1`,
+		canonical).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, fmt.Errorf("find merchant by name: %w", err)
+	}
+
+	isBNPL := IsBNPLMerchant(canonical)
+	err = tx.QueryRow(ctx, `
+		insert into merchant (canonical_name, biller_code, biller_account, is_bnpl)
+		values ($1, nullif($2, ''), nullif($3, ''), $4)
+		returning id`,
+		canonical, billerCode, billerAccount, isBNPL).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("create merchant: %w", err)
+	}
+
+	if merchantRaw != canonical {
+		_, err := tx.Exec(ctx, `
+			insert into merchant_alias (merchant_id, raw)
+			values ($1, $2)
+			on conflict (raw) do nothing`,
+			id, merchantRaw)
+		if err != nil {
+			return 0, fmt.Errorf("create alias: %w", err)
+		}
+	}
+
+	return id, nil
 }
 
 func (s *Store) Cancel(ctx context.Context, importID int64) error {

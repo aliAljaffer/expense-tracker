@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"regexp"
 	"sort"
-	"strings"
 	"time"
+
+	"github.com/aliAljaffer/grooszy/internal/importer"
 )
 
 const (
@@ -17,24 +17,8 @@ const (
 	maxGapDays             = 45
 )
 
-var knownBNPLProviders = map[string]bool{
-	"TABBY":    true,
-	"TAMARA":   true,
-	"POSTPAY":  true,
-	"SPOTII":   true,
-	"CASHEW":   true,
-	"BUYFIRST": true,
-}
-
 func isBNPLMerchant(name string) bool {
-	upper := strings.ToUpper(strings.TrimSpace(name))
-	for provider := range knownBNPLProviders {
-		re := regexp.MustCompile(`\b` + regexp.QuoteMeta(provider) + `\b`)
-		if re.MatchString(upper) {
-			return true
-		}
-	}
-	return false
+	return importer.IsBNPLMerchant(name)
 }
 
 type CardCoverageMonth struct {

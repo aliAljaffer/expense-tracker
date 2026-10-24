@@ -60,8 +60,8 @@ func TestApplyEmpty(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 3 {
-		t.Errorf("expected 3 migrations applied, got %d", count)
+	if count != 4 {
+		t.Errorf("expected 4 migrations applied, got %d", count)
 	}
 
 	var tableExists bool
@@ -90,8 +90,8 @@ func TestApplyIdempotent(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 3 {
-		t.Errorf("expected 3 migrations, got %d (should not apply duplicates)", count)
+	if count != 4 {
+		t.Errorf("expected 4 migrations, got %d (should not apply duplicates)", count)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestMigrationVersions(t *testing.T) {
 		t.Fatalf("rows error: %v", err)
 	}
 
-	expected := []string{"0001_init", "0002_import_preview", "0003_bnpl_detection"}
+	expected := []string{"0001_init", "0002_import_preview", "0003_bnpl_detection", "0004_resolve_merchants"}
 	if strings.Join(versions, ",") != strings.Join(expected, ",") {
 		t.Errorf("expected versions %v, got %v", expected, versions)
 	}

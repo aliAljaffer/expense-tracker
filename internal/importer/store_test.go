@@ -311,3 +311,201 @@ func TestParseRejectsUnknownAndCorruptFiles(t *testing.T) {
 		t.Fatalf("corrupt pdf error = %v", err)
 	}
 }
+
+func TestCommitSetsAndResolvesTransactionMerchantID(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	first.MerchantRaw = "SAMPLE STORE #TRAD"
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first}))
+	res, err := svc.Commit(ctx, p.ImportID, nil)
+	if err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	if res.Inserted != 1 {
+		t.Fatalf("commit = %+v", res)
+	}
+
+	var merchantID *int64
+	err = store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p.ImportID).Scan(&merchantID)
+	if err != nil {
+		t.Fatalf("read merchant_id: %v", err)
+	}
+	if merchantID == nil {
+		t.Fatalf("merchant_id is null, expected a resolved merchant")
+	}
+
+	var canonical string
+	err = store.pool.QueryRow(ctx, `select canonical_name from merchant where id = $1`, *merchantID).Scan(&canonical)
+	if err != nil {
+		t.Fatalf("read canonical_name: %v", err)
+	}
+	if canonical != "SAMPLE STORE" {
+		t.Fatalf("canonical_name = %q, want SAMPLE STORE", canonical)
+	}
+}
+
+func TestSameMerchantAcrossImportsSharesRow(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	first.MerchantRaw = "SAMPLE STORE"
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first}))
+	res1, err := svc.Commit(ctx, p.ImportID, nil)
+	if err != nil || res1.Inserted != 1 {
+		t.Fatalf("first commit: %v, %+v", err, res1)
+	}
+
+	var merchantID1 *int64
+	store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p.ImportID).Scan(&merchantID1)
+
+	second := tx("2026-01-06", 3000, 0, "card purchase two")
+	second.MerchantRaw = "SAMPLE STORE #BRANCH"
+	p2 := upload(t, svc, []byte("statement two"), testStatement("00000000000001", []statement.Transaction{second}))
+	res2, err := svc.Commit(ctx, p2.ImportID, nil)
+	if err != nil || res2.Inserted != 1 {
+		t.Fatalf("second commit: %v, %+v", err, res2)
+	}
+
+	var merchantID2 *int64
+	store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p2.ImportID).Scan(&merchantID2)
+
+	if merchantID1 == nil || merchantID2 == nil {
+		t.Fatalf("one or both merchant_ids are null")
+	}
+	if *merchantID1 != *merchantID2 {
+		t.Fatalf("merchant_id 1 = %d, merchant_id 2 = %d; expected same", *merchantID1, *merchantID2)
+	}
+
+	var count int
+	store.pool.QueryRow(ctx, `select count(*) from merchant`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("merchant count = %d, want 1", count)
+	}
+}
+
+func TestBNPLMerchantSetsIseBNPL(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	tx1 := tx("2026-01-05", 2575, 0, "bnpl purchase")
+	tx1.MerchantRaw = "TABBY STORE"
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{tx1}))
+	if _, err := svc.Commit(ctx, p.ImportID, nil); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	var isBNPL bool
+	err := store.pool.QueryRow(ctx, `
+		select m.is_bnpl from merchant m
+		join transaction t on t.merchant_id = m.id
+		where t.import_id = $1`, p.ImportID).Scan(&isBNPL)
+	if err != nil {
+		t.Fatalf("read is_bnpl: %v", err)
+	}
+	if !isBNPL {
+		t.Fatalf("is_bnpl = %v, want true", isBNPL)
+	}
+}
+
+func TestEmptyMerchantRawLeavesNullMerchantID(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "transfer")
+	first.MerchantRaw = ""
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first}))
+	if _, err := svc.Commit(ctx, p.ImportID, nil); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	var merchantID *int64
+	err := store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p.ImportID).Scan(&merchantID)
+	if err != nil {
+		t.Fatalf("read merchant_id: %v", err)
+	}
+	if merchantID != nil {
+		t.Fatalf("merchant_id = %v, want null", *merchantID)
+	}
+
+	var count int
+	store.pool.QueryRow(ctx, `select count(*) from merchant`).Scan(&count)
+	if count != 0 {
+		t.Fatalf("merchant count = %d, want 0", count)
+	}
+}
+
+func TestSkippedDuplicateCreatesNoMerchant(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	original := tx("2026-01-05", 2575, 0, "card purchase one")
+	original.MerchantRaw = "SAMPLE STORE"
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{original}))
+	if _, err := svc.Commit(ctx, p.ImportID, nil); err != nil {
+		t.Fatalf("first commit: %v", err)
+	}
+
+	duplicate := tx("2026-01-05", 2575, 0, "card purchase one")
+	duplicate.MerchantRaw = "SAMPLE STORE"
+	newRow := tx("2026-01-06", 1000, 0, "card purchase two")
+	newRow.MerchantRaw = "OTHER STORE"
+	p2 := upload(t, svc, []byte("statement two"), testStatement("00000000000001", []statement.Transaction{duplicate, newRow}))
+	res, err := svc.Commit(ctx, p2.ImportID, []int{0, 1})
+	if err != nil {
+		t.Fatalf("second commit: %v", err)
+	}
+	if res.Skipped != 1 || res.Inserted != 1 {
+		t.Fatalf("commit = %+v, want 1 skipped and 1 inserted", res)
+	}
+
+	var count int
+	store.pool.QueryRow(ctx, `select count(*) from merchant`).Scan(&count)
+	if count != 2 {
+		t.Fatalf("merchant count = %d, want 2", count)
+	}
+}
+
+func TestBackfillMerchantsIsIdempotent(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	first.MerchantRaw = "SAMPLE STORE"
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first}))
+	if _, err := svc.Commit(ctx, p.ImportID, nil); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	if err := BackfillMerchants(ctx, store.pool); err != nil {
+		t.Fatalf("first backfill: %v", err)
+	}
+
+	var merchantID1 *int64
+	store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p.ImportID).Scan(&merchantID1)
+
+	if err := BackfillMerchants(ctx, store.pool); err != nil {
+		t.Fatalf("second backfill: %v", err)
+	}
+
+	var merchantID2 *int64
+	store.pool.QueryRow(ctx, `select merchant_id from transaction where import_id = $1`, p.ImportID).Scan(&merchantID2)
+
+	if merchantID1 == nil || merchantID2 == nil || *merchantID1 != *merchantID2 {
+		t.Fatalf("merchant_id changed after second backfill: %v -> %v", merchantID1, merchantID2)
+	}
+
+	var count int
+	store.pool.QueryRow(ctx, `select count(*) from merchant`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("merchant count = %d, want 1", count)
+	}
+}
