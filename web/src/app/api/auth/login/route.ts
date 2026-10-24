@@ -41,10 +41,9 @@ export async function GET() {
   const encrypted = encryptPkceData({ verifier, nonce, state }, key);
 
   const cookieStore = await cookies();
-  const isSecure = process.env.NODE_ENV === "production" || !process.env.INSECURE_COOKIES;
   cookieStore.set(PKCE_COOKIE_NAME, encrypted, {
     httpOnly: true,
-    secure: isSecure,
+    secure: true,
     sameSite: "lax",
     path: "/",
     maxAge: PKCE_COOKIE_MAX_AGE,
