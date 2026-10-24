@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
 const STORAGE_KEY = "expense-tracker-theme";
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "light";
-  }
+function getThemeFromStorage(): Theme {
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored === "light" || stored === "dark") {
     return stored;
@@ -19,8 +16,39 @@ function getInitialTheme(): Theme {
     : "light";
 }
 
+function subscribeToTheme(onStoreChange: () => void): () => void {
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) {
+      onStoreChange();
+    }
+  };
+
+  const handleThemeChange = () => {
+    onStoreChange();
+  };
+
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const handleMediaChange = () => {
+    onStoreChange();
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("theme-change", handleThemeChange);
+  mediaQuery.addEventListener("change", handleMediaChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorageChange);
+    window.removeEventListener("theme-change", handleThemeChange);
+    mediaQuery.removeEventListener("change", handleMediaChange);
+  };
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    getThemeFromStorage,
+    () => "light"
+  );
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -28,9 +56,9 @@ export function ThemeToggle() {
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
     document.documentElement.dataset.theme = next;
     window.localStorage.setItem(STORAGE_KEY, next);
+    window.dispatchEvent(new Event("theme-change"));
   }
 
   return (
