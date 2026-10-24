@@ -1,4 +1,87 @@
 {
+  "alinma_anomaly": {
+    "import_id": 6,
+    "status": "pending",
+    "already_imported": false,
+    "bank": "Alinma",
+    "account_number": "****0002",
+    "parser": "alinma",
+    "parser_version": "1",
+    "period_start": "2026-03-01",
+    "period_end": "2026-03-31",
+    "header": {
+      "opening_balance": 800000,
+      "closing_balance": 750000,
+      "stated_debit_total": 50000,
+      "stated_credit_total": 0,
+      "stated_debit_count": 1,
+      "stated_credit_count": 0
+    },
+    "reconciliation": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "pass",
+          "parsed": "500.00",
+          "stated": "500.00"
+        },
+        {
+          "name": "credit_total",
+          "status": "pass",
+          "parsed": "0.00",
+          "stated": "0.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "1",
+          "stated": "1"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "0",
+          "stated": "0"
+        },
+        {
+          "name": "balance_walk",
+          "status": "pass",
+          "parsed": "7500.00",
+          "stated": "7500.00"
+        }
+      ],
+      "parsed_debit_total": 50000,
+      "parsed_credit_total": 0,
+      "parsed_debit_count": 1,
+      "parsed_credit_count": 0
+    },
+    "rows": [
+      {
+        "posted_date": "2026-01-26",
+        "description_raw": "SAR 500.00 تم الشراء مع Mada Card *0630 في UNUSUAL INTERNATIONAL على 01-03-2026",
+        "debit": 50000,
+        "credit": 0,
+        "balance_after": 750000,
+        "kind": "card_purchase",
+        "merchant_raw": "UNUSUAL INTERNATIONAL",
+        "card_last4": "0630",
+        "fingerprint": "de4cbc1613a5e7d213fc4b39f26de0b1",
+        "anomaly": {
+          "score": 8,
+          "reason": "first payment to this merchant; amount is more than five times your usual purchase"
+        }
+      }
+    ],
+    "summary": {
+      "rows": 1,
+      "exact_duplicates": 0,
+      "needs_review": 1,
+      "default_rows": 0,
+      "history_rows": 20,
+      "anomaly_ready": true
+    }
+  },
   "alinma_ok": {
     "import_id": 2,
     "status": "pending",
@@ -101,6 +184,93 @@
       "needs_review": 2,
       "default_rows": 0,
       "history_rows": 15,
+      "anomaly_ready": false
+    }
+  },
+  "alrajhi_held_duplicate": {
+    "import_id": 8,
+    "status": "pending",
+    "already_imported": false,
+    "bank": "Al Rajhi",
+    "account_number": "****0002",
+    "iban": "SA0080000021234567890123",
+    "parser": "alrajhi",
+    "parser_version": "1",
+    "period_start": "2026-02-05",
+    "period_end": "2026-02-28",
+    "header": {
+      "opening_balance": 50000,
+      "closing_balance": 75000,
+      "stated_debit_total": 0,
+      "stated_credit_total": 25000,
+      "stated_debit_count": 0,
+      "stated_credit_count": 1
+    },
+    "reconciliation": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "debit_total",
+          "status": "pass",
+          "parsed": "0.00",
+          "stated": "0.00"
+        },
+        {
+          "name": "credit_total",
+          "status": "pass",
+          "parsed": "250.00",
+          "stated": "250.00"
+        },
+        {
+          "name": "debit_count",
+          "status": "pass",
+          "parsed": "0",
+          "stated": "0"
+        },
+        {
+          "name": "credit_count",
+          "status": "pass",
+          "parsed": "1",
+          "stated": "1"
+        },
+        {
+          "name": "balance_walk",
+          "status": "pass",
+          "parsed": "750.00",
+          "stated": "750.00"
+        }
+      ],
+      "parsed_debit_total": 0,
+      "parsed_credit_total": 25000,
+      "parsed_debit_count": 0,
+      "parsed_credit_count": 1
+    },
+    "rows": [
+      {
+        "posted_date": "2026-02-05",
+        "description_raw": "2026/02/05 Time:11:30:00, Notes:(9876543210123456-987654321098) COFFEE PLACE CITY CENTER, SA",
+        "debit": 0,
+        "credit": 25000,
+        "balance_after": 75000,
+        "kind": "card_purchase",
+        "merchant_raw": "COFFEE PLACE CITY CENTER, SA",
+        "fingerprint": "63e508988d018273cef9422562a14535",
+        "duplicate": {
+          "score": 9,
+          "exact": false,
+          "reason": "same amount on the same day, same merchant, similar description",
+          "matches": [
+            36
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "rows": 1,
+      "exact_duplicates": 0,
+      "needs_review": 1,
+      "default_rows": 0,
+      "history_rows": 2,
       "anomaly_ready": false
     }
   },

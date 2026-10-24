@@ -82,6 +82,9 @@ func (p *Preview) DefaultSelection() []int {
 		if p.Rows[i].Duplicate != nil && p.Rows[i].Duplicate.Score >= reviewThreshold {
 			continue
 		}
+		if p.Rows[i].Anomaly != nil && p.Rows[i].Anomaly.Score >= reviewThreshold {
+			continue
+		}
 		rows = append(rows, i)
 	}
 	return rows

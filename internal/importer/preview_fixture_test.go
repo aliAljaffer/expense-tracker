@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -96,17 +97,123 @@ func TestPreviewFixture(t *testing.T) {
 		t.Fatalf("already_imported = false; want true")
 	}
 
+	// Build alinma_anomaly: account with 20+ stored spending rows so anomaly_ready is true
+	// Upload baseline spending history first
+	anomalyHistoryXLSX := buildAlinmaAnomalyHistory()
+	anomalyHistorySt := mustParseAlinma(t, anomalyHistoryXLSX)
+	normalizeDateFormat(anomalyHistorySt)
+	svc.parse = func([]byte) (*statement.Statement, error) { return anomalyHistorySt, nil }
+	anomalyHistoryPreview, err := svc.Upload(ctx, anomalyHistoryXLSX)
+	if err != nil {
+		t.Fatalf("anomaly history upload: %v", err)
+	}
+	if anomalyHistoryPreview.Status != "pending" {
+		t.Fatalf("anomaly history preview status = %q; want pending", anomalyHistoryPreview.Status)
+	}
+	if _, err := svc.Commit(ctx, anomalyHistoryPreview.ImportID, nil); err != nil {
+		t.Fatalf("commit anomaly history: %v", err)
+	}
+
+	// Upload statement with unusual row (new merchant + large amount)
+	alinmaAnomalyXLSX := buildAlinmaWithAnomaly()
+	alinmaAnomalySt := mustParseAlinma(t, alinmaAnomalyXLSX)
+	normalizeDateFormat(alinmaAnomalySt)
+	svc.parse = func([]byte) (*statement.Statement, error) { return alinmaAnomalySt, nil }
+	alinmaAnomalyPreview, err := svc.Upload(ctx, alinmaAnomalyXLSX)
+	if err != nil {
+		t.Fatalf("alinma anomaly upload: %v", err)
+	}
+	if alinmaAnomalyPreview.Status != "pending" {
+		t.Fatalf("alinma anomaly preview status = %q; want pending", alinmaAnomalyPreview.Status)
+	}
+	if !alinmaAnomalyPreview.Summary.AnomalyReady {
+		t.Fatalf("anomaly_ready = false; want true")
+	}
+	if len(alinmaAnomalyPreview.Rows) < 1 {
+		t.Fatalf("expected at least 1 row in anomaly preview")
+	}
+	// Verify the anomaly row has a score of 8-10 and is held for review
+	defaultIndices := alinmaAnomalyPreview.DefaultSelection()
+	defaultMap := make(map[int]bool)
+	for _, idx := range defaultIndices {
+		defaultMap[idx] = true
+	}
+	hasAnomalyRow := false
+	for i, row := range alinmaAnomalyPreview.Rows {
+		if row.Anomaly != nil && row.Anomaly.Score >= 8 {
+			hasAnomalyRow = true
+			if defaultMap[i] {
+				t.Fatalf("anomaly row at index %d should not be default_selected", i)
+			}
+		}
+	}
+	if !hasAnomalyRow {
+		t.Fatalf("expected a row with anomaly score 8-10")
+	}
+
+	// Build alrajhi_held_duplicate: overlapping statement with fuzzy duplicate
+	// First upload Al Rajhi baseline
+	alrajhiBaselineXLSX := buildAlrajhiBaseline()
+	alrajhiBaselineSt := mustParseAlrajhi(t, alrajhiBaselineXLSX)
+	normalizeDateFormat(alrajhiBaselineSt)
+	svc.parse = func([]byte) (*statement.Statement, error) { return alrajhiBaselineSt, nil }
+	alrajhiBaselinePreview, err := svc.Upload(ctx, alrajhiBaselineXLSX)
+	if err != nil {
+		t.Fatalf("alrajhi baseline upload: %v", err)
+	}
+	if alrajhiBaselinePreview.Status != "pending" {
+		t.Fatalf("alrajhi baseline preview status = %q; want pending", alrajhiBaselinePreview.Status)
+	}
+	if _, err := svc.Commit(ctx, alrajhiBaselinePreview.ImportID, nil); err != nil {
+		t.Fatalf("commit alrajhi baseline: %v", err)
+	}
+
+	// Upload overlapping statement with fuzzy duplicate
+	alrajhiDuplicateXLSX := buildAlrajhiWithHeldDuplicate()
+	alrajhiDuplicateSt := mustParseAlrajhi(t, alrajhiDuplicateXLSX)
+	normalizeDateFormat(alrajhiDuplicateSt)
+	svc.parse = func([]byte) (*statement.Statement, error) { return alrajhiDuplicateSt, nil }
+	alrajhiDuplicatePreview, err := svc.Upload(ctx, alrajhiDuplicateXLSX)
+	if err != nil {
+		t.Fatalf("alrajhi duplicate upload: %v", err)
+	}
+	if alrajhiDuplicatePreview.Status != "pending" {
+		t.Fatalf("alrajhi duplicate preview status = %q; want pending", alrajhiDuplicatePreview.Status)
+	}
+	// Verify at least one row has a held duplicate score
+	dupDefaultIndices := alrajhiDuplicatePreview.DefaultSelection()
+	dupDefaultMap := make(map[int]bool)
+	for _, idx := range dupDefaultIndices {
+		dupDefaultMap[idx] = true
+	}
+	hasHeldDuplicate := false
+	for i, row := range alrajhiDuplicatePreview.Rows {
+		if row.Duplicate != nil && row.Duplicate.Score >= 8 && !row.Duplicate.Exact {
+			hasHeldDuplicate = true
+			if dupDefaultMap[i] {
+				t.Fatalf("held duplicate row at index %d should not be default_selected", i)
+			}
+		}
+	}
+	if !hasHeldDuplicate {
+		t.Fatalf("expected a row with held duplicate score 8-10")
+	}
+
 	// Mask account numbers in all previews
 	maskAccountNumber(alinmaPreview)
 	maskAccountNumber(alrajhiPreview)
 	maskAccountNumber(rejectedPreview)
 	maskAccountNumber(alreadyImportedPreview)
+	maskAccountNumber(alinmaAnomalyPreview)
+	maskAccountNumber(alrajhiDuplicatePreview)
 
 	fixtures := map[string]interface{}{
-		"alinma_ok":      alinmaPreview,
-		"alrajhi_ok":     alrajhiPreview,
-		"rejected":       rejectedPreview,
-		"already_imported": alreadyImportedPreview,
+		"alinma_ok":          alinmaPreview,
+		"alrajhi_ok":         alrajhiPreview,
+		"rejected":           rejectedPreview,
+		"already_imported":   alreadyImportedPreview,
+		"alinma_anomaly":     alinmaAnomalyPreview,
+		"alrajhi_held_duplicate": alrajhiDuplicatePreview,
 	}
 
 	fixtureFile := filepath.Join("../../web/test/fixtures/preview.json")
@@ -447,4 +554,112 @@ func escapeXML(s string) string {
 	s = strings.ReplaceAll(s, "'", "&apos;")
 	return s
 }
+
+// buildAlinmaAnomalyHistory builds 20+ spending rows with median ~100 SAR
+// to satisfy anomaly_ready threshold. Uses simple integer amounts for reliability.
+func buildAlinmaAnomalyHistory() []byte {
+	rows := [][]string{
+		{"Account Statement"},
+		{"From[01/02/2026] To[28/02/2026]"},
+		{"معلومات الحساب\n‫Customer Name", "SAMPLE CUSTOMER"},
+		{"رقم الحساب\n‫Account Number", "12345000002"},
+		{"العملة\n‫Account Currency", "SAR"},
+		{"الرصيد الافتتاحي\n‫Opening Balance", "3,000.00"},
+		{"الرصيد الختامي\n‫Closing Balance", "1,000.00"},
+		{"عدد السحوبات\n‫Number of Withdraws", "20", "إجمالي السحوبات\n‫Total Withdraws", "2000.00"},
+		{"عدد الإيداعات\n‫Number Of Deposits", "0", "إجمالي الإيداعات\n‫Totals Deposits", "0.00"},
+		{"التاريخ", "الوصف", "إيداع", "سحب", "الرصيد"},
+	}
+	// Add 20 spending transactions with round amounts for median ~100
+	// Amounts: 10 x 100, 5 x 80, 5 x 120 = 1000 + 400 + 600 = 2000
+	// Use Arabic patterns to match parser classification for card purchases
+	amounts := []string{
+		"100", "100", "100", "100", "100", "100", "100", "100", "100", "100",
+		"80", "80", "80", "80", "80",
+		"120", "120", "120", "120", "120",
+	}
+	balance := 3000.0
+	for i, amountStr := range amounts {
+		date := "46028"
+		amount, _ := strconv.ParseFloat(amountStr, 64)
+		// Use Arabic pattern for card purchase so parser classifies correctly
+		desc := fmt.Sprintf("SAR %.2f تم الشراء مع Mada Card *0630 في SHOP %d على 02-02-2026", amount, i+1)
+		balance -= amount
+		rows = append(rows, []string{date, desc, "", fmt.Sprintf("-%.2f", amount), fmt.Sprintf("%.2f", balance)})
+	}
+	return buildXLSX(rows, false)
+}
+
+// buildAlinmaWithAnomaly builds a statement with one unusual row (new merchant, large amount)
+// that should score 8-10 as an anomaly (new merchant + 5x median = 4 + 4 = 8)
+func buildAlinmaWithAnomaly() []byte {
+	rows := [][]string{
+		{"Account Statement"},
+		{"From[01/03/2026] To[31/03/2026]"},
+		{"معلومات الحساب\n‫Customer Name", "SAMPLE CUSTOMER"},
+		{"رقم الحساب\n‫Account Number", "12345000002"},
+		{"العملة\n‫Account Currency", "SAR"},
+		{"الرصيد الافتتاحي\n‫Opening Balance", "8,000.00"},
+		{"الرصيد الختامي\n‫Closing Balance", "7,500.00"},
+		{"عدد السحوبات\n‫Number of Withdraws", "1", "إجمالي السحوبات\n‫Total Withdraws", "500.00"},
+		{"عدد الإيداعات\n‫Number Of Deposits", "0", "إجمالي الإيداعات\n‫Totals Deposits", "0.00"},
+		{"التاريخ", "الوصف", "إيداع", "سحب", "الرصيد"},
+		// Description format: Arabic purchase marker + amount + Card + PIN + في + MERCHANT + على + date
+		{"46048", "SAR 500.00 تم الشراء مع Mada Card *0630 في UNUSUAL INTERNATIONAL على 01-03-2026", "", "-500.00", "7500.00"},
+	}
+	return buildXLSX(rows, false)
+}
+
+// buildAlrajhiBaseline builds baseline Al Rajhi history for duplicate detection
+func buildAlrajhiBaseline() []byte {
+	lines := []string{
+		"Ref. No                                        55000002",
+		"Customer Name                SAMPLE CUSTOMER                         ",
+		"Account Number                   000000000002",
+		"IBAN Number                 SA0080000021234567890123",
+		"Opening Balance                        0.00 SAR",
+		"Closing Balance                      500.00 SAR",
+		"Number Of Deposits                         2",
+		"Number Of Withdrawals                      0",
+		"Total Deposits                       500.00 SAR",
+		"Total Withdrawals                    0.00 SAR",
+		"On The Period             2026/02/01        -         2026/02/28",
+
+		"POS purchase Apple pay (Domestic)",
+		"2026/02/05   Time:10:00:00, Notes:(1234567890123456-123456789012) COFFEE PLACE",
+		"                                                                      0.00 SAR     250.00 SAR      250.00 SAR",
+		"CITY CENTER, SA",
+
+		"POS purchase Apple pay (Domestic)",
+		"2026/02/10   Time:10:00:00, Notes:(1234567890123456-123456789012) COFFEE PLACE",
+		"                                                                      0.00 SAR     250.00 SAR      500.00 SAR",
+		"CITY CENTER, SA",
+	}
+	return buildPDFFromLines(lines)
+}
+
+// buildAlrajhiWithHeldDuplicate builds a statement with a fuzzy duplicate row
+// (same amount, same day, same merchant but different description) that scores 8-10 but is not exact
+func buildAlrajhiWithHeldDuplicate() []byte {
+	lines := []string{
+		"Ref. No                                        55000003",
+		"Customer Name                SAMPLE CUSTOMER                         ",
+		"Account Number                   000000000002",
+		"IBAN Number                 SA0080000021234567890123",
+		"Opening Balance                      500.00 SAR",
+		"Closing Balance                      750.00 SAR",
+		"Number Of Deposits                         1",
+		"Number Of Withdrawals                      0",
+		"Total Deposits                       250.00 SAR",
+		"Total Withdrawals                    0.00 SAR",
+		"On The Period             2026/02/05        -         2026/02/28",
+
+		"POS purchase Apple pay (Domestic)",
+		"2026/02/05   Time:11:30:00, Notes:(9876543210123456-987654321098) COFFEE PLACE",
+		"                                                                      0.00 SAR     250.00 SAR      750.00 SAR",
+		"CITY CENTER, SA",
+	}
+	return buildPDFFromLines(lines)
+}
+
 
