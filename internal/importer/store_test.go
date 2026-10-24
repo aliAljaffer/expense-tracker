@@ -158,7 +158,7 @@ func TestUploadCommitAndFingerprintParity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("commit: %v", err)
 	}
-	if res.Inserted != 3 || res.Skipped != 0 {
+	if res.Inserted != 3 || len(res.Skipped) != 0 {
 		t.Fatalf("commit = %+v", res)
 	}
 
@@ -222,8 +222,8 @@ func TestOverlappingStatementInsertsOnlyNewRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Inserted != 1 {
-		t.Fatalf("commit = %+v, want 1 inserted", res)
+	if res.Inserted != 1 || len(res.Skipped) != 0 {
+		t.Fatalf("commit = %+v, want 1 inserted and 0 skipped (default selection excludes exact duplicates)", res)
 	}
 	var count int
 	store.pool.QueryRow(ctx, `select count(*) from transaction`).Scan(&count)
@@ -256,7 +256,7 @@ func TestHeldDuplicateIsNotStoredByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Inserted != 0 {
+	if res.Inserted != 0 || len(res.Skipped) != 0 {
 		t.Fatalf("commit = %+v, want nothing stored", res)
 	}
 }
@@ -462,8 +462,11 @@ func TestSkippedDuplicateCreatesNoMerchant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second commit: %v", err)
 	}
-	if res.Skipped != 1 || res.Inserted != 1 {
+	if len(res.Skipped) != 1 || res.Inserted != 1 {
 		t.Fatalf("commit = %+v, want 1 skipped and 1 inserted", res)
+	}
+	if res.Skipped[0].RowID != 0 || res.Skipped[0].Reason != "already_imported" {
+		t.Fatalf("skipped row = %+v, want row_id=0 and reason=already_imported", res.Skipped[0])
 	}
 
 	var count int
@@ -507,5 +510,80 @@ func TestBackfillMerchantsIsIdempotent(t *testing.T) {
 	store.pool.QueryRow(ctx, `select count(*) from merchant`).Scan(&count)
 	if count != 1 {
 		t.Fatalf("merchant count = %d, want 1", count)
+	}
+}
+
+func TestCommitExactDuplicateReturnsSkippedWithReason(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first}))
+	res, err := svc.Commit(ctx, p.ImportID, nil)
+	if err != nil {
+		t.Fatalf("first commit: %v", err)
+	}
+	if res.Inserted != 1 || len(res.Skipped) != 0 {
+		t.Fatalf("first commit = %+v, want 1 inserted and 0 skipped", res)
+	}
+
+	duplicate := tx("2026-01-05", 2575, 0, "card purchase one")
+	p2 := upload(t, svc, []byte("statement two"), testStatement("00000000000001", []statement.Transaction{duplicate}))
+	res2, err := svc.Commit(ctx, p2.ImportID, []int{0})
+	if err != nil {
+		t.Fatalf("second commit: %v", err)
+	}
+	if res2.Inserted != 0 || len(res2.Skipped) != 1 {
+		t.Fatalf("second commit = %+v, want 0 inserted and 1 skipped", res2)
+	}
+	if res2.Skipped[0].RowID != 0 || res2.Skipped[0].Reason != "already_imported" {
+		t.Fatalf("skipped row = %+v, want row_id=0 and reason=already_imported", res2.Skipped[0])
+	}
+
+	var count int
+	store.pool.QueryRow(ctx, `select count(*) from transaction`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("transaction count = %d, want 1 (duplicate should not be inserted)", count)
+	}
+}
+
+func TestCommitMultipleExactDuplicatesReturnAllSkippedWithReasons(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+
+	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	second := tx("2026-01-06", 1000, 0, "card purchase two")
+	p := upload(t, svc, []byte("statement one"), testStatement("00000000000001", []statement.Transaction{first, second}))
+	res, err := svc.Commit(ctx, p.ImportID, nil)
+	if err != nil {
+		t.Fatalf("first commit: %v", err)
+	}
+	if res.Inserted != 2 || len(res.Skipped) != 0 {
+		t.Fatalf("first commit = %+v, want 2 inserted and 0 skipped", res)
+	}
+
+	dup1 := tx("2026-01-05", 2575, 0, "card purchase one")
+	dup2 := tx("2026-01-06", 1000, 0, "card purchase two")
+	new1 := tx("2026-01-07", 3000, 0, "card purchase three")
+	p2 := upload(t, svc, []byte("statement two"), testStatement("00000000000001", []statement.Transaction{dup1, dup2, new1}))
+	res2, err := svc.Commit(ctx, p2.ImportID, []int{0, 1, 2})
+	if err != nil {
+		t.Fatalf("second commit: %v", err)
+	}
+	if res2.Inserted != 1 || len(res2.Skipped) != 2 {
+		t.Fatalf("second commit = %+v, want 1 inserted and 2 skipped", res2)
+	}
+
+	skippedRowIDs := make(map[int]bool)
+	for _, sr := range res2.Skipped {
+		if sr.Reason != "already_imported" {
+			t.Errorf("skipped row %d has reason %q, want already_imported", sr.RowID, sr.Reason)
+		}
+		skippedRowIDs[sr.RowID] = true
+	}
+	if !skippedRowIDs[0] || !skippedRowIDs[1] {
+		t.Errorf("skipped rows should be 0 and 1, got %v", skippedRowIDs)
 	}
 }

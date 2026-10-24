@@ -52,10 +52,15 @@ type ImportInput struct {
 	Accepted       bool
 }
 
+type SkippedRow struct {
+	RowID  int    `json:"row_id"`
+	Reason string `json:"reason"`
+}
+
 type CommitResult struct {
-	ImportID int64 `json:"import_id"`
-	Inserted int   `json:"inserted"`
-	Skipped  int   `json:"skipped"`
+	ImportID int64        `json:"import_id"`
+	Inserted int          `json:"inserted"`
+	Skipped  []SkippedRow `json:"skipped"`
 }
 
 type Store struct {
@@ -284,9 +289,9 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 			t.CardLast4, t.FxCurrency, t.FxAmount, nullIfEmpty(t.FxRate), t.FxFee, merchantID)
 	}
 
-	result := CommitResult{ImportID: importID}
+	result := CommitResult{ImportID: importID, Skipped: []SkippedRow{}}
 	br := tx.SendBatch(ctx, batch)
-	for range selected {
+	for _, rowIdx := range selected {
 		tag, err := br.Exec()
 		if err != nil {
 			br.Close()
@@ -295,7 +300,10 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 		if tag.RowsAffected() == 1 {
 			result.Inserted++
 		} else {
-			result.Skipped++
+			result.Skipped = append(result.Skipped, SkippedRow{
+				RowID:  rowIdx,
+				Reason: "already_imported",
+			})
 		}
 	}
 	if err := br.Close(); err != nil {

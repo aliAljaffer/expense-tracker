@@ -127,8 +127,12 @@ Omit `rows` to store the default selection. The default excludes exact
 duplicates and rows held for review. Commit returns:
 
 ```json
-{"import_id": 12, "inserted": 3, "skipped": 0}
+{"import_id": 12, "inserted": 3, "skipped": [{"row_id": 1, "reason": "already_imported"}]}
 ```
+
+`skipped` is a list of rows that were not inserted. `row_id` is the zero-based
+index of the row in the selection. `reason` is why the row was skipped.
+Currently the only reason is `already_imported` for exact fingerprint matches.
 
 ## Read endpoints
 
