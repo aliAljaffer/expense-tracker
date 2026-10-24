@@ -15,7 +15,7 @@ function derivePkceKey(secret: string): Buffer {
   return Buffer.from(derived);
 }
 
-function encryptPkceData(data: { verifier: string; nonce: string }, key: Buffer): string {
+function encryptPkceData(data: { verifier: string; nonce: string; state: string }, key: Buffer): string {
   const plaintext = JSON.stringify(data);
   const iv = randomBytes(12);
   const cipher = createCipheriv(PKCE_ALGORITHM, key, iv);
@@ -38,7 +38,7 @@ export async function GET() {
   const nonce = generateNonce();
 
   const key = derivePkceKey(config.sessionSecret);
-  const encrypted = encryptPkceData({ verifier, nonce }, key);
+  const encrypted = encryptPkceData({ verifier, nonce, state }, key);
 
   const cookieStore = await cookies();
   cookieStore.set(PKCE_COOKIE_NAME, encrypted, {

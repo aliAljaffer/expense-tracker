@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseIdToken, exchangeCode } from "@/lib/auth/oidc";
 import { writeSession } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, timingSafeEqual } from "node:crypto";
 import { hkdfSync } from "node:crypto";
 
 const PKCE_ALGORITHM = "aes-256-gcm";
@@ -14,7 +14,7 @@ function derivePkceKey(secret: string): Buffer {
   return Buffer.from(derived);
 }
 
-function decryptPkceData(encrypted: string, key: Buffer): { verifier: string; nonce: string } {
+function decryptPkceData(encrypted: string, key: Buffer): { verifier: string; nonce: string; state: string } {
   const iv = Buffer.from(encrypted.slice(0, 24), "hex");
   const authTag = Buffer.from(encrypted.slice(24, 56), "hex");
   const ciphertext = encrypted.slice(56);
@@ -36,27 +36,49 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
+  const cookieStore = await cookies();
+
   if (error) {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=access_denied", config.appOrigin));
   }
 
   if (!code || !state) {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=missing_params", config.appOrigin));
   }
 
-  const cookieStore = await cookies();
   const pkceEncrypted = cookieStore.get(PKCE_COOKIE_NAME)?.value;
 
   if (!pkceEncrypted) {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=invalid_session", config.appOrigin));
   }
 
-  let pkceData: { verifier: string; nonce: string };
+  let pkceData: { verifier: string; nonce: string; state: string };
   try {
     const key = derivePkceKey(config.sessionSecret);
     pkceData = decryptPkceData(pkceEncrypted, key);
   } catch {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=invalid_pkce", config.appOrigin));
+  }
+
+  if (!state || !pkceData.state) {
+    cookieStore.delete(PKCE_COOKIE_NAME);
+    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+  }
+
+  try {
+    const stateBuffer = Buffer.from(state, "utf8");
+    const storedStateBuffer = Buffer.from(pkceData.state, "utf8");
+    if (stateBuffer.length !== storedStateBuffer.length || !timingSafeEqual(stateBuffer, storedStateBuffer)) {
+      cookieStore.delete(PKCE_COOKIE_NAME);
+      return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+    }
+  } catch {
+    cookieStore.delete(PKCE_COOKIE_NAME);
+    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
   }
 
   const callbackUrl = new URL("/api/auth/callback", config.appOrigin);
@@ -72,10 +94,12 @@ export async function GET(request: NextRequest) {
       verifier: pkceData.verifier,
     });
   } catch {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=token_exchange", config.appOrigin));
   }
 
   if (!tokenResponse.id_token) {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=no_id_token", config.appOrigin));
   }
 
@@ -88,6 +112,7 @@ export async function GET(request: NextRequest) {
       config.oidcClientId
     );
   } catch {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=invalid_token", config.appOrigin));
   }
 
@@ -106,6 +131,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL("/", config.appOrigin));
   } catch {
+    cookieStore.delete(PKCE_COOKIE_NAME);
     return NextResponse.redirect(new URL("/signin?error=session_write", config.appOrigin));
   }
 }

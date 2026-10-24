@@ -108,7 +108,7 @@ describe("callback route", () => {
     expect(location).not.toContain("access_denied&error_description=user_denied");
   });
 
-  it("does not validate state parameter for CSRF protection", async () => {
+  it("rejects missing state parameter", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
     vi.stubEnv("OIDC_CLIENT_ID", "test-client");
     vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
@@ -117,7 +117,35 @@ describe("callback route", () => {
 
     const { cookies } = await import("next/headers");
     const mockCookieStore: MockCookieStore = {
-      get: vi.fn(() => undefined),
+      get: vi.fn(() => ({ value: "dummy" })),
+      delete: vi.fn(),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(cookies).mockResolvedValueOnce(mockCookieStore as any);
+
+    const mockRequest = {
+      nextUrl: new URL("https://app.example.com/api/auth/callback?code=test-code"),
+      headers: new Headers(),
+    } as unknown as NextRequest;
+
+    const response = await GET(mockRequest);
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get("location");
+    expect(location).toContain("/signin?error=missing_params");
+    expect(mockCookieStore.delete).toHaveBeenCalledWith("et_pkce");
+  });
+
+  it("rejects mismatched state parameter", async () => {
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", "http://localhost:3000");
+
+    const { cookies } = await import("next/headers");
+    const mockCookieStore: MockCookieStore = {
+      get: vi.fn(() => ({ value: "invalid-base64" })),
       delete: vi.fn(),
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,5 +159,8 @@ describe("callback route", () => {
     const response = await GET(mockRequest);
 
     expect(response.status).toBe(307);
+    const location = response.headers.get("location");
+    expect(location).toContain("/signin?error=invalid_pkce");
+    expect(mockCookieStore.delete).toHaveBeenCalledWith("et_pkce");
   });
 });
