@@ -5,6 +5,7 @@ import { getAuthConfig } from "@/lib/auth/config";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 
 export const metadata: Metadata = { title: "Health" };
+export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
   const config = getAuthConfig();
