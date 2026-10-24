@@ -21,7 +21,7 @@ type stubAuth struct {
 func (s stubAuth) Authenticate(*http.Request) (auth.Identity, error) { return s.id, s.err }
 
 func newTestServer(a Authenticator) http.Handler {
-	return New(nil, a, 1<<20, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return New(nil, nil, a, 1<<20, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func TestHealthIsPublic(t *testing.T) {
@@ -35,7 +35,8 @@ func TestHealthIsPublic(t *testing.T) {
 
 func TestProtectedRoutesRejectMissingToken(t *testing.T) {
 	h := newTestServer(stubAuth{err: auth.ErrUnauthenticated})
-	for _, path := range []string{"/api/me", "/api/imports/1"} {
+	for _, path := range []string{"/api/me", "/api/imports/1", "/api/accounts",
+		"/api/overview/monthly", "/api/transactions"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != http.StatusUnauthorized {
@@ -58,6 +59,17 @@ func TestWrongOwnerIsForbidden(t *testing.T) {
 	}
 }
 
+func TestReadRoutesWithoutStoreReturn503(t *testing.T) {
+	h := newTestServer(stubAuth{id: auth.Identity{Subject: "owner"}})
+	for _, path := range []string{"/api/accounts", "/api/overview/monthly", "/api/transactions"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("%s status = %d, want 503", path, rec.Code)
+		}
+	}
+}
+
 func TestOwnerCanReadIdentity(t *testing.T) {
 	h := newTestServer(stubAuth{id: auth.Identity{Subject: "owner", Name: "Owner"}})
 	rec := httptest.NewRecorder()
@@ -75,7 +87,7 @@ func TestOwnerCanReadIdentity(t *testing.T) {
 }
 
 func TestUploadRejectsOversizedFile(t *testing.T) {
-	h := New(nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024,
+	h := New(nil, nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)

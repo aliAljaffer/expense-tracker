@@ -1,7 +1,8 @@
 # API
 
 The Go API runs the parsers, decides whether a statement may be imported, and
-stores approved rows. The browser never calls it directly: Next.js forwards the
+stores approved rows. It also serves the read endpoints behind the account and
+overview views. The browser never calls it directly: Next.js forwards the
 owner's access token.
 
 ## Configuration
@@ -116,6 +117,138 @@ duplicates and rows held for review. Commit returns:
 
 ```json
 {"import_id": 12, "inserted": 3, "skipped": 0}
+```
+
+## Read endpoints
+
+All read routes require the bearer token. They return 503
+`{"error":"database unavailable"}` when the database is not reachable.
+
+### GET /api/accounts
+
+Returns every account. `masked_number` keeps only the last four characters of
+the account number, and no IBAN is returned. `balance` is the `balance_after`
+of the newest transaction by posting date, time and id, null when the account
+has no transactions. `balance_date` is that transaction's posting date.
+
+```json
+{
+  "accounts": [
+    {
+      "id": 1,
+      "bank": "alinma",
+      "masked_number": "**********6060",
+      "kind": "current",
+      "currency": "SAR",
+      "balance": 118600,
+      "balance_date": "2026-03-31"
+    }
+  ]
+}
+```
+
+### GET /api/overview/monthly
+
+| Parameter | Required | Meaning |
+|---|---|---|
+| `from` | no | First month, `YYYY-MM`. Default: 11 months before the current month |
+| `to` | no | Last month, `YYYY-MM`. Default: the current month |
+
+Set both or neither. `from` after `to` returns 400. Months without a
+transaction are omitted; entries are oldest first. Every amount is integer
+halalas. Only `uncovered_share` is a ratio.
+
+- `income.total` is every credit in the month. `salary`, `transfers_in` and
+  `refunds` split out those kinds; `other` holds the rest (`cash_deposit` and
+  any other credit).
+- `spending` uses the generated `counts_as_spending` column with `debit > 0`.
+  Internal transfers, external transfers out, round-up sweeps and card payments
+  never enter it.
+- `transfers` is reported separately and never added to spending.
+- `uncategorised_spending` is the part of `spending.total` whose category is
+  null.
+- `outflow_total` is every debit in the month, all kinds.
+- `credit_card_coverage.uncovered` is `greatest(card_payments -
+  purchases_recorded, 0)`, where `purchases_recorded` is the debit of the three
+  purchase kinds. `uncovered_share` is `uncovered / card_payments` to six
+  decimal places, 0 when there are no card payments.
+
+```json
+{
+  "months": [
+    {
+      "month": "2026-02",
+      "income": {"salary": 100000, "transfers_in": 5000, "refunds": 2500, "other": 1200, "total": 108700},
+      "spending": {"card_purchase": 2575, "online_purchase": 990, "intl_purchase": 2667, "bill_payment": 15000, "cash_withdrawal": 50000, "fee": 1250, "total": 72482},
+      "transfers": {"internal": 20000, "external_out": 3000, "roundup_sweeps": 250, "total": 23250},
+      "card_payments": 58000,
+      "uncategorised_spending": 1250,
+      "outflow_total": 143732,
+      "credit_card_coverage": {
+        "card_payments": 58000,
+        "purchases_recorded": 6232,
+        "uncovered": 51768,
+        "uncovered_share": 0.892552
+      },
+      "transaction_count": 14
+    }
+  ]
+}
+```
+
+### GET /api/transactions
+
+| Parameter | Required | Meaning |
+|---|---|---|
+| `from` | no | First posting date, `YYYY-MM-DD`, inclusive |
+| `to` | no | Last posting date, `YYYY-MM-DD`, inclusive |
+| `account_id` | no | Only this account |
+| `bucket` | no | One of the buckets below. Default `all` |
+| `kind` | no | One transaction kind |
+| `limit` | no | Page size, default 100, maximum 500 |
+| `offset` | no | Rows to skip, default 0 |
+
+A bucket selects exactly the rows that add up to one monthly total:
+
+| Bucket | Monthly total it explains |
+|---|---|
+| `all` | No bucket filter |
+| `income` | `income.total` |
+| `spending` | `spending.total` |
+| `transfers` | `transfers.total` |
+| `card_payments` | `card_payments` and `credit_card_coverage.card_payments` |
+| `uncategorised` | `uncategorised_spending` |
+| `refunds` | `income.refunds` |
+
+`total_count`, `total_debit` and `total_credit` cover the whole filtered set,
+not the page. Rows are newest first.
+
+```json
+{
+  "rows": [
+    {
+      "id": 34,
+      "account_id": 1,
+      "posted_date": "2026-03-05",
+      "posted_time": "10:15:00",
+      "description": "card purchase sample market",
+      "debit": 2575,
+      "credit": 0,
+      "balance_after": 118600,
+      "kind": "card_purchase",
+      "counts_as_spending": true,
+      "merchant_id": 9,
+      "merchant_name": "Sample Market",
+      "category_id": 3,
+      "category_name": "Groceries",
+      "fx_currency": null,
+      "fx_amount": null
+    }
+  ],
+  "total_count": 7,
+  "total_debit": 72482,
+  "total_credit": 0
+}
 ```
 
 ## Duplicate scores

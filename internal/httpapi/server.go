@@ -13,6 +13,7 @@ import (
 
 	"github.com/aliAljaffer/expense-tracker/internal/auth"
 	"github.com/aliAljaffer/expense-tracker/internal/importer"
+	"github.com/aliAljaffer/expense-tracker/internal/ledger"
 )
 
 type Authenticator interface {
@@ -21,20 +22,24 @@ type Authenticator interface {
 
 type Server struct {
 	svc       *importer.Service
+	ledger    *ledger.Store
 	auth      Authenticator
 	maxUpload int64
 	log       *slog.Logger
 }
 
-func New(svc *importer.Service, a Authenticator, maxUpload int64, log *slog.Logger) http.Handler {
+func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload int64, log *slog.Logger) http.Handler {
 	if maxUpload <= 0 {
 		maxUpload = 16 << 20
 	}
-	s := &Server{svc: svc, auth: a, maxUpload: maxUpload, log: log}
+	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, log: log}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.Handle("GET /api/me", s.protect(s.me))
+	mux.Handle("GET /api/accounts", s.protect(s.accounts))
+	mux.Handle("GET /api/overview/monthly", s.protect(s.monthly))
+	mux.Handle("GET /api/transactions", s.protect(s.transactions))
 	mux.Handle("POST /api/imports", s.protect(s.upload))
 	mux.Handle("GET /api/imports/{id}", s.protect(s.get))
 	mux.Handle("POST /api/imports/{id}/commit", s.protect(s.commit))

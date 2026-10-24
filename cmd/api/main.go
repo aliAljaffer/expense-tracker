@@ -15,6 +15,7 @@ import (
 	"github.com/aliAljaffer/expense-tracker/internal/config"
 	"github.com/aliAljaffer/expense-tracker/internal/httpapi"
 	"github.com/aliAljaffer/expense-tracker/internal/importer"
+	"github.com/aliAljaffer/expense-tracker/internal/ledger"
 )
 
 func main() {
@@ -39,6 +40,12 @@ func run(log *slog.Logger) error {
 	}
 	defer store.Close()
 
+	led, err := ledger.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer led.Close()
+
 	discoveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	verifier, err := auth.New(discoveryCtx, cfg.OIDCIssuer, cfg.OIDCAudience, cfg.OwnerSubject)
 	cancel()
@@ -54,7 +61,7 @@ func run(log *slog.Logger) error {
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(svc, verifier, cfg.MaxUploadBytes, log),
+		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, log),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      120 * time.Second,
