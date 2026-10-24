@@ -66,7 +66,8 @@ func TestWrongOwnerIsForbidden(t *testing.T) {
 
 func TestReadRoutesWithoutStoreReturn503(t *testing.T) {
 	h := newTestServer(stubAuth{id: auth.Identity{Subject: "owner"}})
-	for _, path := range []string{"/api/accounts", "/api/overview/monthly", "/api/transactions"} {
+	for _, path := range []string{"/api/accounts", "/api/overview/monthly", "/api/transactions",
+		"/api/suggestions/card-coverage", "/api/suggestions/recurring", "/api/suggestions/bnpl"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != http.StatusServiceUnavailable {

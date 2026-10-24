@@ -50,6 +50,9 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	mux.Handle("DELETE /api/imports/{id}", s.protect(s.cancel))
 	mux.Handle("GET /api/explainers/status", s.protect(s.explainStatus))
 	mux.Handle("POST /api/explanations", s.protect(s.explanation))
+	mux.Handle("GET /api/suggestions/card-coverage", s.protect(s.cardCoverage))
+	mux.Handle("GET /api/suggestions/recurring", s.protect(s.recurring))
+	mux.Handle("GET /api/suggestions/bnpl", s.protect(s.bnpl))
 	return http.TimeoutHandler(mux, 90*time.Second, `{"error":"request timed out"}`)
 }
 

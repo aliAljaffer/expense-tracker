@@ -342,6 +342,125 @@ The response is text only:
 
 The text is returned to the caller and never written to the database.
 
+## Suggestion endpoints
+
+All suggestion endpoints are read-only, deterministic, and return insufficient_data
+rather than estimating when data is too thin. They accept optional `from` and `to`
+parameters in `YYYY-MM` format, defaulting to the last 12 months. Set both or
+neither. Months without a transaction are omitted from results. All money is
+integer halalas.
+
+Common response shape:
+
+```json
+{
+  "status": "ok|insufficient_data",
+  "period": {"from": "YYYY-MM", "to": "YYYY-MM"},
+  "summary": "one short plain sentence",
+  "evidence": { "varies_by_endpoint": "..." },
+  "limits": "what this suggestion does not cover",
+  "next_step": "one recommended action"
+}
+```
+
+### GET /api/suggestions/card-coverage
+
+Detects card payments without recorded purchase statements. Per uncovered month:
+card payment total, recorded purchases, uncovered amount, uncovered share (ratio),
+and the transaction ids of the card payment rows.
+
+```json
+{
+  "status": "ok",
+  "period": {"from": "2026-02", "to": "2026-12"},
+  "summary": "Seven of twelve months had card payments without matching purchase statements.",
+  "evidence": {
+    "months": [
+      {
+        "month": "2026-02",
+        "card_payments": 58000,
+        "purchases_recorded": 6232,
+        "uncovered": 51768,
+        "uncovered_share": 0.892552,
+        "transaction_ids": [123, 456]
+      }
+    ]
+  },
+  "limits": "Does not account for manually entered card statements or categories.",
+  "next_step": "Import the card statement for Feb 2026."
+}
+```
+
+Insufficient_data when fewer than one month has card payments.
+
+### GET /api/suggestions/recurring
+
+Detects recurring payments appearing in at least 3 distinct months with at least
+3 occurrences. Per series: merchant name and id, occurrence count, distinct
+months, median and total amount, first and last date, and transaction ids.
+
+```json
+{
+  "status": "ok",
+  "period": {"from": "2026-02", "to": "2026-12"},
+  "summary": "Nine recurring payments found. The largest is rent (SAR 3500.00/month).",
+  "evidence": {
+    "recurring_series": [
+      {
+        "merchant": "Rent Agency",
+        "merchant_id": 1,
+        "occurrence_count": 12,
+        "distinct_months": 12,
+        "median_amount": 350000,
+        "total_amount": 4200000,
+        "first_date": "2026-02-01",
+        "last_date": "2026-12-01",
+        "cadence_days": null,
+        "transaction_ids": [100, 101, ...]
+      }
+    ]
+  },
+  "limits": "Recurring series must appear in at least 3 distinct months. May not detect recently started payments.",
+  "next_step": "Review and categorize the recurring payments."
+}
+```
+
+Insufficient_data when no merchants meet the threshold.
+
+### GET /api/suggestions/bnpl
+
+Detects buy-now-pay-later commitments and flags rising monthly obligations.
+Requires merchants to be manually marked as BNPL. Per month: outflow total,
+payment count, previous month outflow, 3-month average, and transaction ids.
+Months are flagged as rising when outflow exceeds both the previous month and
+the 3-month average.
+
+```json
+{
+  "status": "ok",
+  "period": {"from": "2026-01", "to": "2026-12"},
+  "summary": "BNPL commitments are rising: SAR 4500.00 this month vs SAR 3500.00 average.",
+  "evidence": {
+    "months": [
+      {
+        "month": "2026-04",
+        "bnpl_outflow": 4500,
+        "payment_count": 3,
+        "previous_month": 4000,
+        "three_month_average": 3500,
+        "is_rising": true,
+        "transaction_ids": [200, 201, 202]
+      }
+    ]
+  },
+  "limits": "BNPL identification requires merchants to be manually marked. Unknown BNPL providers will not be detected.",
+  "next_step": "Review upcoming BNPL payment dates and plan repayment."
+}
+```
+
+Insufficient_data when no merchants are marked as BNPL, or fewer than 3 months
+of BNPL transactions exist, or no months show a rising trend.
+
 ## Known limits
 
 - The parsers do not expose a posting time, so fingerprints use midnight. The
