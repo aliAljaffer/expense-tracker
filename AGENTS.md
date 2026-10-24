@@ -46,6 +46,20 @@ go run ./cmd/statement "statements/<file>.pdf" --json=out.json
 Exit code 0 means the statement reconciled. Exit code 1 means reject the import.
 Exit code 2 means the file could not be read or parsed.
 
+## API
+
+`cmd/api` serves the owner-only import API. It needs PostgreSQL and a Keycloak
+issuer; `docs/API.md` lists the environment and endpoints.
+
+```
+docker run -d --name expense-db -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test -p 5432:5432 postgres:17
+export DATABASE_URL='postgres://postgres:test@localhost:5432/test?sslmode=disable'
+bash scripts/check-migrations.sh
+DATABASE_URL="$DATABASE_URL" go test -race ./...
+```
+
+Database tests build and drop their own schema. Without `DATABASE_URL` they skip.
+
 ## Before committing
 
 Enable the hook once per clone. It refuses a commit that contains statement

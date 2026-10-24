@@ -10,7 +10,8 @@ PostgreSQL for storage. No statement data leaves the deployment.
 ## Status
 
 Early. Both statement parsers are Go packages in `parsers/`, with a CLI in
-`cmd/statement/` for local checks. The API and web app are next.
+`cmd/statement/` for local checks. The Go API imports a statement, reconciles
+it, scores duplicates, and stores approved rows. The web app is next.
 
 ## Layout
 
@@ -18,6 +19,9 @@ Early. Both statement parsers are Go packages in `parsers/`, with a CLI in
 |---|---|
 | `parsers/` | Statement parsers, one Go package per bank |
 | `cmd/statement/` | CLI: parse one export, report reconciliation, optional JSON |
+| `cmd/api/` | Owner-only import API |
+| `internal/` | API authentication, import workflow, database access |
+| `api/migrations/` | Versioned PostgreSQL schema |
 | `docs/` | Design and operating notes |
 | `web/design/` | App colour tokens, generated theme, and design decisions |
 | `.claude/` | Submodule: [ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), the shared design doctrine and gates |
@@ -29,6 +33,7 @@ Early. Both statement parsers are Go packages in `parsers/`, with a CLI in
 | `docs/FEATURES.md` | Prioritized feature list with rationale |
 | `docs/PARSING-NOTES.md` | Format gotchas per bank |
 | `docs/DATA-MODEL.md` | Schema |
+| `docs/API.md` | Endpoints, configuration, scoring rules |
 
 All examples in these documents are synthetic. Real statements stay out of Git.
 
