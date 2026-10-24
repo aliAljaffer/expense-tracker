@@ -3,10 +3,13 @@
 
 Staged text is scanned for two things:
 
-- Identifiers taken from the statements in statements/, when that directory
+- Identifiers read from the statements in statements/, when that directory
   exists: the account holder name, IBAN, account number, and reference numbers
   from transaction descriptions.
-- Any Saudi IBAN that is not on the synthetic allowlist below.
+- Any Saudi IBAN whose digits are not an obvious dummy pattern.
+
+A report names the file, the line, and the kind of match. The matched value is
+never printed, so the hook cannot repeat the data it exists to hide.
 
 Exit code 1 means the commit must not proceed.
 """
@@ -18,17 +21,17 @@ import subprocess
 import sys
 import tempfile
 
-# Every IBAN used in tests and documentation. Add new synthetic ones here; a
-# real IBAN is never added.
-SYNTHETIC_IBANS = {
-    "SA0000000000000000000000",
-    "SA0005000001234567890123",
-    "SA0080000001234567890123",
-    "SA4410000001234567890123",
-}
-
 IBAN = re.compile(r"SA\d{2}(?:\s*\d){20}")
 REFERENCE = re.compile(r"\d{8,}")
+
+# A synthetic IBAN repeats one digit or ends in a rising run. No real account
+# does, and the pattern is checked structurally so no value needs storing here.
+DUMMY_TAIL = "1234567890123"
+
+
+def is_dummy(iban):
+    digits = re.sub(r"\s", "", iban)[2:]
+    return set(digits) == {"0"} or digits.endswith(DUMMY_TAIL)
 
 
 def git(*args):
@@ -51,7 +54,7 @@ def staged_text(path):
 
 
 def statement_terms():
-    """Identifiers from the local statements. Empty when they are absent."""
+    """Identifiers from the local statements as (needle, label). Absent is fine."""
     if not os.path.isdir("statements"):
         return []
     with tempfile.TemporaryDirectory() as tmp:
@@ -61,7 +64,7 @@ def statement_terms():
         )
         if build.returncode != 0:
             return []
-        terms = set()
+        terms = {}
         for name in sorted(os.listdir("statements")):
             path = os.path.join("statements", name)
             if not os.path.isfile(path):
@@ -72,14 +75,22 @@ def statement_terms():
                 continue
             with open(out, encoding="utf-8") as fh:
                 data = json.load(fh)
-            for field in ("customer_name", "account_number"):
+            for field, label in (
+                ("customer_name", "the account holder name"),
+                ("account_number", "the account number"),
+            ):
                 if data.get(field):
-                    terms.add(data[field])
+                    terms.setdefault(data[field].lower(), label)
             if data.get("iban"):
-                terms.add(data["iban"].replace(" ", ""))
+                terms.setdefault(data["iban"].replace(" ", "").lower(), "the IBAN")
             for tx in data.get("transactions", []):
-                terms.update(REFERENCE.findall(tx.get("description_raw", "")))
-        return sorted(terms, key=len, reverse=True)
+                for ref in REFERENCE.findall(tx.get("description_raw", "")):
+                    terms.setdefault(ref.lower(), "a reference number")
+        return [(k, v) for k, v in terms.items() if len(k) >= 4]
+
+
+def line_of(text, index):
+    return text.count("\n", 0, index) + 1
 
 
 def main():
@@ -97,13 +108,15 @@ def main():
         if text is None:
             continue
         for match in IBAN.finditer(text):
-            if match.group(0).replace(" ", "") not in SYNTHETIC_IBANS:
-                problems.append(f"{path}: Saudi IBAN {match.group(0)!r} is not synthetic")
+            if not is_dummy(match.group(0)):
+                problems.append(
+                    f"{path}:{line_of(text, match.start())}: Saudi IBAN that is not a dummy value"
+                )
         lowered = text.lower()
-        for term in terms:
-            if len(term) >= 4 and term.lower() in lowered:
-                problems.append(f"{path}: contains statement data {term!r}")
-                break
+        for needle, label in terms:
+            at = lowered.find(needle)
+            if at >= 0:
+                problems.append(f"{path}:{line_of(text, at)}: matches {label} from statements/")
 
     if not problems:
         return 0
@@ -114,4 +127,10 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--self-check"]:
+        assert is_dummy("SA" + "0" * 22)
+        assert is_dummy("SA" + "00" + "0" * 7 + DUMMY_TAIL)
+        assert not is_dummy("SA" + "01" + "9" * 20)
+        print("ok")
+        sys.exit(0)
     sys.exit(main())

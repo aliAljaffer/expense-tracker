@@ -56,5 +56,6 @@ git config core.hooksPath scripts/hooks
 ```
 
 The check reads the statements in `statements/` for the owner name, account
-number, IBAN, and reference numbers. Any new synthetic IBAN used in a test must
-be added to `SYNTHETIC_IBANS` in `scripts/check-leaks.py`.
+number, IBAN, and reference numbers. A synthetic IBAN in a test must repeat one
+digit or end in `1234567890123`; the script stores no IBAN value and never
+prints one it matched.
