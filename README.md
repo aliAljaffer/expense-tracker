@@ -28,6 +28,8 @@ it, scores duplicates, and stores approved rows. The web app is next.
 
 ## Documents
 
+`docs/README.md` indexes every document in `docs/`.
+
 | File | Contents |
 |---|---|
 | `docs/FEATURES.md` | Prioritized feature list with rationale |
