@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getCookieChunks, type SessionPayload } from "./session";
+import { getCookieChunks, type SessionPayload, refreshIfExpiring } from "./session";
 import { createCipheriv, hkdfSync, randomBytes } from "node:crypto";
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(),
+}));
 
 const testSecret = "test-secret-key-for-hashing-purposes-at-least-32-chars";
 
@@ -139,6 +143,144 @@ describe("session", () => {
       const reconstructed = chunks.map((c) => c.value).join("");
       expect(reconstructed).toBe(combined);
       expect(JSON.stringify(largePayload)).toBe(plaintext);
+    });
+  });
+
+  describe("refreshIfExpiring", () => {
+    let mockCookiesStore: Map<string, string>
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockCookiesStore = new Map();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("does nothing when over 60 seconds remain", async () => {
+      const futureExpiresAt = Date.now() + 90 * 1000;
+      const session: SessionPayload = {
+        ...testPayload,
+        expiresAt: futureExpiresAt,
+      };
+
+      const keyBuffer = Buffer.from(hkdfSync("sha256", testSecret, "", "", 32));
+      const iv = randomBytes(12);
+      const plaintext = JSON.stringify(session);
+      const cipher = createCipheriv("aes-256-gcm", keyBuffer, iv);
+      let encrypted = cipher.update(plaintext, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      const authTag = cipher.getAuthTag();
+      const combined = iv.toString("hex") + authTag.toString("hex") + encrypted;
+      const chunks = getCookieChunks(combined);
+
+      chunks.forEach((chunk) => {
+        mockCookiesStore.set(chunk.name, chunk.value);
+      });
+
+      const { cookies } = await import("next/headers");
+      const mockStore = {
+        get: (name: string) => (mockCookiesStore.has(name) ? { value: mockCookiesStore.get(name) || "" } : undefined),
+      };
+      vi.mocked(cookies).mockResolvedValue(mockStore as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const refreshFn = vi.fn();
+      const result = await refreshIfExpiring(testSecret, refreshFn);
+
+      expect(result?.expiresAt).toBe(futureExpiresAt);
+      expect(refreshFn).not.toHaveBeenCalled();
+    });
+
+    it("refreshes when under 60 seconds remain", async () => {
+      const soonExpiresAt = Date.now() + 30 * 1000;
+      const session: SessionPayload = {
+        ...testPayload,
+        expiresAt: soonExpiresAt,
+      };
+
+      const keyBuffer = Buffer.from(hkdfSync("sha256", testSecret, "", "", 32));
+      const iv = randomBytes(12);
+      const plaintext = JSON.stringify(session);
+      const cipher = createCipheriv("aes-256-gcm", keyBuffer, iv);
+      let encrypted = cipher.update(plaintext, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      const authTag = cipher.getAuthTag();
+      const combined = iv.toString("hex") + authTag.toString("hex") + encrypted;
+      const chunks = getCookieChunks(combined);
+
+      chunks.forEach((chunk) => {
+        mockCookiesStore.set(chunk.name, chunk.value);
+      });
+
+      const { cookies } = await import("next/headers");
+      const mockStore = {
+        get: (name: string) => (mockCookiesStore.has(name) ? { value: mockCookiesStore.get(name) || "" } : undefined),
+        set: (name: string, value: string) => {
+          mockCookiesStore.set(name, value);
+        },
+      };
+      vi.mocked(cookies).mockResolvedValue(mockStore as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const newExpiresAt = Date.now() + 3600 * 1000;
+      const refreshFn = vi.fn().mockResolvedValue({
+        accessToken: "new-access-token",
+        expiresAt: newExpiresAt,
+      });
+
+      const result = await refreshIfExpiring(testSecret, refreshFn);
+
+      expect(refreshFn).toHaveBeenCalledWith(session.refreshToken);
+      expect(result?.accessToken).toBe("new-access-token");
+      expect(result?.refreshToken).toBe(session.refreshToken);
+    });
+
+    it("returns null when refresh fails", async () => {
+      const soonExpiresAt = Date.now() + 30 * 1000;
+      const session: SessionPayload = {
+        ...testPayload,
+        expiresAt: soonExpiresAt,
+      };
+
+      const keyBuffer = Buffer.from(hkdfSync("sha256", testSecret, "", "", 32));
+      const iv = randomBytes(12);
+      const plaintext = JSON.stringify(session);
+      const cipher = createCipheriv("aes-256-gcm", keyBuffer, iv);
+      let encrypted = cipher.update(plaintext, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      const authTag = cipher.getAuthTag();
+      const combined = iv.toString("hex") + authTag.toString("hex") + encrypted;
+      const chunks = getCookieChunks(combined);
+
+      chunks.forEach((chunk) => {
+        mockCookiesStore.set(chunk.name, chunk.value);
+      });
+
+      const { cookies } = await import("next/headers");
+      const mockStore = {
+        get: (name: string) => (mockCookiesStore.has(name) ? { value: mockCookiesStore.get(name) || "" } : undefined),
+      };
+      vi.mocked(cookies).mockResolvedValue(mockStore as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const refreshFn = vi.fn().mockRejectedValue(new Error("Refresh failed"));
+
+      const result = await refreshIfExpiring(testSecret, refreshFn);
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null when no session exists", async () => {
+      const { cookies } = await import("next/headers");
+      const mockStore = {
+        get: () => undefined,
+      };
+      vi.mocked(cookies).mockResolvedValue(mockStore as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const refreshFn = vi.fn();
+      const result = await refreshIfExpiring(testSecret, refreshFn);
+
+      expect(result).toBeNull();
+      expect(refreshFn).not.toHaveBeenCalled();
     });
   });
 

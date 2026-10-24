@@ -95,4 +95,13 @@ describe("pkce", () => {
       expect(nonce).not.toContain("=");
     });
   });
+
+  describe("RFC 7636 Appendix B test vector", () => {
+    it("generates correct S256 challenge for appendix B verifier", () => {
+      const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+      const challenge = generateS256Challenge(verifier);
+
+      expect(challenge).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+    });
+  });
 });
