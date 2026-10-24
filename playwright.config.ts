@@ -33,7 +33,7 @@ export default defineConfig({
     ...(CLUSTER && {
       launchOptions: {
         args: [
-          "--host-resolver-rules=MAP test-issuer.expense-tracker-dev.svc 127.0.0.1",
+          "--host-resolver-rules=MAP test-issuer.grooszy-dev.svc 127.0.0.1",
         ],
       },
     }),

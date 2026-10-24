@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-NAMESPACE="expense-tracker-dev"
+NAMESPACE="grooszy-dev"
 RESET_DB=0
 PLAYWRIGHT_ARGS=()
 
@@ -18,13 +18,13 @@ done
 
 echo "Starting port-forwards..."
 
-kubectl port-forward -n "$NAMESPACE" svc/expense-tracker-web 3000:3000 > /dev/null 2>&1 &
+kubectl port-forward -n "$NAMESPACE" svc/grooszy-web 3000:3000 > /dev/null 2>&1 &
 WEB_PF_PID=$!
 
 kubectl port-forward -n "$NAMESPACE" svc/test-issuer 8900:8900 > /dev/null 2>&1 &
 ISSUER_PF_PID=$!
 
-kubectl port-forward -n "$NAMESPACE" svc/expense-tracker-api 8901:8080 > /dev/null 2>&1 &
+kubectl port-forward -n "$NAMESPACE" svc/grooszy-api 8901:8080 > /dev/null 2>&1 &
 API_PF_PID=$!
 
 cleanup() {
@@ -64,7 +64,7 @@ reset_database() {
   fi
 
   echo "Resetting database..."
-  kubectl exec -n "$NAMESPACE" expense-tracker-db-1 -c postgres -- psql -U postgres -d expense-tracker << 'EOF'
+  kubectl exec -n "$NAMESPACE" grooszy-db-1 -c postgres -- psql -U postgres -d grooszy << 'EOF'
 TRUNCATE TABLE account CASCADE;
 TRUNCATE TABLE category CASCADE;
 TRUNCATE TABLE debt CASCADE;
