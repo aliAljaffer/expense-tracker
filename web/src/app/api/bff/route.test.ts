@@ -15,6 +15,21 @@ describe("BFF route handler", () => {
     vi.stubEnv("APP_ORIGIN", "https://app.example.com");
     vi.stubEnv("API_BASE_URL", "http://localhost:8080");
 
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      if (String(url).includes("openid-configuration")) {
+        return new Response(
+          JSON.stringify({
+            issuer: "https://example.com/realms/test",
+            authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+            token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+            jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response("", { status: 404 });
+    });
+
     const mockRequest = {
       method: "GET",
       headers: new Map(),

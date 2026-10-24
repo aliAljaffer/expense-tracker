@@ -35,6 +35,7 @@ export async function fetchDiscovery(issuer: string): Promise<OIDCDiscoveryDocum
 
 export function buildAuthorizationUrl(options: {
   issuer: string;
+  authorizationEndpoint: string;
   clientId: string;
   redirectUri: string;
   codeChallenge: string;
@@ -43,7 +44,7 @@ export function buildAuthorizationUrl(options: {
   scopes?: string[];
 }): URL {
   const {
-    issuer,
+    authorizationEndpoint,
     clientId,
     redirectUri,
     codeChallenge,
@@ -52,7 +53,7 @@ export function buildAuthorizationUrl(options: {
     scopes = ["openid", "profile"],
   } = options;
 
-  const url = new URL("protocol/openid-connect/auth", issuer);
+  const url = new URL(authorizationEndpoint);
 
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("response_type", "code");
@@ -67,7 +68,7 @@ export function buildAuthorizationUrl(options: {
 }
 
 export async function exchangeCode(options: {
-  issuer: string;
+  tokenEndpoint: string;
   clientId: string;
   clientSecret?: string;
   redirectUri: string;
@@ -75,7 +76,7 @@ export async function exchangeCode(options: {
   verifier: string;
 }): Promise<TokenResponse> {
   const {
-    issuer,
+    tokenEndpoint,
     clientId,
     clientSecret,
     redirectUri,
@@ -83,7 +84,7 @@ export async function exchangeCode(options: {
     verifier,
   } = options;
 
-  const tokenUrl = new URL("protocol/openid-connect/token", issuer);
+  const tokenUrl = new URL(tokenEndpoint);
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",

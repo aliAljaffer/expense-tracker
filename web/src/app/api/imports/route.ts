@@ -1,12 +1,23 @@
 import { NextRequest } from "next/server";
 import { refreshIfExpiring } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
+import { fetchDiscovery } from "@/lib/auth/oidc";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const authConfig = getAuthConfig();
 
+  let discovery;
+  try {
+    discovery = await fetchDiscovery(authConfig.oidcIssuer);
+  } catch {
+    return new Response(JSON.stringify({ error: "Failed to fetch OIDC configuration" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
   const session = await refreshIfExpiring(authConfig.sessionSecret, async (refreshToken) => {
-    const response = await fetch(`${authConfig.oidcIssuer}/protocol/openid-connect/token`, {
+    const response = await fetch(discovery.token_endpoint, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({

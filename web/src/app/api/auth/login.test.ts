@@ -33,12 +33,18 @@ vi.mock("@/lib/auth/oidc", () => ({
   buildAuthorizationUrl: vi.fn((params) => {
     const url = new URL(`https://example.com/auth?code_challenge_method=S256`);
     Object.entries(params).forEach(([key, value]) => {
-      if (key !== "issuer") {
+      if (key !== "issuer" && key !== "authorizationEndpoint") {
         url.searchParams.set(key, String(value));
       }
     });
     return url.toString();
   }),
+  fetchDiscovery: vi.fn(async () => ({
+    issuer: "https://example.com/realms/test",
+    authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+    token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+    jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+  })),
 }));
 
 describe("login route", () => {

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { parseIdToken, exchangeCode } from "@/lib/auth/oidc";
+import { parseIdToken, exchangeCode, fetchDiscovery } from "@/lib/auth/oidc";
 import { writeSession } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
 import { createDecipheriv, timingSafeEqual } from "node:crypto";
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   if (!pkceEncrypted) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_session", config.appOrigin));
+    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
   }
 
   let pkceData: { verifier: string; nonce: string; state: string };
@@ -85,8 +85,9 @@ export async function GET(request: NextRequest) {
 
   let tokenResponse;
   try {
+    const discovery = await fetchDiscovery(config.oidcIssuer);
     tokenResponse = await exchangeCode({
-      issuer: config.oidcIssuer,
+      tokenEndpoint: discovery.token_endpoint,
       clientId: config.oidcClientId,
       clientSecret: config.oidcClientSecret,
       redirectUri: callbackUrl.toString(),

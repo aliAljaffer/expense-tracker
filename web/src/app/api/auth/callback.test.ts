@@ -77,7 +77,7 @@ describe("callback route", () => {
 
     expect(response.status).toBe(307);
     const location = response.headers.get("location");
-    expect(location).toContain("/signin?error=invalid_session");
+    expect(location).toContain("/signin?error=invalid_state");
   });
 
   it("redirects with error parameter without exposing raw error text", async () => {

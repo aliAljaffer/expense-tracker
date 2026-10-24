@@ -6,6 +6,15 @@ vi.mock("@/lib/auth/session", () => ({
   refreshIfExpiring: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/oidc", () => ({
+  fetchDiscovery: vi.fn(async () => ({
+    issuer: "https://example.com/realms/test",
+    authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+    token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+    jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+  })),
+}));
+
 interface Address {
   port: number;
 }
@@ -346,6 +355,21 @@ describe("proxyToApi", () => {
     vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
     vi.stubEnv("APP_ORIGIN", "https://app.example.com");
     vi.stubEnv("API_BASE_URL", `http://localhost:${port}`);
+
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      if (String(url).includes("openid-configuration")) {
+        return new Response(
+          JSON.stringify({
+            issuer: "https://example.com/realms/test",
+            authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+            token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+            jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response("", { status: 404 });
+    });
 
     const request: ProxyRequest = {
       method: "GET",

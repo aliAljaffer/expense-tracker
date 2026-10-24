@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateVerifier, generateS256Challenge, generateState, generateNonce } from "@/lib/auth/pkce";
-import { buildAuthorizationUrl } from "@/lib/auth/oidc";
+import { buildAuthorizationUrl, fetchDiscovery } from "@/lib/auth/oidc";
 import { getAuthConfig } from "@/lib/auth/config";
 import { createCipheriv, randomBytes } from "node:crypto";
 import { hkdfSync } from "node:crypto";
@@ -50,14 +50,22 @@ export async function GET() {
   });
 
   const callbackUrl = new URL("/api/auth/callback", config.appOrigin);
-  const authUrl = buildAuthorizationUrl({
-    issuer: config.oidcIssuer,
-    clientId: config.oidcClientId,
-    redirectUri: callbackUrl.toString(),
-    codeChallenge: challenge,
-    state,
-    nonce,
-  });
+
+  let authUrl;
+  try {
+    const discovery = await fetchDiscovery(config.oidcIssuer);
+    authUrl = buildAuthorizationUrl({
+      issuer: config.oidcIssuer,
+      authorizationEndpoint: discovery.authorization_endpoint,
+      clientId: config.oidcClientId,
+      redirectUri: callbackUrl.toString(),
+      codeChallenge: challenge,
+      state,
+      nonce,
+    });
+  } catch {
+    return NextResponse.json({ error: "Failed to fetch OIDC configuration" }, { status: 500 });
+  }
 
   return NextResponse.redirect(authUrl);
 }

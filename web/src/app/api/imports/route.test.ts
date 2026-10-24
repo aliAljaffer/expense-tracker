@@ -75,6 +75,17 @@ describe("POST /api/imports", () => {
     } as unknown as NextRequest;
 
     vi.stubGlobal("fetch", async (url: string | URL) => {
+      if (String(url).includes("openid-configuration")) {
+        return new Response(
+          JSON.stringify({
+            issuer: "https://example.com/realms/test",
+            authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+            token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+            jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+          }),
+          { status: 200 }
+        );
+      }
       if (String(url).includes("/api/imports")) {
         return new Response(JSON.stringify({ import_id: 1 }), {
           status: 200,
@@ -111,6 +122,17 @@ describe("POST /api/imports", () => {
     } as unknown as NextRequest;
 
     vi.stubGlobal("fetch", async (url: string | URL) => {
+      if (String(url).includes("openid-configuration")) {
+        return new Response(
+          JSON.stringify({
+            issuer: "https://example.com/realms/test",
+            authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+            token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+            jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+          }),
+          { status: 200 }
+        );
+      }
       if (String(url).includes("token")) {
         return new Response("", { status: 401 });
       }
@@ -146,6 +168,21 @@ describe("POST /api/imports", () => {
       ]),
       body: null,
     } as unknown as NextRequest;
+
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      if (String(url).includes("openid-configuration")) {
+        return new Response(
+          JSON.stringify({
+            issuer: "https://example.com/realms/test",
+            authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
+            token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
+            jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response("", { status: 404 });
+    });
 
     const response = await POST(mockRequest);
     expect(response.status).toBe(403);

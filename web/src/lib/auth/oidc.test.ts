@@ -10,6 +10,7 @@ describe("oidc", () => {
     it("builds authorization URL with all parameters", () => {
       const url = buildAuthorizationUrl({
         issuer,
+        authorizationEndpoint: "https://keycloak.example.com/realms/homelab/protocol/openid-connect/auth",
         clientId: "test-client",
         redirectUri: "https://example.com/callback",
         codeChallenge: "test-challenge",
@@ -29,6 +30,7 @@ describe("oidc", () => {
     it("includes custom scopes", () => {
       const url = buildAuthorizationUrl({
         issuer,
+        authorizationEndpoint: "https://keycloak.example.com/realms/homelab/protocol/openid-connect/auth",
         clientId: "test-client",
         redirectUri: "https://example.com/callback",
         codeChallenge: "test-challenge",
@@ -43,6 +45,7 @@ describe("oidc", () => {
     it("encodes redirect URI properly", () => {
       const url = buildAuthorizationUrl({
         issuer,
+        authorizationEndpoint: "https://keycloak.example.com/realms/homelab/protocol/openid-connect/auth",
         clientId: "test-client",
         redirectUri: "https://example.com/callback?param=value",
         codeChallenge: "test-challenge",
@@ -54,9 +57,11 @@ describe("oidc", () => {
       expect(url.toString()).toContain("callback");
     });
 
-    it("preserves issuer path structure", () => {
+    it("uses provided authorization endpoint", () => {
+      const authEndpoint = "https://auth.local/custom/realm/authorize";
       const url = buildAuthorizationUrl({
         issuer: "https://auth.local/custom/realm/",
+        authorizationEndpoint: authEndpoint,
         clientId: "client",
         redirectUri: "https://app.local/cb",
         codeChallenge: "challenge",
@@ -64,12 +69,13 @@ describe("oidc", () => {
         nonce: "nonce",
       });
 
-      expect(url.toString()).toContain("https://auth.local/custom/realm/protocol/openid-connect/auth");
+      expect(url.toString()).toContain(authEndpoint);
     });
 
     it("does not include client_secret in authorization URL", () => {
       const url = buildAuthorizationUrl({
         issuer,
+        authorizationEndpoint: "https://keycloak.example.com/realms/homelab/protocol/openid-connect/auth",
         clientId: "test-client",
         redirectUri: "https://example.com/callback",
         codeChallenge: "test-challenge",
@@ -185,7 +191,7 @@ describe("oidc", () => {
 
     it("posts grant_type=authorization_code with code_verifier and redirect_uri", async () => {
       const tokens = await exchangeCode({
-        issuer: serverUrl,
+        tokenEndpoint: `${serverUrl}protocol/openid-connect/token`,
         clientId: "client",
         redirectUri: "https://app.example.com/callback",
         code: "auth-code",
@@ -200,7 +206,7 @@ describe("oidc", () => {
     it("throws error without including code or token in message on 400", async () => {
       try {
         await exchangeCode({
-          issuer: serverUrl,
+          tokenEndpoint: `${serverUrl}protocol/openid-connect/token`,
           clientId: "client",
           redirectUri: "https://app.example.com/callback",
           code: "auth-code-secret",
