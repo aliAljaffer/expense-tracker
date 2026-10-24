@@ -472,7 +472,7 @@
       "parsed_debit_count": 12,
       "parsed_credit_count": 3
     },
-    "rows": null,
+    "rows": [],
     "summary": {
       "rows": 15,
       "exact_duplicates": 0,
