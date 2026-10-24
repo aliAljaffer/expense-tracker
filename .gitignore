@@ -10,3 +10,4 @@ dist/
 bin/
 __pycache__/
 *.log
+*.tsbuildinfo
