@@ -64,6 +64,7 @@ export function UploadForm({ onUploadComplete, onError }: UploadFormProps) {
       formData.append("file", file);
 
       xhr.open("POST", "/api/imports");
+      xhr.withCredentials = true;
       xhr.send(formData);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
