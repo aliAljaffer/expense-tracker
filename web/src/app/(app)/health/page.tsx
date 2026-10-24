@@ -32,8 +32,8 @@ export default async function HealthPage() {
       <ReadinessChecks />
 
       <p className="note">
-        Statements stay on this machine. No account number is written to a log or sent to a third
-        party.
+        Statements go only to your own grooszy server, which deletes the file after review. No
+        account number is written to a log or sent to a third party.
       </p>
     </>
   );
