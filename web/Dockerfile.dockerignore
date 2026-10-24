@@ -12,6 +12,5 @@ web/.eslintcache
 web/dist
 web/build
 web/e2e
-web/test
 .DS_Store
 *.md
