@@ -92,7 +92,7 @@ func tableExists(ctx context.Context, pool Pool, tableName string) (bool, error)
 	err := pool.QueryRow(ctx, `
 		select exists(
 			select 1 from information_schema.tables
-			where table_name = $1
+			where table_name = $1 and table_schema = current_schema()
 		)
 	`, tableName).Scan(&exists)
 	return exists, err
