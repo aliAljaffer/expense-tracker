@@ -235,3 +235,82 @@ func TestRejectsNotAWorkbook(t *testing.T) {
 		t.Fatal("expected an error for a non-xlsx file")
 	}
 }
+
+// The export repeats rows that share a serial, description and amount and only
+// differ in balance, so both must land in Transactions and in the totals.
+func TestParseKeepsRepeatedTransactions(t *testing.T) {
+	rows := [][]string{
+		{"Account Statement"},
+		{"From[01/01/2026] To[31/03/2026]"},
+		{"معلومات الحساب\n\u202bCustomer Name", "SAMPLE CUSTOMER"},
+		{"رقم الحساب\n\u202bAccount Number", "00000000000000"},
+		{"العملة\n\u202bAccount Currency", "SAR"},
+		{"الرصيد الافتتاحي\n\u202bOpening Balance", "1,000.00"},
+		{"الرصيد الختامي\n\u202bClosing Balance", "990.00"},
+		{"عدد السحوبات\n\u202bNumber of Withdraws", "2", "إجمالي السحوبات\n\u202bTotal Withdraws", "10.00"},
+		{"عدد الإيداعات\n\u202bNumber Of Deposits", "0", "إجمالي الإيداعات\n\u202bTotals Deposits", "0.00"},
+		{"التاريخ", "الوصف", "إيداع", "سحب", "الرصيد"},
+		{"46036", "SAR 5.00 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE TWIN على 14-01-2026 في 09:00AM", "", "-5.00", "995.00"},
+		{"46036", "SAR 5.00 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE TWIN على 14-01-2026 في 09:00AM", "", "-5.00", "990.00"},
+	}
+	s, err := Parse(buildXLSX(t, rows, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := s.Reconcile()
+	if !r.OK {
+		t.Fatalf("reconciliation failed: %+v", r.Checks)
+	}
+	if r.DebitCount != 2 || r.DebitTotal != 1000 {
+		t.Fatalf("reconciliation counted %d debits totalling %d; want both repeats", r.DebitCount, r.DebitTotal)
+	}
+	if len(s.Transactions) != 2 {
+		t.Fatalf("got %d transactions; want 2, one per identical row", len(s.Transactions))
+	}
+	for i, tx := range s.Transactions {
+		if tx.PostedDate != "2026-01-14" || tx.Kind != statement.CardPurchase ||
+			tx.MerchantRaw != "SAMPLE TWIN" || tx.Debit != 500 {
+			t.Errorf("row %d = %s %s %q debit=%d", i, tx.PostedDate, tx.Kind, tx.MerchantRaw, tx.Debit)
+		}
+	}
+}
+
+// The exporter sometimes truncates a purchase row to digits plus a timestamp,
+// which leaves no merchant to extract. The row without a merchant must keep an
+// empty MerchantRaw and the row after it must parse on its own.
+func TestParseWithoutMerchant(t *testing.T) {
+	rows := [][]string{
+		{"Account Statement"},
+		{"From[01/01/2026] To[31/03/2026]"},
+		{"معلومات الحساب\n\u202bCustomer Name", "SAMPLE CUSTOMER"},
+		{"رقم الحساب\n\u202bAccount Number", "00000000000000"},
+		{"العملة\n\u202bAccount Currency", "SAR"},
+		{"الرصيد الافتتاحي\n\u202bOpening Balance", "1,000.00"},
+		{"الرصيد الختامي\n\u202bClosing Balance", "987.25"},
+		{"عدد السحوبات\n\u202bNumber of Withdraws", "2", "إجمالي السحوبات\n\u202bTotal Withdraws", "12.75"},
+		{"عدد الإيداعات\n\u202bNumber Of Deposits", "0", "إجمالي الإيداعات\n\u202bTotals Deposits", "0.00"},
+		{"التاريخ", "الوصف", "إيداع", "سحب", "الرصيد"},
+		{"46033", "33 On 11-01-2026 at 08:00AM", "", "-3.75", "996.25"},
+		{"46034", "SAR 9.00 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE CO على 12-01-2026 في 09:00AM", "", "-9.00", "987.25"},
+	}
+	s, err := Parse(buildXLSX(t, rows, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := s.Reconcile(); !r.OK {
+		t.Fatalf("reconciliation failed: %+v", r.Checks)
+	}
+	if len(s.Transactions) != 2 {
+		t.Fatalf("got %d transactions; want 2, the merchant-less row and the row after it", len(s.Transactions))
+	}
+	empty := s.Transactions[0]
+	if empty.PostedDate != "2026-01-11" || empty.Kind != statement.CardPurchase ||
+		empty.MerchantRaw != "" || empty.Debit != 375 {
+		t.Errorf("no-merchant row = %s %s %q debit=%d", empty.PostedDate, empty.Kind, empty.MerchantRaw, empty.Debit)
+	}
+	next := s.Transactions[1]
+	if next.PostedDate != "2026-01-12" || next.Kind != statement.CardPurchase ||
+		next.MerchantRaw != "SAMPLE CO" || next.Debit != 900 {
+		t.Errorf("row after = %s %s %q debit=%d", next.PostedDate, next.Kind, next.MerchantRaw, next.Debit)
+	}
+}

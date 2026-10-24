@@ -1,0 +1,12 @@
+drop table if exists suggestion;
+drop table if exists user_decision;
+drop table if exists debt;
+drop table if exists recurring_series;
+alter table transaction drop constraint if exists transaction_shared_expense_fk;
+drop table if exists shared_expense;
+drop table if exists transaction;
+drop table if exists statement_import;
+drop table if exists account;
+drop table if exists merchant_alias;
+drop table if exists merchant;
+drop table if exists category;

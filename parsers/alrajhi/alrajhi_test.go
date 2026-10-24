@@ -3,6 +3,7 @@ package alrajhi
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -133,6 +134,122 @@ func TestParseLinesNeedsADate(t *testing.T) {
 	})
 	if len(s.Transactions) != 0 {
 		t.Fatalf("got %d rows without a date; want 0", len(s.Transactions))
+	}
+}
+
+// headerWith keeps every header identity field but changes the six figures, so
+// each synthetic statement can carry rows that reconcile its own totals.
+func headerWith(opening, closing, depositTotal, withdrawalTotal string, deposits, withdrawals int) []string {
+	return []string{
+		"Ref. No                                        55000001",
+		"Customer Name                SAMPLE CUSTOMER                         ",
+		"Account Number                   000000000000000",
+		"IBAN Number                 SA0000000000000000000000",
+		"Opening Balance                   " + opening + " SAR",
+		"Closing Balance                   " + closing + " SAR",
+		"Number Of Deposits                 " + strconv.Itoa(deposits),
+		"Number Of Withdrawals              " + strconv.Itoa(withdrawals),
+		"Total Deposits                     " + depositTotal + " SAR",
+		"Total Withdrawals                  " + withdrawalTotal + " SAR",
+		"On The Period             2026/01/01        -         2026/03/31",
+	}
+}
+
+// The two rows carry the same date, type, note and amount and differ only in
+// BalanceAfter, the field the dedup key includes, so a real same-day repeat
+// must stay two rows while identical extracted text still collapses.
+func TestParseLinesKeepsRepeatedTransactions(t *testing.T) {
+	lines := append(headerWith("1,000.00", "948.50", "0.00", "51.50", 0, 2),
+		"POS purchase Apple pay (Domestic)",
+		"2026/01/05   Time:10:00:00, Notes:(1234567890123456-123456789012) SAMPLE STORE",
+		"                                                                 25.75 SAR       0.00 SAR      974.25 SAR",
+		"TRADING, ANY CITY, SA",
+		"POS purchase Apple pay (Domestic)",
+		"2026/01/05   Time:10:00:00, Notes:(1234567890123456-123456789012) SAMPLE STORE",
+		"                                                                 25.75 SAR       0.00 SAR      948.50 SAR",
+		"TRADING, ANY CITY, SA",
+	)
+	s := parseLines(lines)
+	r := s.Reconcile()
+	if !r.OK {
+		t.Fatalf("reconciliation failed: %+v", r.Checks)
+	}
+	if r.DebitCount != 2 || r.DebitTotal != 5150 {
+		t.Fatalf("reconciliation counted %d debits totalling %d; want both repeats", r.DebitCount, r.DebitTotal)
+	}
+	if len(s.Transactions) != 2 {
+		t.Fatalf("got %d transactions; want 2, one per identical row", len(s.Transactions))
+	}
+	for i, tx := range s.Transactions {
+		if tx.PostedDate != "2026-01-05" || tx.Kind != statement.CardPurchase ||
+			tx.MerchantRaw != "SAMPLE STORE TRADING" || tx.Debit != 2575 {
+			t.Errorf("row %d = %s %s %q debit=%d", i, tx.PostedDate, tx.Kind, tx.MerchantRaw, tx.Debit)
+		}
+	}
+}
+
+func TestParseLinesClassifiesTransfers(t *testing.T) {
+	lines := append(headerWith("1,000.00", "1,549.42", "750.00", "200.58", 1, 2),
+		"Outward IPS Credit Transfer",
+		"2026/01/12   Time:09:00:00, Notes:9000000000000002/SAMPLE BENEFICIARY",
+		"                                                                  200.00 SAR       0.00 SAR      800.00 SAR",
+		"Outward IPS Credit Transaction Charges",
+		"2026/01/12   Time:09:00:01, Notes:CHARGE FOR THE IPS TRANSFER",
+		"                                                                    0.58 SAR       0.00 SAR      799.42 SAR",
+		"Inward IPS Credit Transfer",
+		"2026/01/13   Time:14:00:00, Notes:9000000000000003/SAMPLE SENDER",
+		"                                                                    0.00 SAR     750.00 SAR    1,549.42 SAR",
+	)
+	s := parseLines(lines)
+	if r := s.Reconcile(); !r.OK {
+		t.Fatalf("reconciliation failed: %+v", r.Checks)
+	}
+	want := []struct {
+		kind     statement.Kind
+		merchant string
+		debit    int64
+		credit   int64
+	}{
+		{statement.ExternalTransferOut, "SAMPLE BENEFICIARY", 20000, 0},
+		{statement.Fee, "", 58, 0},
+		{statement.ExternalTransferIn, "SAMPLE SENDER", 0, 75000},
+	}
+	if len(s.Transactions) != len(want) {
+		t.Fatalf("got %d transactions; want %d", len(s.Transactions), len(want))
+	}
+	for i, w := range want {
+		got := s.Transactions[i]
+		if got.Kind != w.kind || got.MerchantRaw != w.merchant || got.Debit != w.debit || got.Credit != w.credit {
+			t.Errorf("row %d = %s %q debit=%d credit=%d; want %s %q debit=%d credit=%d",
+				i, got.Kind, got.MerchantRaw, got.Debit, got.Credit, w.kind, w.merchant, w.debit, w.credit)
+		}
+	}
+}
+
+func TestParseLinesWithoutMerchant(t *testing.T) {
+	lines := append(headerWith("1,000.00", "944.25", "0.00", "55.75", 0, 2),
+		"POS purchase Apple pay (Domestic)",
+		"2026/01/05   Time:10:00:00, Notes:(1234567890123456-123456789012)",
+		"                                                                 25.75 SAR       0.00 SAR      974.25 SAR",
+		"Online purchase Apple pay (Domestic)",
+		"2026/01/06   Time:11:00:00, Notes:Online Purchase from SAMPLE ONLINE     30.00 SAR       0.00 SAR      944.25 SAR",
+	)
+	s := parseLines(lines)
+	if r := s.Reconcile(); !r.OK {
+		t.Fatalf("reconciliation failed: %+v", r.Checks)
+	}
+	if len(s.Transactions) != 2 {
+		t.Fatalf("got %d transactions; want 2, the merchant-less row and the row after it", len(s.Transactions))
+	}
+	empty := s.Transactions[0]
+	if empty.PostedDate != "2026-01-05" || empty.Kind != statement.CardPurchase ||
+		empty.MerchantRaw != "" || empty.Debit != 2575 {
+		t.Errorf("no-merchant row = %s %s %q debit=%d", empty.PostedDate, empty.Kind, empty.MerchantRaw, empty.Debit)
+	}
+	next := s.Transactions[1]
+	if next.PostedDate != "2026-01-06" || next.Kind != statement.OnlinePurchase ||
+		next.MerchantRaw != "SAMPLE ONLINE" || next.Debit != 3000 {
+		t.Errorf("row after = %s %s %q debit=%d", next.PostedDate, next.Kind, next.MerchantRaw, next.Debit)
 	}
 }
 
