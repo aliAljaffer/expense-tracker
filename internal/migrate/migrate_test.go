@@ -139,3 +139,97 @@ func TestMigrationVersions(t *testing.T) {
 		t.Errorf("expected versions %v, got %v", expected, versions)
 	}
 }
+
+func TestAdoptOldDatabase(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+
+	sql, err := os.ReadFile("../../api/migrations/0001_init.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, string(sql)); err != nil {
+		t.Fatalf("apply 0001: %v", err)
+	}
+
+	if err := Apply(ctx, pool, migrations.FS); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	var count int
+	if err := pool.QueryRow(ctx, "select count(*) from schema_migrations").Scan(&count); err != nil {
+		t.Fatalf("query schema_migrations: %v", err)
+	}
+
+	if count != 3 {
+		t.Errorf("expected 3 migrations recorded, got %d", count)
+	}
+
+	rows, err := pool.Query(ctx, "select version from schema_migrations order by version")
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	defer rows.Close()
+
+	var versions []string
+	for rows.Next() {
+		var v string
+		if err := rows.Scan(&v); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		versions = append(versions, v)
+	}
+
+	expected := []string{"0001_init", "0002_import_preview", "0003_bnpl_detection"}
+	if strings.Join(versions, ",") != strings.Join(expected, ",") {
+		t.Errorf("expected versions %v, got %v", expected, versions)
+	}
+}
+
+func TestAdoptOldDatabasePartiallyBuiltErrors(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+
+	_, err := pool.Exec(ctx, `
+		create table account (
+			id bigint generated always as identity primary key,
+			bank text not null,
+			number text,
+			iban text,
+			currency char(3) not null default 'SAR',
+			kind text not null,
+			owner_is_user boolean not null default true,
+			created_at timestamptz not null default now(),
+			unique (bank, number)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("create partial schema: %v", err)
+	}
+
+	applyErr := Apply(ctx, pool, migrations.FS)
+	if applyErr == nil {
+		t.Fatalf("Apply should fail for partial schema, but it succeeded")
+	}
+	if !strings.Contains(applyErr.Error(), "migration 0001_init is incomplete") {
+		t.Errorf("expected incomplete migration error, got: %v", applyErr)
+	}
+}
+
+func TestAdoptEmptyDatabase(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+
+	if err := Apply(ctx, pool, migrations.FS); err != nil {
+		t.Fatalf("Apply empty database: %v", err)
+	}
+
+	var count int
+	if err := pool.QueryRow(ctx, "select count(*) from schema_migrations").Scan(&count); err != nil {
+		t.Fatalf("query schema_migrations: %v", err)
+	}
+
+	if count != 3 {
+		t.Errorf("expected 3 migrations applied, got %d", count)
+	}
+}
