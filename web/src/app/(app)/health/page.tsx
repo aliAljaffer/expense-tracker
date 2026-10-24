@@ -32,8 +32,8 @@ export default async function HealthPage() {
       <ReadinessChecks />
 
       <p className="note">
-        Statements go only to your own grooszy server, which deletes the file after review. No
-        account number is written to a log or sent to a third party.
+        Statement files are processed and then discarded. Only the parsed transactions are kept, in
+        your own database. No account number is written to a log or sent to a third party.
       </p>
     </>
   );
