@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import { ReadinessChecks } from "@/components/features/readiness-checks";
+import { readSession } from "@/lib/auth/session";
+import { getAuthConfig } from "@/lib/auth/config";
+import { SignOutButton } from "@/components/ui/sign-out-button";
 
 export const metadata: Metadata = { title: "Health" };
 
-export default function HealthPage() {
+export default async function HealthPage() {
+  const config = getAuthConfig();
+  const session = await readSession(config.sessionSecret);
+  const subject = session?.subject || "unknown";
+
   return (
     <>
       <div className="page__intro">
@@ -12,6 +19,13 @@ export default function HealthPage() {
         <p className="lede">
           Three checks must pass before a statement can be committed. Two are still open.
         </p>
+      </div>
+
+      <div className="panel">
+        <p className="panel__text">Signed in as: {subject}</p>
+        <div className="panel__actions">
+          <SignOutButton />
+        </div>
       </div>
 
       <ReadinessChecks />

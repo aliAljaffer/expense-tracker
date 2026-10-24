@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -19,13 +20,12 @@ export default function SignInPage() {
           Owner sign-in
         </h2>
         <p className="panel__text">
-          Sign-in goes through the homelab Keycloak realm. The client is not created yet, so this
-          control stays disabled.
+          Sign-in goes through the homelab Keycloak realm.
         </p>
         <div className="panel__actions">
-          <button type="button" className="button button--primary" disabled>
+          <Link href="/api/auth/login" className="button button--primary">
             Continue to Keycloak
-          </button>
+          </Link>
         </div>
         <p className="note">
           The API already rejects a request with no token, an expired token, a wrong audience, or any

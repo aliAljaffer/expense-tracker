@@ -137,3 +137,20 @@ export async function refreshToken(options: {
 
   return response.json();
 }
+
+export function parseIdToken(idToken: string, expectedNonce: string): IdTokenClaims {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid token format");
+  }
+
+  const payload = parts[1];
+  const decoded = Buffer.from(payload, "base64").toString("utf-8");
+  const claims = JSON.parse(decoded) as IdTokenClaims;
+
+  if (claims.nonce !== expectedNonce) {
+    throw new Error("Nonce mismatch");
+  }
+
+  return claims;
+}
