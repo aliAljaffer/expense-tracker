@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+.env*
+docs
+statements
+node_modules
+web/node_modules
+web/.next
+web/.env*
+web/.eslintcache
+web/dist
+web/build
+web/e2e
+web/test
+.DS_Store
+*.md
