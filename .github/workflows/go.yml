@@ -3,7 +3,25 @@ name: Go
 on:
   push:
     branches: [main]
+    paths:
+      - "**.go"
+      - go.mod
+      - go.sum
+      - api/**
+      - scripts/**
+      - Dockerfile.api
+      - .dockerignore
+      - .github/workflows/go.yml
   pull_request:
+    paths:
+      - "**.go"
+      - go.mod
+      - go.sum
+      - api/**
+      - scripts/**
+      - Dockerfile.api
+      - .dockerignore
+      - .github/workflows/go.yml
 
 permissions:
   contents: read
