@@ -52,17 +52,35 @@ requirement, so it was not adopted. Its surrounding rules were adopted instead.
 Charts never use action colours. Series must also differ by shape or direct
 label, because hue alone fails for colour-blind readers.
 
+## Tokens beyond colour
+
+Colour is the semantic tier: `action`, `feedback`, `text`, `surface`, `border`,
+`interactive`, plus `data-viz`. The other groups are flat scales:
+
+| Group | Emits | Notes |
+|---|---|---|
+| `font` | `--font-*`, `--text-*`, `--weight-*`, `--leading-*`, `--tracking-*` | Body 16px, display 48px, so the 2.5x display rule holds |
+| `space` | `--space-1` to `--space-24` | 4px base unit, key is the multiplier |
+| `size` | `--size-control-*`, `--size-icon-*`, `--size-container-*`, `--size-measure-*` | Default control is 44px, the project floor |
+| `radius` | `--radius-sm` to `--radius-full` | |
+| `shadow` | `--shadow-sm` to `--shadow-lg` | Cards use a border; shadow marks something that floats |
+| `shadows.focus-ring` | `--shadow-focus-ring` | Page-coloured gap, then a 2px `border.focus` ring. Follows dark mode |
+| `motion` | `--duration-*`, `--ease-*` | 150 to 300ms |
+| `breakpoints` | `--bp-*` | Mobile-first `min-width` values |
+| `z` | `--z-*` | |
+
 ## Checks run
 
 `python3 .claude/scripts/validate_contrast.py web/design/tokens.json` passes
 all required pairs in both modes. Lowest required ratio is the control border at
 3.35:1 light and 3.42:1 dark.
 
-`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 155
+`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 229
 valid tokens.
 
 `node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check`
-reports every alias resolved and no token dropped.
+reports every alias resolved and no token dropped. The theme holds 138 light
+variables, 68 dark overrides.
 
 Not yet run: any render gate. There is no page to render until the web app
 exists.
