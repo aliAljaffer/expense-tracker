@@ -3,6 +3,13 @@ interface OIDCDiscoveryDocument {
   token_endpoint: string;
   jwks_uri: string;
   issuer: string;
+  end_session_endpoint?: string;
+}
+
+interface IdTokenClaims {
+  sub: string;
+  nonce: string;
+  exp: number;
 }
 
 interface TokenResponse {
