@@ -42,7 +42,7 @@ metadata:
 spec:
   containers:
   - name: test-runner
-    image: mcr.microsoft.com/playwright:v1.48.0-focal
+    image: node:22-alpine
     workingDir: /app
     securityContext:
       allowPrivilegeEscalation: false
@@ -62,6 +62,16 @@ spec:
       value: http://expense-tracker-web.expense-tracker-dev.svc:3000
     - name: API_BASE_URL
       value: http://expense-tracker-api.expense-tracker-dev.svc:8080
+    command:
+    - /bin/sh
+    - -c
+    - |
+      apk add --no-cache chromium tini
+      npm ci
+      npx playwright install
+      exec "$@"
+    - --
+    - npx playwright test "$@" --reporter=line --workers=1
     volumeMounts:
     - name: app
       mountPath: /app
@@ -82,8 +92,8 @@ trap "kubectl delete pod -n $NAMESPACE $POD_NAME 2>/dev/null || true" EXIT
 echo "Applying pod manifest..."
 kubectl apply -f /tmp/e2e-pod.yaml
 
-echo "Waiting for pod to be ready (max 120s)..."
-kubectl wait --for=condition=Ready pod/$POD_NAME -n $NAMESPACE --timeout=120s 2>/dev/null || {
+echo "Waiting for pod to be ready (max 300s)..."
+kubectl wait --for=condition=Ready pod/$POD_NAME -n $NAMESPACE --timeout=300s 2>/dev/null || {
   echo "Pod failed to become ready. Checking logs..."
   kubectl logs -n $NAMESPACE $POD_NAME || true
   exit 1
@@ -98,10 +108,7 @@ tar czf - \
   web/e2e web/package.json web/package-lock.json playwright.config.ts | \
   kubectl exec -i -n $NAMESPACE $POD_NAME -- tar xzf -
 
-echo "Installing dependencies in pod..."
-kubectl exec -n $NAMESPACE $POD_NAME -- npm ci
-
-echo "Running Playwright tests..."
+echo "Running Playwright tests in pod..."
 kubectl exec -n $NAMESPACE $POD_NAME -- npx playwright test "$@" --reporter=line --workers=1
 
 echo "Test run complete"
