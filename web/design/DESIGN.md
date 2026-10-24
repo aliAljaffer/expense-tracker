@@ -6,7 +6,11 @@ why the palette is what it is.
 | Source | Location | Role |
 |---|---|---|
 | UI/UX Pro Max (nextlevelbuilder) | `.claude/skills/ui-ux-pro-max/` | Searchable design database and numbered rules |
-| UX/UI agent kit (plugin87) | `AGENTS.md`, `tokens/`, `taste/`, `accessibility/`, `scripts/` | Doctrine, DTCG tokens, objective gates |
+| UX/UI agent kit (plugin87) | `.claude/AGENTS.md`, `.claude/tokens/`, `.claude/taste/`, `.claude/scripts/` | Doctrine, DTCG tokens, objective gates |
+
+Both live in the `.claude/` submodule of
+[ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), with the
+precedence rules and resolved disagreements in its `README.md`.
 
 Precedence: where the two disagree on a specific rule, UI/UX Pro Max wins.
 
@@ -50,14 +54,14 @@ label, because hue alone fails for colour-blind readers.
 
 ## Checks run
 
-`python3 scripts/validate_contrast.py web/design/tokens.json` passes all
-required pairs in both modes. Lowest required ratio is the control border at
+`python3 .claude/scripts/validate_contrast.py web/design/tokens.json` passes
+all required pairs in both modes. Lowest required ratio is the control border at
 3.35:1 light and 3.42:1 dark.
 
-`python3 scripts/validate_tokens.py web/design/tokens.json` reports 155 valid
-tokens.
+`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 155
+valid tokens.
 
-`node scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check`
+`node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check`
 reports every alias resolved and no token dropped.
 
 Not yet run: any render gate. There is no page to render until the web app

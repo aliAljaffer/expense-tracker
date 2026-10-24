@@ -19,8 +19,7 @@ Early. The two statement parsers work as Python reference implementations in
 | `parsers/` | Statement parsers. Go packages, with the Python originals kept as a reference during the port |
 | `docs/` | Design and operating notes |
 | `web/design/` | App colour tokens, generated theme, and design decisions |
-| `tokens/`, `taste/`, `scripts/` | Vendored UX/UI agent kit and its gates |
-| `.claude/skills/ui-ux-pro-max/` | Vendored UI/UX Pro Max skill |
+| `.claude/` | Submodule: [ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), the shared design doctrine and gates |
 
 ## Documents
 
@@ -42,10 +41,10 @@ behind the same normalization layer.
 
 ## Design
 
-The interface follows two vendored kits: the UX/UI agent kit in `tokens/`,
-`taste/`, and `accessibility/`, and UI/UX Pro Max in
-`.claude/skills/ui-ux-pro-max/`. Where they disagree, UI/UX Pro Max wins.
-`web/design/DESIGN.md` lists the resolved disagreements.
+The interface follows `.claude/`, a submodule holding two design kits and the
+rules for choosing between them. The doctrine loads from `.claude/AGENTS.md`.
+Where the kits disagree, UI/UX Pro Max wins; `web/design/DESIGN.md` lists the
+resolved disagreements.
 
 The app palette is `web/design/tokens.json`. One vibrant accent, lime, on warm
 neutrals in light mode and green-tinted near-black in dark mode. Charts use the
@@ -54,13 +53,13 @@ data-viz ramp from the same file, never the action colours.
 Rebuild the CSS variables after a palette change:
 
 ```
-node scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
+node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
 ```
 
 Check contrast in both modes:
 
 ```
-python3 scripts/validate_contrast.py web/design/tokens.json
+python3 .claude/scripts/validate_contrast.py web/design/tokens.json
 ```
 
 Both currently pass. Every pairing used by a component needs its own check when
