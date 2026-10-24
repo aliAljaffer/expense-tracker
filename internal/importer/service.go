@@ -98,13 +98,23 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 		return nil, err
 	}
 
+	// Parse and normalize period dates from the statement
+	periodStart, err := ParseStatementDate(st.PeriodStart)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrBadPeriod, err)
+	}
+	periodEnd, err := ParseStatementDate(st.PeriodEnd)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrBadPeriod, err)
+	}
+
 	importID, err := s.store.CreateImport(ctx, ImportInput{
 		AccountID:      accountID,
 		FileSHA256:     hash,
 		Parser:         st.Parser,
 		ParserVersion:  st.ParserVersion,
-		PeriodStart:    st.PeriodStart,
-		PeriodEnd:      st.PeriodEnd,
+		PeriodStart:    periodStart.Format("2006-01-02"),
+		PeriodEnd:      periodEnd.Format("2006-01-02"),
 		RowCount:       len(rows),
 		Statement:      st,
 		Reconciliation: recon,
@@ -122,8 +132,8 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 		IBAN:           st.IBAN,
 		Parser:         st.Parser,
 		ParserVersion:  st.ParserVersion,
-		PeriodStart:    st.PeriodStart,
-		PeriodEnd:      st.PeriodEnd,
+		PeriodStart:    periodStart.Format("2006-01-02"),
+		PeriodEnd:      periodEnd.Format("2006-01-02"),
 		Reconciliation: recon,
 		Header: Header{
 			OpeningBalance:    st.OpeningBalance,

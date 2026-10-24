@@ -125,6 +125,9 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request, id auth.Identity
 	case errors.Is(err, importer.ErrNoAccount):
 		writeError(w, http.StatusUnprocessableEntity, "statement does not identify an account")
 		return
+	case errors.Is(err, importer.ErrBadPeriod):
+		writeError(w, http.StatusUnprocessableEntity, "the statement period could not be read")
+		return
 	case err != nil:
 		s.log.Error("upload failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "import failed")

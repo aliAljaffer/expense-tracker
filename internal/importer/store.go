@@ -21,6 +21,7 @@ var (
 	ErrUnsupported  = errors.New("unsupported file type")
 	ErrUnreadable   = errors.New("file could not be parsed")
 	ErrBadSelection = errors.New("invalid row selection")
+	ErrBadPeriod    = errors.New("statement period could not be read")
 )
 
 // ImportRecord is the stored state of one statement import.
