@@ -9,6 +9,8 @@ let lastHeaders = {
   cookie: null,
 };
 
+let simulateReadyzUnavailable = false;
+
 const server = createServer((req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,6 +31,34 @@ const server = createServer((req, res) => {
     res.writeHead(200);
     res.end(JSON.stringify({ status: "ok" }));
     return;
+  }
+
+  // Readiness check endpoint
+  if (pathname === "/readyz") {
+    if (simulateReadyzUnavailable) {
+      res.writeHead(503);
+      res.end(JSON.stringify({ error: "database unavailable" }));
+      return;
+    }
+    res.writeHead(200);
+    res.end(JSON.stringify({ status: "ready" }));
+    return;
+  }
+
+  // Test control endpoint to toggle readyz unavailability
+  if (pathname === "/__readyz-unavailable") {
+    if (req.method === "POST") {
+      simulateReadyzUnavailable = true;
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+    if (req.method === "DELETE") {
+      simulateReadyzUnavailable = false;
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
   }
 
   // Accounts endpoint

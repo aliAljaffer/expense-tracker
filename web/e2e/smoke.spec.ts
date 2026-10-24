@@ -23,6 +23,10 @@ test("health page lists the three readiness checks", async ({ page }) => {
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Import readiness.");
   await expect(page.getByRole("listitem")).toHaveCount(3);
+
+  // Verify the checks show status text
+  const pageContent = await page.content();
+  expect(pageContent).toMatch(/checks need attention|All checks pass/i);
 });
 
 test("theme toggle switches the document theme", async ({ page }) => {

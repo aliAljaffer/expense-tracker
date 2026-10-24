@@ -3,6 +3,7 @@ import { ReadinessChecks } from "@/components/features/readiness-checks";
 import { readSession } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
 import { SignOutButton } from "@/components/ui/sign-out-button";
+import { probeHealth, probeReadiness } from "@/lib/health/probe";
 
 export const metadata: Metadata = { title: "Health" };
 export const dynamic = "force-dynamic";
@@ -12,13 +13,24 @@ export default async function HealthPage() {
   const session = await readSession(config.sessionSecret);
   const subject = session?.subject || "unknown";
 
+  const healthResult = await probeHealth();
+  const readinessResult = await probeReadiness();
+
+  const passCount = [true, healthResult.status === "ready", readinessResult.status === "ready"].filter(Boolean).length;
+  const totalChecks = 3;
+
+  const statusText =
+    passCount === totalChecks
+      ? "All checks pass."
+      : `${totalChecks - passCount} of ${totalChecks} checks need attention.`;
+
   return (
     <>
       <div className="page__intro">
         <p className="eyebrow">Status</p>
         <h1 className="display">Import readiness.</h1>
         <p className="lede">
-          Three checks must pass before a statement can be committed. Two are still open.
+          {statusText}
         </p>
       </div>
 
@@ -30,11 +42,6 @@ export default async function HealthPage() {
       </div>
 
       <ReadinessChecks />
-
-      <p className="note">
-        Statement files are processed and then discarded. Only the parsed transactions are kept, in
-        your own database. No account number is written to a log or sent to a third party.
-      </p>
     </>
   );
 }

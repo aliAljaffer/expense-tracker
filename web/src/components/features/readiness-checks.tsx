@@ -1,5 +1,6 @@
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
+import { probeHealth, probeReadiness } from "@/lib/health/probe";
 
 type Check = {
   name: string;
@@ -7,27 +8,6 @@ type Check = {
   state: "pass" | "wait";
   status: string;
 };
-
-const checks: Check[] = [
-  {
-    name: "Web app",
-    detail: "This page is rendered by the Next.js server.",
-    state: "pass",
-    status: "Serving",
-  },
-  {
-    name: "Import API",
-    detail: "The readiness probe arrives with the read endpoints.",
-    state: "wait",
-    status: "Not probed",
-  },
-  {
-    name: "Statement store",
-    detail: "Migrations are ready. The cluster is created at deploy time.",
-    state: "wait",
-    status: "Not connected",
-  },
-];
 
 function CheckIcon({ state }: { state: Check["state"] }) {
   if (state === "pass") {
@@ -47,7 +27,42 @@ function CheckIcon({ state }: { state: Check["state"] }) {
   );
 }
 
-export function ReadinessChecks() {
+export async function ReadinessChecks() {
+  const healthResult = await probeHealth();
+  const readinessResult = await probeReadiness();
+
+  const checks: Check[] = [
+    {
+      name: "Web app",
+      detail: "This page is rendered by the Next.js server.",
+      state: "pass",
+      status: "Serving",
+    },
+    {
+      name: "Import API",
+      detail: "The readiness probe arrives with the read endpoints.",
+      state: healthResult.status === "ready" ? "pass" : "wait",
+      status:
+        healthResult.status === "ready"
+          ? "Ready"
+          : healthResult.reason || "Unavailable",
+    },
+    {
+      name: "Statement store",
+      detail: "Migrations are ready. The cluster is created at deploy time.",
+      state:
+        readinessResult.status === "ready"
+          ? "pass"
+          : readinessResult.status === "unknown"
+            ? "wait"
+            : "wait",
+      status:
+        readinessResult.status === "ready"
+          ? "Ready"
+          : readinessResult.reason || "Unavailable",
+    },
+  ];
+
   return (
     <section className="section" aria-labelledby="checks-heading">
       <h2 id="checks-heading" className="section__title">
