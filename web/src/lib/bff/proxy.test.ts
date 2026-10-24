@@ -111,7 +111,7 @@ describe("proxyToApi", () => {
     vi.stubEnv("APP_ORIGIN", "https://app.example.com");
     vi.stubEnv("API_BASE_URL", `http://localhost:${port}`);
 
-    vi.stubGlobal("fetch", async (url: string | URL, _init: RequestInit | undefined) => {
+    vi.stubGlobal("fetch", async (url: string | URL) => {
       if (String(url).includes("token")) {
         return new Response("", { status: 401 });
       }
@@ -335,5 +335,26 @@ describe("proxyToApi", () => {
 
     const response = await proxyToApi(request, "/api/test");
     expect(response.status).toBe(200);
+  });
+
+  it("treats expired session cookie as signed out and returns 401", async () => {
+    const { refreshIfExpiring } = await import("@/lib/auth/session");
+    vi.mocked(refreshIfExpiring).mockResolvedValueOnce(null);
+
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", `http://localhost:${port}`);
+
+    const request: ProxyRequest = {
+      method: "GET",
+      headers: new Headers(),
+    };
+
+    const response = await proxyToApi(request, "/api/test");
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body).toEqual({ error: "Unauthorized" });
   });
 });

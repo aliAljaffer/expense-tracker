@@ -175,7 +175,7 @@ describe("POST /api/imports", () => {
       body: null,
     } as unknown as NextRequest;
 
-    vi.stubGlobal("fetch", async (url: string | URL) => {
+    vi.stubGlobal("fetch", async () => {
       return new Response(JSON.stringify({ import_id: 1 }), {
         status: 200,
         headers: { "content-type": "application/json" },
