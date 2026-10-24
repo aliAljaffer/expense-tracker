@@ -1,3 +1,4 @@
+import { cookieSecure } from "./cookie-options";
 import "server-only";
 
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
@@ -13,12 +14,14 @@ export interface SessionPayload {
 const ALGORITHM = "aes-256-gcm";
 const COOKIE_NAME_PREFIX = "grooszy_session";
 const COOKIE_MAX_SIZE = 3800;
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  sameSite: "lax" as const,
-  path: "/",
-};
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    secure: cookieSecure(process.env.APP_ORIGIN),
+    sameSite: "lax" as const,
+    path: "/",
+  };
+}
 
 function deriveKey(secret: string): Buffer {
   const derived = hkdfSync("sha256", secret, "", "", 32);
@@ -126,7 +129,7 @@ export async function writeSession(
   const cookieStore = await cookies();
 
   for (const chunk of chunks) {
-    cookieStore.set(chunk.name, chunk.value, COOKIE_OPTIONS);
+    cookieStore.set(chunk.name, chunk.value, cookieOptions());
   }
 }
 

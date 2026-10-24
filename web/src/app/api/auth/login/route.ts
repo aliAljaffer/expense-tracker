@@ -1,3 +1,4 @@
+import { cookieSecure } from "@/lib/auth/cookie-options";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateVerifier, generateS256Challenge, generateState, generateNonce } from "@/lib/auth/pkce";
@@ -43,7 +44,7 @@ export async function GET() {
   const cookieStore = await cookies();
   cookieStore.set(PKCE_COOKIE_NAME, encrypted, {
     httpOnly: true,
-    secure: true,
+    secure: cookieSecure(config.appOrigin),
     sameSite: "lax",
     path: "/",
     maxAge: PKCE_COOKIE_MAX_AGE,

@@ -38,21 +38,27 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
 
+  const hadPkceCookie = Boolean(cookieStore.get(PKCE_COOKIE_NAME)?.value);
+  const fail = (reason: string) => {
+    console.warn("auth callback rejected", { reason, hadPkceCookie });
+    return NextResponse.redirect(new URL(`/signin?error=${reason}`, config.appOrigin));
+  };
+
   if (error) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=access_denied", config.appOrigin));
+    return fail("access_denied");
   }
 
   if (!code || !state) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=missing_params", config.appOrigin));
+    return fail("missing_params");
   }
 
   const pkceEncrypted = cookieStore.get(PKCE_COOKIE_NAME)?.value;
 
   if (!pkceEncrypted) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+    return fail("invalid_state");
   }
 
   let pkceData: { verifier: string; nonce: string; state: string };
@@ -61,12 +67,12 @@ export async function GET(request: NextRequest) {
     pkceData = decryptPkceData(pkceEncrypted, key);
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_pkce", config.appOrigin));
+    return fail("invalid_pkce");
   }
 
   if (!state || !pkceData.state) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+    return fail("invalid_state");
   }
 
   try {
@@ -74,11 +80,11 @@ export async function GET(request: NextRequest) {
     const storedStateBuffer = Buffer.from(pkceData.state, "utf8");
     if (stateBuffer.length !== storedStateBuffer.length || !timingSafeEqual(stateBuffer, storedStateBuffer)) {
       cookieStore.delete(PKCE_COOKIE_NAME);
-      return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+      return fail("invalid_state");
     }
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_state", config.appOrigin));
+    return fail("invalid_state");
   }
 
   const callbackUrl = new URL("/api/auth/callback", config.appOrigin);
@@ -96,12 +102,12 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=token_exchange", config.appOrigin));
+    return fail("token_exchange");
   }
 
   if (!tokenResponse.id_token) {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=no_id_token", config.appOrigin));
+    return fail("no_id_token");
   }
 
   let idTokenClaims;
@@ -114,7 +120,7 @@ export async function GET(request: NextRequest) {
     );
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=invalid_token", config.appOrigin));
+    return fail("invalid_token");
   }
 
   try {
@@ -133,6 +139,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", config.appOrigin));
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
-    return NextResponse.redirect(new URL("/signin?error=session_write", config.appOrigin));
+    return fail("session_write");
   }
 }
