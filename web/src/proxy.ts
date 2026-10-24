@@ -76,8 +76,9 @@ function getSession(request: NextRequest): SessionPayload | null {
     const key = deriveKey(secret);
     const session = decryptPayload(encrypted, key);
 
-    const now = Date.now();
-    if (session.expiresAt < now) {
+    // An expired access token is not fatal: the BFF refreshes it using the
+    // stored refresh token. Reject only sessions that cannot be refreshed.
+    if (!session.refreshToken) {
       return null;
     }
 
