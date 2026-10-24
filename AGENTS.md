@@ -71,7 +71,7 @@ These rules are enforced, not requested. A commit that breaks them is rejected.
 - Follow the UI stack in the plan: plain CSS on the design tokens plus Headless UI. Add no UI library.
 - Report only results you saw. If you could not run a check, say so.
 
-The `commit-msg` hook runs `scripts/check-commit-message.sh`. The `Commit style` workflow runs the same script on every pushed commit. Enable the hooks once per clone with `git config core.hooksPath scripts/hooks`.
+The `commit-msg` hook runs `scripts/check-commit-message.sh`. Enable the hook once per clone with `git config core.hooksPath scripts/hooks`.
 
 ## Before committing
 
