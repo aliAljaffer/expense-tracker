@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const APP_ORIGIN = "http://127.0.0.1:3000";
-const API_BASE_URL = "http://127.0.0.1:8901";
+const APP_ORIGIN = `http://127.0.0.1:${process.env.WEB_PORT || "3000"}`;
+const API_BASE_URL = `http://127.0.0.1:${process.env.API_PORT || "8901"}`;
 
 // Helper to extract access token from cookies (for testing purposes)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,18 +74,15 @@ test("(b) sign in through issuer and reach /health with subject displayed", asyn
   // The test issuer auto-approves and redirects back with code
   // The callback handler exchanges the code for tokens
 
-  // Wait for navigations to complete (multiple redirects through auth flow)
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
-  // Should be on a protected page (home or health)
-  // Verify we can see the subject
-  const heading = page.getByRole("heading", { level: 1 });
-  const text = await heading.textContent();
+  // Verify URL has left /signin
+  expect(page.url()).not.toContain("/signin");
 
-  // The subject should appear somewhere on the page
-  expect(text).toBeTruthy();
+  // Verify session cookie exists
+  const sessionCookies = await getSessionCookies(page);
+  expect(sessionCookies.length).toBeGreaterThan(0);
 });
 
 // Test (c): Access token does not appear in page HTML, localStorage, sessionStorage, or non-HttpOnly cookies
@@ -97,10 +94,8 @@ test("(c) access token is not in HTML, localStorage, sessionStorage, or non-Http
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
   await signInButton.click();
 
-  // Wait for redirect to complete
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
   // Check HTML content
   const htmlContent = await page.content();
@@ -141,10 +136,8 @@ test("(d) BFF proxy adds Bearer token and removes Cookie header", async ({
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
   await signInButton.click();
 
-  // Wait for redirect
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
   // Now make a request through the BFF to /api/bff/accounts
   // This should proxy to the API at /api/accounts
@@ -176,10 +169,8 @@ test("(e) token refresh works when access token expires", async ({ page }) => {
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
   await signInButton.click();
 
-  // Wait for redirect
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
   // Wait for token to expire (5 seconds + some buffer)
   await page.waitForTimeout(7000);
@@ -199,23 +190,25 @@ test("(f) logout clears session and redirects to /signin", async ({ page }) => {
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
   await signInButton.click();
 
-  // Wait for redirect
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
   // Verify we're signed in by checking session cookie exists
   let sessionCookies = await getSessionCookies(page);
   expect(sessionCookies.length).toBeGreaterThan(0);
 
-  // Make a logout request
+  // Make a logout request without following redirects
   const response = await page.request.post(`${APP_ORIGIN}/api/auth/logout`, {
     headers: {
       "Origin": APP_ORIGIN,
     },
+    maxRedirects: 0,
   });
 
-  expect([200, 302]).toContain(response.status());
+  // Should get a redirect to the issuer's end_session endpoint
+  expect([302, 307]).toContain(response.status());
+  const location = response.headerValue("Location");
+  expect(location).toBeTruthy();
 
   // Navigate to health page - should redirect to signin
   await page.goto("/health");
@@ -238,10 +231,8 @@ test("(g) expired or invalid session cookie redirects to /signin", async ({
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
   await signInButton.click();
 
-  // Wait for redirect
-  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-    // Timeout is OK, just continue
-  });
+  // Wait for navigation away from /signin
+  await page.waitForURL((url) => !url.toString().includes("/signin"), { timeout: 15000 });
 
   // Verify we're signed in
   const sessionCookies = await getSessionCookies(page);

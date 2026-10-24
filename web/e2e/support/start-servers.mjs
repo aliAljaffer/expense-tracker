@@ -7,7 +7,7 @@ const API_PORT = process.env.API_PORT || "8901";
 const DB_PORT = process.env.DB_PORT || "5440";
 const ISSUER_URL = process.env.ISSUER_URL || `http://127.0.0.1:${ISSUER_PORT}`;
 const API_BASE_URL = `http://127.0.0.1:${API_PORT}`;
-const APP_ORIGIN = "http://127.0.0.1:3000";
+const APP_ORIGIN = `http://127.0.0.1:${process.env.WEB_PORT || "3000"}`;
 const SESSION_SECRET = process.env.SESSION_SECRET || "test-secret-32-chars-minimum1234567";
 const OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID || "test-client";
 const DB_PASSWORD = "test";
@@ -71,6 +71,7 @@ servers.push({
   command: "npm",
   args: ["--prefix", "web", "run", "start"],
   env: {
+    PORT: process.env.WEB_PORT || "3000",
     OIDC_ISSUER: ISSUER_URL,
     OIDC_CLIENT_ID: OIDC_CLIENT_ID,
     SESSION_SECRET,
