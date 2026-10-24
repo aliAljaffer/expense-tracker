@@ -128,12 +128,11 @@ func TestRecurringRequires3DistinctMonths(t *testing.T) {
 
 	storeID := seedMerchant(t, s, "Store")
 	seedTransaction(t, s, acc, imp, "2026-01-05", 1000, 0, "card_purchase", idp(1000), txOpts{merchantID: &storeID})
-	seedTransaction(t, s, acc, imp, "2026-01-15", 1100, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
-	seedTransaction(t, s, acc, imp, "2026-03-10", 1050, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
+	seedTransaction(t, s, acc, imp, "2026-02-05", 1050, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
+	seedTransaction(t, s, acc, imp, "2026-03-05", 1000, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
 	seedTransaction(t, s, acc, imp, "2026-03-20", 950, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
-	seedTransaction(t, s, acc, imp, "2026-04-05", 1075, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
 
-	result, err := s.Recurring(ctx, "2026-01", "2026-04")
+	result, err := s.Recurring(ctx, "2026-01", "2026-03")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,6 +145,73 @@ func TestRecurringRequires3DistinctMonths(t *testing.T) {
 	series := result.Evidence.Series[0]
 	if series.DistinctMonths != 3 {
 		t.Fatalf("distinct months = %d, want 3", series.DistinctMonths)
+	}
+}
+
+func TestRecurringWithMissingMonth(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000019")
+	imp := seedImport(t, s, acc)
+
+	subID := seedMerchant(t, s, "Subscription")
+	seedTransaction(t, s, acc, imp, "2026-01-01", 10000, 0, "card_purchase", idp(10000), txOpts{merchantID: &subID})
+	seedTransaction(t, s, acc, imp, "2026-02-01", 10000, 0, "card_purchase", idp(0), txOpts{merchantID: &subID})
+	seedTransaction(t, s, acc, imp, "2026-04-01", 10000, 0, "card_purchase", idp(0), txOpts{merchantID: &subID})
+
+	result, err := s.Recurring(ctx, "2026-01", "2026-04")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "insufficient_data" {
+		t.Fatalf("status = %q, want insufficient_data due to gap exceeding 45 days", result.Status)
+	}
+}
+
+func TestRecurringWithErrraticAmounts(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000020")
+	imp := seedImport(t, s, acc)
+
+	storeID := seedMerchant(t, s, "Erratic Store")
+	seedTransaction(t, s, acc, imp, "2026-01-05", 5000, 0, "card_purchase", idp(5000), txOpts{merchantID: &storeID})
+	seedTransaction(t, s, acc, imp, "2026-02-05", 100000, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
+	seedTransaction(t, s, acc, imp, "2026-03-05", 2000, 0, "card_purchase", idp(0), txOpts{merchantID: &storeID})
+
+	result, err := s.Recurring(ctx, "2026-01", "2026-03")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "insufficient_data" {
+		t.Fatalf("status = %q, want insufficient_data due to erratic amounts", result.Status)
+	}
+}
+
+func TestRecurringMonthlySubscription(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000021")
+	imp := seedImport(t, s, acc)
+
+	subID := seedMerchant(t, s, "Monthly Sub")
+	seedTransaction(t, s, acc, imp, "2026-01-15", 15000, 0, "card_purchase", idp(15000), txOpts{merchantID: &subID})
+	seedTransaction(t, s, acc, imp, "2026-02-15", 15000, 0, "card_purchase", idp(0), txOpts{merchantID: &subID})
+	seedTransaction(t, s, acc, imp, "2026-03-15", 15000, 0, "card_purchase", idp(0), txOpts{merchantID: &subID})
+
+	result, err := s.Recurring(ctx, "2026-01", "2026-03")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "ok" {
+		t.Fatalf("status = %q, want ok", result.Status)
+	}
+	if len(result.Evidence.Series) != 1 {
+		t.Fatalf("series count = %d, want 1", len(result.Evidence.Series))
+	}
+	series := result.Evidence.Series[0]
+	if series.CadenceDays == nil || *series.CadenceDays < 25 || *series.CadenceDays > 35 {
+		t.Fatalf("cadence_days = %v, want ~30", series.CadenceDays)
 	}
 }
 
@@ -204,8 +270,8 @@ func TestBNPLRisingTrend(t *testing.T) {
 	if result.Status != "ok" {
 		t.Fatalf("status = %q", result.Status)
 	}
-	if len(result.Evidence.Months) == 0 {
-		t.Fatalf("evidence months is empty, expected rising months")
+	if len(result.Evidence.Months) != 4 {
+		t.Fatalf("evidence months = %d, want 4", len(result.Evidence.Months))
 	}
 
 	latest := result.Evidence.Months[len(result.Evidence.Months)-1]
@@ -217,6 +283,35 @@ func TestBNPLRisingTrend(t *testing.T) {
 	}
 	if latest.BNPLOutflow != 4500 {
 		t.Fatalf("latest outflow = %d, want 4500", latest.BNPLOutflow)
+	}
+}
+
+func TestBNPLFlatTrend(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000018")
+	imp := seedImport(t, s, acc)
+
+	bnplID := seedBNPLMerchant(t, s, "BNPL Flat")
+	seedTransaction(t, s, acc, imp, "2026-01-05", 2000, 0, "card_purchase", idp(2000), txOpts{merchantID: &bnplID})
+	seedTransaction(t, s, acc, imp, "2026-02-05", 2000, 0, "card_purchase", idp(0), txOpts{merchantID: &bnplID})
+	seedTransaction(t, s, acc, imp, "2026-03-05", 2000, 0, "card_purchase", idp(0), txOpts{merchantID: &bnplID})
+	seedTransaction(t, s, acc, imp, "2026-04-05", 2000, 0, "card_purchase", idp(0), txOpts{merchantID: &bnplID})
+
+	result, err := s.BNPL(ctx, "2026-01", "2026-04")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "ok" {
+		t.Fatalf("status = %q", result.Status)
+	}
+	if len(result.Evidence.Months) != 4 {
+		t.Fatalf("evidence months = %d, want 4", len(result.Evidence.Months))
+	}
+
+	latest := result.Evidence.Months[len(result.Evidence.Months)-1]
+	if latest.IsRising {
+		t.Fatalf("latest month should not be marked as rising for flat trend")
 	}
 }
 

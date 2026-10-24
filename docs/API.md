@@ -396,8 +396,10 @@ Insufficient_data when fewer than one month has card payments.
 ### GET /api/suggestions/recurring
 
 Detects recurring payments appearing in at least 3 distinct months with at least
-3 occurrences. Per series: merchant name and id, occurrence count, distinct
-months, median and total amount, first and last date, and transaction ids.
+3 occurrences, stable amounts within 20% of median, and consistent cadence
+(no gap between occurrences exceeds 45 days). Per series: merchant name and id,
+occurrence count, distinct months, median and total amount, first and last date,
+median cadence in days, and transaction ids.
 
 ```json
 {
@@ -415,12 +417,12 @@ months, median and total amount, first and last date, and transaction ids.
         "total_amount": 4200000,
         "first_date": "2026-02-01",
         "last_date": "2026-12-01",
-        "cadence_days": null,
+        "cadence_days": 30,
         "transaction_ids": [100, 101, ...]
       }
     ]
   },
-  "limits": "Recurring series must appear in at least 3 distinct months. May not detect recently started payments.",
+  "limits": "Recurring series must appear in at least 3 distinct months with stable amounts and consistent cadence. May not detect recently started payments.",
   "next_step": "Review and categorize the recurring payments."
 }
 ```
@@ -429,8 +431,9 @@ Insufficient_data when no merchants meet the threshold.
 
 ### GET /api/suggestions/bnpl
 
-Detects buy-now-pay-later commitments and flags rising monthly obligations.
-Requires merchants to be manually marked as BNPL. Per month: outflow total,
+Detects buy-now-pay-later commitments and trends. BNPL identification uses
+known provider names (Tabby, Tamara, Postpay, Spotii, Cashew) matched on
+normalized merchant name, plus manual merchant tagging. Per month: outflow total,
 payment count, previous month outflow, 3-month average, and transaction ids.
 Months are flagged as rising when outflow exceeds both the previous month and
 the 3-month average.
@@ -453,13 +456,14 @@ the 3-month average.
       }
     ]
   },
-  "limits": "BNPL identification requires merchants to be manually marked. Unknown BNPL providers will not be detected.",
+  "limits": "BNPL identification uses known provider names (Tabby, Tamara, Postpay, Spotii, Cashew) and manual merchant tagging. Unknown providers will not be detected.",
   "next_step": "Review upcoming BNPL payment dates and plan repayment."
 }
 ```
 
-Insufficient_data when no merchants are marked as BNPL, or fewer than 3 months
-of BNPL transactions exist, or no months show a rising trend.
+Insufficient_data when no merchants are marked as BNPL or fewer than 3 months
+of BNPL transactions exist. Returns ok with all months (rising and flat/falling)
+when 3+ months of data exist.
 
 ## Known limits
 

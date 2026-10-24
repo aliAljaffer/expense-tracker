@@ -4,13 +4,38 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
+	"sort"
+	"strings"
 	"time"
 )
 
 const (
-	minRecurringCount  = 3
-	minRecurringMonths = 3
+	minRecurringCount      = 3
+	minRecurringMonths     = 3
+	amountTolerancePercent = 20
+	maxGapDays             = 45
 )
+
+var knownBNPLProviders = map[string]bool{
+	"TABBY":    true,
+	"TAMARA":   true,
+	"POSTPAY":  true,
+	"SPOTII":   true,
+	"CASHEW":   true,
+	"BUYFIRST": true,
+}
+
+func isBNPLMerchant(name string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(name))
+	for provider := range knownBNPLProviders {
+		re := regexp.MustCompile(`\b` + regexp.QuoteMeta(provider) + `\b`)
+		if re.MatchString(upper) {
+			return true
+		}
+	}
+	return false
+}
 
 type CardCoverageMonth struct {
 	Month             string  `json:"month"`
@@ -179,6 +204,42 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 		}
 		series.MedianAmount = int64(math.Round(median))
 
+		dateAmountRows, dateErr := s.db.QueryContext(ctx, `
+			select t.posted_date, t.debit from transaction t
+			join merchant m on t.merchant_id = m.id
+			where m.id = $1 and t.debit > 0 and t.counts_as_spending
+			  and t.posted_date >= $2::date and t.posted_date <= $3::date
+			order by t.posted_date`,
+			series.MerchantID, first, last)
+		if dateErr != nil {
+			rows.Close()
+			return out, fmt.Errorf("read recurring dates: %w", dateErr)
+		}
+
+		var dates []time.Time
+		var amounts []int64
+		for dateAmountRows.Next() {
+			var d time.Time
+			var amt int64
+			if err := dateAmountRows.Scan(&d, &amt); err != nil {
+				dateAmountRows.Close()
+				rows.Close()
+				return out, fmt.Errorf("scan recurring date: %w", err)
+			}
+			dates = append(dates, d)
+			amounts = append(amounts, amt)
+		}
+		dateAmountRows.Close()
+
+		if !isValidRecurringSeries(series.MedianAmount, dates, amounts, maxGapDays, amountTolerancePercent) {
+			continue
+		}
+
+		cadenceDays := calculateCadenceDays(dates)
+		if cadenceDays > 0 {
+			series.CadenceDays = &cadenceDays
+		}
+
 		txRows, queryErr := s.db.QueryContext(ctx, `
 			select t.id from transaction t
 			join merchant m on t.merchant_id = m.id
@@ -212,7 +273,7 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 	if len(out.Evidence.Series) == 0 {
 		out.Status = "insufficient_data"
 		out.Summary = "No recurring payments found."
-		out.Limits = "Recurring series must appear in at least 3 distinct months with at least 3 occurrences."
+		out.Limits = "Recurring series must appear in at least 3 distinct months with at least 3 occurrences, stable amounts, and consistent cadence."
 		out.NextStep = "Review recurring payments once more data is available."
 		return out, nil
 	}
@@ -225,10 +286,54 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 	} else {
 		out.Summary = fmt.Sprintf("%d recurring payments found. The largest is %s (SAR %.2f/month).", count, largest.Merchant, float64(largest.MedianAmount)/100)
 	}
-	out.Limits = "Recurring series must appear in at least 3 distinct months. May not detect recently started payments."
+	out.Limits = "Recurring series must appear in at least 3 distinct months with stable amounts and consistent cadence. May not detect recently started payments."
 	out.NextStep = "Review and categorize the recurring payments."
 
 	return out, nil
+}
+
+func isValidRecurringSeries(medianAmount int64, dates []time.Time, amounts []int64, maxGapDays int, tolerancePercent int) bool {
+	if len(dates) < 3 || len(amounts) < 3 {
+		return false
+	}
+
+	tolerance := (medianAmount * int64(tolerancePercent)) / 100
+	minAmount := medianAmount - tolerance
+	maxAmount := medianAmount + tolerance
+
+	for _, amt := range amounts {
+		if amt < minAmount || amt > maxAmount {
+			return false
+		}
+	}
+
+	for i := 0; i < len(dates)-1; i++ {
+		gap := int(dates[i+1].Sub(dates[i]).Hours() / 24)
+		if gap > maxGapDays {
+			return false
+		}
+	}
+
+	return true
+}
+
+func calculateCadenceDays(dates []time.Time) int64 {
+	if len(dates) < 2 {
+		return 0
+	}
+
+	var gaps []int64
+	for i := 0; i < len(dates)-1; i++ {
+		gap := int64(dates[i+1].Sub(dates[i]).Hours() / 24)
+		gaps = append(gaps, gap)
+	}
+
+	if len(gaps) == 0 {
+		return 0
+	}
+
+	sort.Slice(gaps, func(i, j int) bool { return gaps[i] < gaps[j] })
+	return gaps[len(gaps)/2]
 }
 
 type BNPLMonth struct {
@@ -331,7 +436,7 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 	if len(monthData) < 3 {
 		out.Status = "insufficient_data"
 		out.Summary = "Insufficient BNPL data to detect trends."
-		out.Limits = "Requires at least 3 months of BNPL transactions. BNPL identification requires merchants to be manually marked."
+		out.Limits = "Requires at least 3 months of BNPL transactions. BNPL identification uses known provider names and manual merchant tagging."
 		out.NextStep = "Add BNPL merchants to your profile as you identify them."
 		return out, nil
 	}
@@ -349,26 +454,17 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 		}
 	}
 
-	risingCount := 0
-	for _, m := range monthData {
-		if m.IsRising {
-			risingCount++
-			out.Evidence.Months = append(out.Evidence.Months, m)
-		}
-	}
-
-	if risingCount == 0 {
-		out.Status = "insufficient_data"
-		out.Summary = "No rising BNPL commitments detected in the period."
-		out.Limits = "Rising trends require at least 3 months of data. BNPL identification requires merchants to be manually marked."
-		out.NextStep = "Review BNPL merchant assignments if commitments feel underrepresented."
-		return out, nil
-	}
-
+	out.Evidence.Months = monthData
 	out.Status = "ok"
 	latest := out.Evidence.Months[len(out.Evidence.Months)-1]
-	out.Summary = fmt.Sprintf("BNPL commitments are rising: SAR %.2f this month vs SAR %.2f average.", float64(latest.BNPLOutflow)/100, float64(*latest.ThreeMonthAverage)/100)
-	out.Limits = "BNPL identification requires merchants to be manually marked. Unknown BNPL providers will not be detected."
+
+	if latest.IsRising {
+		out.Summary = fmt.Sprintf("BNPL commitments are rising: SAR %.2f this month vs SAR %.2f average.", float64(latest.BNPLOutflow)/100, float64(*latest.ThreeMonthAverage)/100)
+	} else {
+		out.Summary = fmt.Sprintf("BNPL commitments are stable or falling: SAR %.2f this month vs SAR %.2f average.", float64(latest.BNPLOutflow)/100, float64(*latest.ThreeMonthAverage)/100)
+	}
+
+	out.Limits = "BNPL identification uses known provider names (Tabby, Tamara, Postpay, Spotii, Cashew) and manual merchant tagging. Unknown providers will not be detected."
 	out.NextStep = "Review upcoming BNPL payment dates and plan repayment."
 
 	return out, nil
