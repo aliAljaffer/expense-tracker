@@ -13,12 +13,16 @@ export interface SessionPayload {
 const ALGORITHM = "aes-256-gcm";
 const COOKIE_NAME_PREFIX = "et_session";
 const COOKIE_MAX_SIZE = 3800;
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  sameSite: "lax" as const,
-  path: "/",
-};
+
+function getCookieOptions() {
+  const isSecure = process.env.NODE_ENV === "production" || !process.env.INSECURE_COOKIES;
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: "lax" as const,
+    path: "/",
+  };
+}
 
 function deriveKey(secret: string): Buffer {
   const derived = hkdfSync("sha256", secret, "", "", 32);
@@ -124,9 +128,10 @@ export async function writeSession(
   const encrypted = encryptPayload(payload, key);
   const chunks = getCookieChunks(encrypted);
   const cookieStore = await cookies();
+  const options = getCookieOptions();
 
   for (const chunk of chunks) {
-    cookieStore.set(chunk.name, chunk.value, COOKIE_OPTIONS);
+    cookieStore.set(chunk.name, chunk.value, options);
   }
 }
 
