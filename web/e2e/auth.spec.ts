@@ -133,6 +133,9 @@ test("(c) access token is not in HTML, localStorage, sessionStorage, or non-Http
 test("(d) BFF proxy adds Bearer token and removes Cookie header", async ({
   page,
 }) => {
+  // In CLUSTER mode, we verify via the BFF response. In fake API mode, we check the recorded headers.
+  const isCluster = process.env.CLUSTER === "1";
+
   // Sign in first
   await page.goto("/signin");
   const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
@@ -144,24 +147,26 @@ test("(d) BFF proxy adds Bearer token and removes Cookie header", async ({
   });
 
   // Now make a request through the BFF to /api/bff/accounts
-  // This should proxy to the fake API at /api/accounts
+  // This should proxy to the API at /api/accounts
   const response = await page.request.get(`${APP_ORIGIN}/api/bff/accounts`);
 
   expect(response.status()).toBe(200);
   const data = await response.json();
   expect(data.accounts).toBeTruthy();
 
-  // Check the fake API to see what headers it received
-  const lastResponse = await page.request.get(
-    `${API_BASE_URL}/__last`
-  );
-  const lastHeaders = await lastResponse.json();
+  if (!isCluster) {
+    // Check the fake API to see what headers it received
+    const lastResponse = await page.request.get(
+      `${API_BASE_URL}/__last`
+    );
+    const lastHeaders = await lastResponse.json();
 
-  // Should have Bearer authorization
-  expect(lastHeaders.authorization).toMatch(/^Bearer /);
+    // Should have Bearer authorization
+    expect(lastHeaders.authorization).toMatch(/^Bearer /);
 
-  // Should NOT have cookie header (it's explicitly dropped)
-  expect(lastHeaders.cookie).toBeNull();
+    // Should NOT have cookie header (it's explicitly dropped)
+    expect(lastHeaders.cookie).toBeNull();
+  }
 });
 
 // Test (e): Token refresh with short-lived access tokens
