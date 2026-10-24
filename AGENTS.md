@@ -60,6 +60,19 @@ DATABASE_URL="$DATABASE_URL" go test -race ./...
 
 Database tests build and drop their own schema. Without `DATABASE_URL` they skip.
 
+## Rules for every agent
+
+These rules are enforced, not requested. A commit that breaks them is rejected.
+
+- Write one-line commit messages of at most two sentences.
+- Add no Co-Authored-By line and no tool attribution to a commit message.
+- Write no em-dashes in code, comments, docs, or commit messages.
+- Commit with explicit paths. Never commit `deploy/`, `test-results/`, or the `.claude` submodule.
+- Follow the UI stack in the plan: plain CSS on the design tokens plus Headless UI. Add no UI library.
+- Report only results you saw. If you could not run a check, say so.
+
+The `commit-msg` hook runs `scripts/check-commit-message.sh`. The `Commit style` workflow runs the same script on every pushed commit. Enable the hooks once per clone with `git config core.hooksPath scripts/hooks`.
+
 ## Before committing
 
 Enable the hook once per clone. It refuses a commit that contains statement
