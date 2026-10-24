@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "local artifacts and private data that never reach git"
+paths = [
+    '''(^|/)statements/''',
+    '''(^|/)node_modules/''',
+    '''(^|/)\.next/''',
+    '''^web/design/theme\.css''',
+    '''(^|/)parsers/reference/__pycache__/''',
+]
