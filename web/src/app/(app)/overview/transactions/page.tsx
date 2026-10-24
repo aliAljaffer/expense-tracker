@@ -24,16 +24,16 @@ export default async function TransactionsPage(props: TransactionsPageProps) {
   const searchParams = await props.searchParams;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-medium">Transactions</h1>
+    <div className="transactions-page">
+      <div className="overview-section">
+        <h1 className="transactions-page__title">Transactions</h1>
         {searchParams.month && (
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="transactions-page__lede">
             {searchParams.bucket && `${searchParams.bucket} for `}{searchParams.month}
           </p>
         )}
         {searchParams.merchant && (
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="transactions-page__lede">
             Merchant filter {searchParams.from && `from ${searchParams.from}`} {searchParams.to && `to ${searchParams.to}`}
           </p>
         )}

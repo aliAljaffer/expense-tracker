@@ -86,21 +86,19 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-[var(--color-feedback-error-border)] bg-[var(--color-feedback-error-bg)] p-6">
-        <div className="flex gap-3">
-          <div className="flex-shrink-0 text-[var(--color-feedback-error-icon)]">
-            <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          <div>
-            <h2 className="font-medium text-[var(--color-feedback-error-text)]">Failed to load transactions</h2>
-            <p className="mt-1 text-sm text-[var(--color-feedback-error-text)]">{error}</p>
-          </div>
+      <div className="overview-error-box">
+        <div className="overview-error-icon">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="24" height="24">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <div className="overview-error-content">
+          <h2 className="overview-error-title">Failed to load transactions</h2>
+          <p className="overview-error-text">{error}</p>
         </div>
       </div>
     );
@@ -108,47 +106,47 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
   if (!data || data.rows.length === 0) {
     return (
-      <div className="rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-8 text-center">
-        <p className="text-sm text-[var(--color-text-secondary)]">No transactions found</p>
+      <div className="overview-empty-state">
+        <p className="overview-empty-state__text">No transactions found</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-[var(--color-text-secondary)]">
+    <div className="overview-sections">
+      <div className="transactions-summary">
         Total: {data.total_count} transaction{data.total_count !== 1 ? "s" : ""} | Debit: {displaySAR(data.total_debit)} | Credit: {displaySAR(data.total_credit)}
       </div>
 
-      <div className="rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-card)] overflow-x-auto">
-        <table className="w-full">
+      <div className="transactions-table-wrapper">
+        <table className="transactions-table">
           <thead>
-            <tr className="border-b border-[var(--color-border-default)]">
-              <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-secondary)]">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-secondary)]">Description</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-secondary)]">Category</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-[var(--color-text-secondary)]">Debit</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-[var(--color-text-secondary)]">Credit</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-[var(--color-text-secondary)]">Balance</th>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Balance</th>
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((transaction: Transaction, index: number) => (
-              <tr key={transaction.id} className={index !== data.rows.length - 1 ? "border-b border-[var(--color-border-default)]" : ""}>
-                <td className="px-4 py-3 text-sm text-[var(--color-text-primary)]">{transaction.posted_date}</td>
-                <td className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
+            {data.rows.map((transaction: Transaction) => (
+              <tr key={transaction.id}>
+                <td>{transaction.posted_date}</td>
+                <td>
                   {transaction.merchant_name || transaction.description}
                 </td>
-                <td className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
+                <td>
                   {transaction.category_name || "-"}
                 </td>
-                <td className="px-4 py-3 text-sm text-right text-[var(--color-text-primary)]">
+                <td>
                   {transaction.debit > 0 ? displaySAR(transaction.debit) : "-"}
                 </td>
-                <td className="px-4 py-3 text-sm text-right text-[var(--color-text-primary)]">
+                <td>
                   {transaction.credit > 0 ? displaySAR(transaction.credit) : "-"}
                 </td>
-                <td className="px-4 py-3 text-sm text-right text-[var(--color-text-primary)]">
+                <td>
                   {displaySAR(transaction.balance_after)}
                 </td>
               </tr>

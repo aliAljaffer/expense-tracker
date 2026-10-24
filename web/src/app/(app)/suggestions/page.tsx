@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 export default function SuggestionsPage() {
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-medium">Suggestions</h1>
-        <p className="text-sm text-[var(--color-text-secondary)]">
+    <div className="suggestions-page">
+      <div className="overview-section">
+        <h1 className="suggestions-page__title">Suggestions</h1>
+        <p className="suggestions-page__lede">
           Smart insights about your spending patterns and payment trends.
         </p>
       </div>
