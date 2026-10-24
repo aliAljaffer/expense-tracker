@@ -9,14 +9,15 @@ PostgreSQL for storage. No statement data leaves the deployment.
 
 ## Status
 
-Early. The two statement parsers work as Python reference implementations in
-`parsers/reference/`. The Go port, API, and web app are next.
+Early. Both statement parsers are Go packages in `parsers/`, with a CLI in
+`cmd/statement/` for local checks. The API and web app are next.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `parsers/` | Statement parsers. Go packages, with the Python originals kept as a reference during the port |
+| `parsers/` | Statement parsers, one Go package per bank |
+| `cmd/statement/` | CLI: parse one export, report reconciliation, optional JSON |
 | `docs/` | Design and operating notes |
 | `web/design/` | App colour tokens, generated theme, and design decisions |
 | `.claude/` | Submodule: [ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), the shared design doctrine and gates |

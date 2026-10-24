@@ -106,7 +106,9 @@ Commission is the number immediately before `العمولة`.
 
 ## Al Rajhi PDF export
 
-Use `pdftotext -layout`. Without `-layout` the columns interleave.
+Text is extracted in Go from glyph positions, which reproduces `pdftotext
+-layout`: glyphs are grouped by baseline and the gaps between them become
+spaces. Without layout the columns interleave.
 
 ### Rows span multiple lines and the amount line varies
 
@@ -150,7 +152,7 @@ Message to beneficiary
 ### POS note format
 
 ```
-Notes:(55000001-55000001) SAMPLE STORE
+Notes:(1234567890123456-123456789012) SAMPLE STORE
       ANY CITY, SA
 ```
 
@@ -160,7 +162,7 @@ of the merchant. Strip `(\d+-\d+)` then strip the trailing `, CITY, SA`.
 ### Sadad note format
 
 ```
-Notes:W#153-55000001 -10000000001  500.00 SAR
+Notes:W#153-4000000001 -10000000001  500.00 SAR
 ```
 
 `153` is the biller code, `10000000001` is the user's account with that biller.
@@ -177,7 +179,7 @@ it as a fee, not as a transfer.
 ### Reconcile before trusting anything
 
 Both statements expose opening balance, closing balance, counts and totals.
-Assert all of them. Both reference parsers match to the cent.
+Assert all of them. Both parsers match to the cent.
 
 A parser that drops rows still produces plausible output. Only the header
 figures show the gap.
@@ -200,3 +202,24 @@ each other. Do not pair them.
 Descriptions mix Arabic and Latin in one field. Store as UTF-8 and do not
 normalize direction. Match on Latin substrings where possible, because they are
 more stable than the Arabic, which contains presentation forms in the PDF.
+
+## Go PDF text extraction
+
+`github.com/ledongthuc/pdf` `v0.0.0-20261020125853-5e46805f718e`, a pseudo-version:
+never tagged, last commit 2026-10-20. Verdict: keep. Pure Go, already in `go.mod`,
+and it reproduced every figure the reconciliation depends on.
+
+Measured on one 13-page statement against `pdftotext -layout`:
+
+- 330 of 330 rows recovered, same date, debit, credit and balance keys.
+- All 9 header figures recovered, values identical to pdftotext.
+- 330 of 330 transaction type strings matched, so classification is unchanged.
+- 0 of 330 descriptions matched byte for byte, though every Latin token was
+  present. The type label lands on the date line where pdftotext gives it its own
+  line, so group rows by glyph X and Y; the 2-line tail rule does not port.
+- 24 rows carry Arabic. Characters survive, order and spacing do not.
+- 34353 of 47979 glyph runs report width 0: use `Page.Content().Text` and its X and
+  Y, never `GetPlainText` or `GetTextByRow`. Spacing here relies on drawn spaces.
+
+The port uses glyph row grouping and asserts the same five reconciliation checks.
+24 open issues, 7 on text extraction, none blocking.

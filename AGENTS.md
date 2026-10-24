@@ -35,11 +35,13 @@ python3 .claude/scripts/validate_tokens.py web/design/tokens.json
 
 ## Parsers
 
-`parsers/reference/` holds the Python originals. They are the reference until
-the Go port matches them statement for statement, then they are deleted.
+One Go package per bank. The CLI parses a local export and reports
+reconciliation:
 
 ```
-cd parsers/reference && python3 alinma_xlsx.py ../../statements/<file>.xlsx
+go run ./cmd/statement statements/<file>.xlsx
+go run ./cmd/statement "statements/<file>.pdf" --json=out.json
 ```
 
 Exit code 0 means the statement reconciled. Exit code 1 means reject the import.
+Exit code 2 means the file could not be read or parsed.
