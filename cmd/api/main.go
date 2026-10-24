@@ -8,15 +8,18 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/aliAljaffer/expense-tracker/api/migrations"
 	"github.com/aliAljaffer/expense-tracker/internal/auth"
 	"github.com/aliAljaffer/expense-tracker/internal/config"
 	"github.com/aliAljaffer/expense-tracker/internal/explain"
 	"github.com/aliAljaffer/expense-tracker/internal/httpapi"
 	"github.com/aliAljaffer/expense-tracker/internal/importer"
 	"github.com/aliAljaffer/expense-tracker/internal/ledger"
+	"github.com/aliAljaffer/expense-tracker/internal/migrate"
 )
 
 func main() {
@@ -46,6 +49,17 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	defer led.Close()
+
+	if err := migrate.Apply(ctx, store.Pool(), migrations.FS); err != nil {
+		dbURL := cfg.DatabaseURL
+		if idx := strings.Index(dbURL, "://"); idx >= 0 {
+			if idx2 := strings.Index(dbURL[idx+3:], "@"); idx2 >= 0 {
+				dbURL = dbURL[:idx+3] + "***@" + dbURL[idx+3+idx2+1:]
+			}
+		}
+		log.Error("apply migrations", "error", err, "database", dbURL)
+		os.Exit(1)
+	}
 
 	discoveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	verifier, err := auth.New(discoveryCtx, cfg.OIDCIssuer, cfg.OIDCAudience, cfg.OwnerSubject)

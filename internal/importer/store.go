@@ -78,6 +78,8 @@ func (s *Store) Close() { s.pool.Close() }
 
 func (s *Store) Ping(ctx context.Context) error { return s.pool.Ping(ctx) }
 
+func (s *Store) Pool() *pgxpool.Pool { return s.pool }
+
 // UpsertAccount keys the account on bank and number so a later statement for
 // the same account attaches to the same rows.
 func (s *Store) UpsertAccount(ctx context.Context, bank, number, iban string) (int64, error) {
