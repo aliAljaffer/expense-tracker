@@ -9,7 +9,7 @@ async function getSessionCookies(page: any): Promise<any[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cookies = await page.context().cookies() as any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return cookies.filter((c: any) => c.name.startsWith("et_session"));
+  return cookies.filter((c: any) => c.name.startsWith("grooszy_session"));
 }
 
 // Helper to check localStorage and sessionStorage

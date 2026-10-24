@@ -1,4 +1,4 @@
-# Keycloak client for expense-tracker
+# Keycloak client for grooszy
 
 VERDICT: YES.
 
@@ -17,7 +17,7 @@ The KeycloakOIDCClient CRD can create a dedicated client in the existing homelab
 apiVersion: k8s.keycloak.org/v2alpha1
 kind: KeycloakOIDCClient
 metadata:
-  name: expense-tracker
+  name: grooszy
   namespace: keycloak
 spec:
   keycloakCRName: keycloak
@@ -26,11 +26,11 @@ spec:
     enabled: true
     protocol: openid-connect
     redirectUris:
-      - https://expense-tracker.alialjaffer.com/oauth2/callback
+      - https://grooszy.alialjaffer.com/oauth2/callback
     auth:
       method: client-secret
       secretRef:
-        name: expense-tracker-secret
+        name: grooszy-secret
         key: CLIENT_SECRET
 ```
 
@@ -38,7 +38,7 @@ metadata.name is the client ID. The secret is referenced by name only. The
 `client` block is illustrative: the fields follow the Admin API v2 client
 reference, so check the final shape against it before applying.
 
-The file belongs at kubernetes/apps/expense-tracker/keycloak-oidc-client.yaml. Add it to the app kustomization.
+The file belongs at kubernetes/apps/grooszy/keycloak-oidc-client.yaml. Add it to the app kustomization.
 
 ## Open fact
 

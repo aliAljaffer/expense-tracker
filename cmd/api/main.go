@@ -1,4 +1,4 @@
-// Command api serves the owner-only expense tracker API.
+// Command api serves the owner-only grooszy API.
 package main
 
 import (
