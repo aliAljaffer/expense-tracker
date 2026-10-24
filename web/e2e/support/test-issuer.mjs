@@ -25,7 +25,6 @@ const publicKeyJwk = pubKeyObj.export({ format: "jwk" });
 
 // Use the PEM private key
 const privateKey = privKeyPem;
-const publicKey = pubKeyPem;
 
 // Derive kid from public key hash
 const kid = createHash("sha256")
