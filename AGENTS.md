@@ -45,3 +45,16 @@ go run ./cmd/statement "statements/<file>.pdf" --json=out.json
 
 Exit code 0 means the statement reconciled. Exit code 1 means reject the import.
 Exit code 2 means the file could not be read or parsed.
+
+## Before committing
+
+Enable the hook once per clone. It refuses a commit that contains statement
+data, a real Saudi IBAN, or a staged file under `statements/`:
+
+```
+git config core.hooksPath scripts/hooks
+```
+
+The check reads the statements in `statements/` for the owner name, account
+number, IBAN, and reference numbers. Any new synthetic IBAN used in a test must
+be added to `SYNTHETIC_IBANS` in `scripts/check-leaks.py`.
