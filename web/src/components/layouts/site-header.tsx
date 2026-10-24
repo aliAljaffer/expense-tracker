@@ -19,6 +19,9 @@ export function SiteHeader() {
           <Link href="/overview" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">
             Overview
           </Link>
+          <Link href="/suggestions" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">
+            Suggestions
+          </Link>
         </nav>
         <ThemeToggle />
       </div>

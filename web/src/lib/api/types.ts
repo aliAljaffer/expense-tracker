@@ -196,3 +196,79 @@ export interface TransactionsResponse {
   total_debit: number;
   total_credit: number;
 }
+
+export interface SuggestionPeriod {
+  from: string;
+  to: string;
+}
+
+export interface CardCoverageMonth {
+  month: string;
+  card_payments: number;
+  purchases_recorded: number;
+  uncovered: number;
+  uncovered_share: number;
+  transaction_ids: number[];
+}
+
+export interface CardCoverageEvidence {
+  months: CardCoverageMonth[];
+}
+
+export interface CardCoverageResponse {
+  status: "ok" | "insufficient_data";
+  period: SuggestionPeriod;
+  summary: string;
+  evidence: CardCoverageEvidence;
+  limits: string;
+  next_step: string;
+}
+
+export interface RecurringSeries {
+  merchant: string;
+  merchant_id: number;
+  occurrence_count: number;
+  distinct_months: number;
+  median_amount: number;
+  total_amount: number;
+  first_date: string;
+  last_date: string;
+  cadence_days: number | null;
+  transaction_ids: number[];
+}
+
+export interface RecurringEvidence {
+  recurring_series: RecurringSeries[];
+}
+
+export interface RecurringResponse {
+  status: "ok" | "insufficient_data";
+  period: SuggestionPeriod;
+  summary: string;
+  evidence: RecurringEvidence;
+  limits: string;
+  next_step: string;
+}
+
+export interface BnplMonth {
+  month: string;
+  bnpl_outflow: number;
+  payment_count: number;
+  previous_month: number;
+  three_month_average: number;
+  is_rising: boolean;
+  transaction_ids: number[];
+}
+
+export interface BnplEvidence {
+  months: BnplMonth[];
+}
+
+export interface BnplResponse {
+  status: "ok" | "insufficient_data";
+  period: SuggestionPeriod;
+  summary: string;
+  evidence: BnplEvidence;
+  limits: string;
+  next_step: string;
+}
