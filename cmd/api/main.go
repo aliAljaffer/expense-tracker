@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -59,6 +60,10 @@ func run(log *slog.Logger) error {
 		}
 		log.Error("apply migrations", "error", err, "database", dbURL)
 		os.Exit(1)
+	}
+
+	if err := importer.BackfillMerchants(ctx, store.Pool()); err != nil {
+		return fmt.Errorf("backfill merchants: %w", err)
 	}
 
 	discoveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
