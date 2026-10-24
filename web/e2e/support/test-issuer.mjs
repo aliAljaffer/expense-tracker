@@ -1,23 +1,50 @@
 import { createServer } from "http";
-import { createHmac, createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, generateKeyPairSync, createSign, createPublicKey } from "crypto";
 import { URL } from "url";
 
 const PORT = parseInt(process.env.ISSUER_PORT || "8900", 10);
 const ISSUER = process.env.ISSUER_URL || `http://localhost:${PORT}`;
 const CLIENT_ID = "test-client";
 
+// Generate RSA 2048 key pair at startup
+const { privateKey: privKeyPem, publicKey: pubKeyPem } = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  publicKeyEncoding: {
+    type: "spki",
+    format: "pem",
+  },
+  privateKeyEncoding: {
+    type: "pkcs8",
+    format: "pem",
+  },
+});
+
+// Create KeyObject instances and export as JWK
+const pubKeyObj = createPublicKey(pubKeyPem);
+const publicKeyJwk = pubKeyObj.export({ format: "jwk" });
+
+// Use the PEM private key
+const privateKey = privKeyPem;
+const publicKey = pubKeyPem;
+
+// Derive kid from public key hash
+const kid = createHash("sha256")
+  .update(JSON.stringify(publicKeyJwk))
+  .digest("hex")
+  .slice(0, 32);
+
 // Simple in-memory store for authorization codes
 const authorizationCodes = new Map();
 const refreshTokens = new Map();
 
-// Generate a simple JWT header.payload.signature structure
-function createJwt(payload, secret) {
-  const header = JSON.stringify({ alg: "HS256", typ: "JWT" });
+// Sign JWT with RS256
+function signJwt(payload, kid) {
+  const header = JSON.stringify({ alg: "RS256", typ: "JWT", kid });
   const headerEncoded = Buffer.from(header).toString("base64url");
   const payloadEncoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
 
   const message = `${headerEncoded}.${payloadEncoded}`;
-  const signature = createHmac("sha256", secret).update(message).digest("base64url");
+  const signature = createSign("sha256").update(message).sign(privateKey, "base64url");
 
   return `${message}.${signature}`;
 }
@@ -59,7 +86,16 @@ const server = createServer(async (req, res) => {
       end_session_endpoint: `${ISSUER}/logout`,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"],
+      id_token_signing_alg_values_supported: ["RS256"],
     }));
+    return;
+  }
+
+  // JWKS endpoint
+  if (pathname === "/jwks") {
+    const jwk = { ...publicKeyJwk, kid, use: "sig", alg: "RS256" };
+    res.writeHead(200);
+    res.end(JSON.stringify({ keys: [jwk] }));
     return;
   }
 
@@ -135,6 +171,14 @@ const server = createServer(async (req, res) => {
           });
 
           const now = Math.floor(Date.now() / 1000);
+          const accessTokenPayload = {
+            iss: ISSUER,
+            sub: "test-subject-123",
+            aud: CLIENT_ID,
+            exp: now + expiresIn,
+            iat: now,
+          };
+
           const idTokenPayload = {
             iss: ISSUER,
             sub: "test-subject-123",
@@ -144,8 +188,8 @@ const server = createServer(async (req, res) => {
             iat: now,
           };
 
-          const idToken = createJwt(idTokenPayload, "test-secret");
-          const accessToken = randomBytes(32).toString("hex");
+          const accessToken = signJwt(accessTokenPayload, kid);
+          const idToken = signJwt(idTokenPayload, kid);
 
           res.writeHead(200);
           res.end(JSON.stringify({
@@ -171,6 +215,14 @@ const server = createServer(async (req, res) => {
           const expiresIn = parseInt(process.env.ACCESS_TOKEN_LIFETIME || "3600", 10);
           const now = Math.floor(Date.now() / 1000);
 
+          const accessTokenPayload = {
+            iss: ISSUER,
+            sub: "test-subject-123",
+            aud: CLIENT_ID,
+            exp: now + expiresIn,
+            iat: now,
+          };
+
           const idTokenPayload = {
             iss: ISSUER,
             sub: "test-subject-123",
@@ -180,8 +232,8 @@ const server = createServer(async (req, res) => {
             iat: now,
           };
 
-          const idToken = createJwt(idTokenPayload, "test-secret");
-          const accessToken = randomBytes(32).toString("hex");
+          const accessToken = signJwt(accessTokenPayload, kid);
+          const idToken = signJwt(idTokenPayload, kid);
 
           res.writeHead(200);
           res.end(JSON.stringify({
