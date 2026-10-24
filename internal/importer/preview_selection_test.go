@@ -204,3 +204,29 @@ func TestDefaultSelectionAndSummariseMustAgree(t *testing.T) {
 		t.Errorf("Summary.NeedsReview = %d; want %d", p.Summary.NeedsReview, expectedNeedsReview)
 	}
 }
+
+func TestSetDefaultSelection(t *testing.T) {
+	rows := []Row{
+		{Transaction: statement.Transaction{PostedDate: "2026-01-05"}}, // selected
+		{Transaction: statement.Transaction{PostedDate: "2026-01-06"}, Duplicate: &Duplicate{Score: 8, Exact: false}}, // held
+		{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 7}}, // selected
+		{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}}, // held
+	}
+
+	p := &Preview{Rows: rows}
+	p.SetDefaultSelection()
+
+	// Verify DefaultSelected flags are set correctly
+	if !p.Rows[0].DefaultSelected {
+		t.Error("row 0 should be default_selected")
+	}
+	if p.Rows[1].DefaultSelected {
+		t.Error("row 1 should not be default_selected")
+	}
+	if !p.Rows[2].DefaultSelected {
+		t.Error("row 2 should be default_selected")
+	}
+	if p.Rows[3].DefaultSelected {
+		t.Error("row 3 should not be default_selected")
+	}
+}

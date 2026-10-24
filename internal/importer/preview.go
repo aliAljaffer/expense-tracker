@@ -10,9 +10,10 @@ import (
 // Row is one parsed transaction with the review signals shown before commit.
 type Row struct {
 	statement.Transaction
-	Fingerprint string     `json:"fingerprint"`
-	Duplicate   *Duplicate `json:"duplicate,omitempty"`
-	Anomaly     *Anomaly   `json:"anomaly,omitempty"`
+	Fingerprint     string     `json:"fingerprint"`
+	Duplicate       *Duplicate `json:"duplicate,omitempty"`
+	Anomaly         *Anomaly   `json:"anomaly,omitempty"`
+	DefaultSelected bool       `json:"default_selected"`
 }
 
 // Duplicate scores how likely the row is a repeat of one already stored.
@@ -88,6 +89,18 @@ func (p *Preview) DefaultSelection() []int {
 		rows = append(rows, i)
 	}
 	return rows
+}
+
+// SetDefaultSelection populates the DefaultSelected flag on each row.
+func (p *Preview) SetDefaultSelection() {
+	selected := p.DefaultSelection()
+	selectedMap := make(map[int]bool, len(selected))
+	for _, i := range selected {
+		selectedMap[i] = true
+	}
+	for i := range p.Rows {
+		p.Rows[i].DefaultSelected = selectedMap[i]
+	}
 }
 
 func (p *Preview) summarise(stats HistoryStats) {

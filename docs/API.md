@@ -95,7 +95,8 @@ A file whose SHA-256 is already stored returns the earlier result with
       "credit": 0,
       "kind": "card_purchase",
       "fingerprint": "00000000000000000000000000000000",
-      "duplicate": {"score": 9, "exact": false, "reason": "same amount on the same day, same merchant"}
+      "duplicate": {"score": 9, "exact": false, "reason": "same amount on the same day, same merchant"},
+      "default_selected": false
     }
   ],
   "summary": {
@@ -110,6 +111,11 @@ A file whose SHA-256 is already stored returns the earlier result with
 ```
 
 All money is integer halalas.
+
+`default_selected` indicates whether the row is included in the default selection
+when the owner commits without providing explicit row choices. Rows with exact
+duplicate fingerprints or held for review (duplicate or anomaly score 8 or higher)
+are not default selected.
 
 Commit accepts an optional row selection:
 

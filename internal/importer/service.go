@@ -64,6 +64,7 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 		case "pending":
 			if p, err := s.store.LoadPreview(ctx, rec.ID); err == nil {
 				p.AlreadyImported = true
+				p.SetDefaultSelection()
 				return p, nil
 			}
 			if err := s.store.Cancel(ctx, rec.ID); err != nil {
@@ -138,6 +139,7 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 	if !recon.OK {
 		p.Status = "rejected"
 		p.summarise(HistoryStats{})
+		p.SetDefaultSelection()
 		return p, nil
 	}
 
@@ -147,6 +149,7 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 	}
 	stats := Analyse(p.Rows, history)
 	p.summarise(stats)
+	p.SetDefaultSelection()
 
 	if err := s.store.SavePreview(ctx, importID, p, s.now().Add(previewTTL)); err != nil {
 		return nil, err
@@ -164,7 +167,12 @@ func (s *Service) Get(ctx context.Context, importID int64) (*Preview, error) {
 	if rec.Status != "pending" {
 		return newPreview(rec), nil
 	}
-	return s.store.LoadPreview(ctx, importID)
+	p, err := s.store.LoadPreview(ctx, importID)
+	if err != nil {
+		return nil, err
+	}
+	p.SetDefaultSelection()
+	return p, nil
 }
 
 // Commit stores the selected rows and accepts the import. A nil selection
