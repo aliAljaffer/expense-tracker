@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/aliAljaffer/expense-tracker/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/auth"
 )
 
 type stubAuth struct {

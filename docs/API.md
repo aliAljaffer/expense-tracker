@@ -11,7 +11,7 @@ owner's access token.
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `OIDC_ISSUER` | yes | Keycloak realm issuer, for example `https://kc.example.com/realms/homelab` |
-| `OIDC_AUDIENCE` | no | Client ID the token must carry. Default `expense-tracker` |
+| `OIDC_AUDIENCE` | no | Client ID the token must carry. Default `grooszy` |
 | `OIDC_OWNER_SUBJECT` | yes | Keycloak subject of the only allowed user |
 | `LISTEN_ADDR` | no | Default `:8080` |
 | `MAX_UPLOAD_BYTES` | no | Default 16 MiB |

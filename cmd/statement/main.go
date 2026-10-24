@@ -15,9 +15,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/alinma"
-	"github.com/aliAljaffer/expense-tracker/parsers/alrajhi"
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/alinma"
+	"github.com/aliAljaffer/grooszy/parsers/alrajhi"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 func main() {

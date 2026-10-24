@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 // testStore builds an isolated schema from the real migrations. Without

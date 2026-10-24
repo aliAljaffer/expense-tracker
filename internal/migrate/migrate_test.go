@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/api/migrations"
+	"github.com/aliAljaffer/grooszy/api/migrations"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

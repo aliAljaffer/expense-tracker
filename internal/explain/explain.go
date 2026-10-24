@@ -237,7 +237,7 @@ func sortedKeys(m map[string]json.RawMessage) []string {
 
 // systemInstruction is fixed. The model may not compute anything: every
 // number it mentions must come from the app, and it never gives advice.
-const systemInstruction = "You explain spending figures that the expense tracker already computed. " +
+const systemInstruction = "You explain spending figures that grooszy already computed. " +
 	"You may not calculate, may not give financial advice, and may not invent figures. " +
 	"Every figure you mention comes from the input the app sent. " +
 	"Amounts are integer halalas: 2575 is 25.75 riyals. " +

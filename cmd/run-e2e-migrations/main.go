@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/aliAljaffer/expense-tracker/api/migrations"
-	"github.com/aliAljaffer/expense-tracker/internal/migrate"
+	"github.com/aliAljaffer/grooszy/api/migrations"
+	"github.com/aliAljaffer/grooszy/internal/migrate"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

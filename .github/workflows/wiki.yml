@@ -57,7 +57,7 @@ jobs:
           done | LC_ALL=C sort > "$RUNNER_TEMP/links.md"
 
           {
-            echo "# Expense Tracker wiki"
+            echo "# grooszy wiki"
             echo
             echo "Generated from docs/ on every push to main. Edit the page in the repository, not here."
             echo

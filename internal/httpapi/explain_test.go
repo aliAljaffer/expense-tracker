@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/aliAljaffer/expense-tracker/internal/auth"
-	"github.com/aliAljaffer/expense-tracker/internal/explain"
+	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/explain"
 )
 
 func fakeProvider(t *testing.T, respond func(http.ResponseWriter)) (*httptest.Server, *atomic.Int32) {

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with the expense tracker
+about: Report a problem with grooszy
 title: "[Bug]: "
 labels: bug
 assignees: ""

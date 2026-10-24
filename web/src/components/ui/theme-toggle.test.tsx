@@ -18,7 +18,7 @@ describe("ThemeToggle", () => {
   });
 
   it("renders with dark theme when localStorage holds dark before mount", () => {
-    window.localStorage.setItem("expense-tracker-theme", "dark");
+    window.localStorage.setItem("grooszy-theme", "dark");
 
     render(<ThemeToggle />);
 
@@ -38,12 +38,12 @@ describe("ThemeToggle", () => {
 
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(window.localStorage.getItem("expense-tracker-theme")).toBe("dark");
+    expect(window.localStorage.getItem("grooszy-theme")).toBe("dark");
   });
 
   it("toggles back to light theme", async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem("expense-tracker-theme", "dark");
+    window.localStorage.setItem("grooszy-theme", "dark");
     render(<ThemeToggle />);
 
     const button = screen.getByRole("button", { name: "Dark theme" });
@@ -53,6 +53,6 @@ describe("ThemeToggle", () => {
 
     expect(button).toHaveAttribute("aria-pressed", "false");
     expect(document.documentElement.dataset.theme).toBe("light");
-    expect(window.localStorage.getItem("expense-tracker-theme")).toBe("light");
+    expect(window.localStorage.getItem("grooszy-theme")).toBe("light");
   });
 });

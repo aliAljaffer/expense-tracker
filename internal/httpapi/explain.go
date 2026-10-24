@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/internal/auth"
-	"github.com/aliAljaffer/expense-tracker/internal/explain"
+	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/explain"
 )
 
 // maxExplainBody caps the explanation request so no statement-sized payload

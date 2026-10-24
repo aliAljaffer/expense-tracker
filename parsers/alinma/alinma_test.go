@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 var bareNumber = regexp.MustCompile(`^-?\d+(\.\d+)?$`)

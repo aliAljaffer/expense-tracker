@@ -44,7 +44,7 @@ func TestAuthenticate(t *testing.T) {
 	defer srv.Close()
 	issuer = srv.URL
 
-	v, err := New(t.Context(), issuer, "expense-tracker", "owner-sub")
+	v, err := New(t.Context(), issuer, "grooszy", "owner-sub")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 	now := time.Now()
 	valid := map[string]any{
-		"iss": issuer, "aud": "expense-tracker", "sub": "owner-sub",
+		"iss": issuer, "aud": "grooszy", "sub": "owner-sub",
 		"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(),
 		"email": "owner@example.test", "name": "Owner",
 	}
@@ -77,7 +77,7 @@ func TestAuthenticate(t *testing.T) {
 		{"not bearer", "Basic abc", ErrUnauthenticated},
 		{"garbage token", "Bearer abc.def.ghi", ErrUnauthenticated},
 		{"expired", "Bearer " + token(map[string]any{
-			"iss": issuer, "aud": "expense-tracker", "sub": "owner-sub",
+			"iss": issuer, "aud": "grooszy", "sub": "owner-sub",
 			"exp": now.Add(-time.Minute).Unix(), "iat": now.Add(-2 * time.Minute).Unix(),
 		}), ErrUnauthenticated},
 		{"wrong audience", "Bearer " + token(map[string]any{
@@ -85,11 +85,11 @@ func TestAuthenticate(t *testing.T) {
 			"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(),
 		}), ErrUnauthenticated},
 		{"wrong issuer", "Bearer " + token(map[string]any{
-			"iss": "https://elsewhere.test", "aud": "expense-tracker", "sub": "owner-sub",
+			"iss": "https://elsewhere.test", "aud": "grooszy", "sub": "owner-sub",
 			"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(),
 		}), ErrUnauthenticated},
 		{"other subject", "Bearer " + token(map[string]any{
-			"iss": issuer, "aud": "expense-tracker", "sub": "someone-else",
+			"iss": issuer, "aud": "grooszy", "sub": "someone-else",
 			"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(),
 		}), ErrForbidden},
 	}

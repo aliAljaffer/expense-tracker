@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 var (

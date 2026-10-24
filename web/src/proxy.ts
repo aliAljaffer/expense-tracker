@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createDecipheriv, hkdfSync } from "node:crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const COOKIE_NAME_PREFIX = "et_session";
+const COOKIE_NAME_PREFIX = "grooszy_session";
 
 interface SessionPayload {
   accessToken: string;

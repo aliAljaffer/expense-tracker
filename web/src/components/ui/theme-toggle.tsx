@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
-const STORAGE_KEY = "expense-tracker-theme";
+const STORAGE_KEY = "grooszy-theme";
 
 function getThemeFromStorage(): Theme {
   const stored = window.localStorage.getItem(STORAGE_KEY);

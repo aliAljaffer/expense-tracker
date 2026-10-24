@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/alrajhi"
-	"github.com/aliAljaffer/expense-tracker/parsers/alinma"
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/alinma"
+	"github.com/aliAljaffer/grooszy/parsers/alrajhi"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 // TestPreviewFixture generates and maintains the preview fixture file at
@@ -208,11 +208,11 @@ func TestPreviewFixture(t *testing.T) {
 	maskAccountNumber(alrajhiDuplicatePreview)
 
 	fixtures := map[string]interface{}{
-		"alinma_ok":          alinmaPreview,
-		"alrajhi_ok":         alrajhiPreview,
-		"rejected":           rejectedPreview,
-		"already_imported":   alreadyImportedPreview,
-		"alinma_anomaly":     alinmaAnomalyPreview,
+		"alinma_ok":              alinmaPreview,
+		"alrajhi_ok":             alrajhiPreview,
+		"rejected":               rejectedPreview,
+		"already_imported":       alreadyImportedPreview,
+		"alinma_anomaly":         alinmaAnomalyPreview,
 		"alrajhi_held_duplicate": alrajhiDuplicatePreview,
 	}
 
@@ -661,5 +661,3 @@ func buildAlrajhiWithHeldDuplicate() []byte {
 	}
 	return buildPDFFromLines(lines)
 }
-
-

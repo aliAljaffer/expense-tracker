@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/internal/auth"
-	"github.com/aliAljaffer/expense-tracker/internal/ledger"
+	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/ledger"
 )
 
 func (s *Server) cardCoverage(w http.ResponseWriter, r *http.Request, id auth.Identity) {

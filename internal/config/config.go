@@ -24,7 +24,7 @@ func Load() (Config, error) {
 		ListenAddr:     envOr("LISTEN_ADDR", ":8080"),
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
 		OIDCIssuer:     os.Getenv("OIDC_ISSUER"),
-		OIDCAudience:   envOr("OIDC_AUDIENCE", "expense-tracker"),
+		OIDCAudience:   envOr("OIDC_AUDIENCE", "grooszy"),
 		OwnerSubject:   os.Getenv("OIDC_OWNER_SUBJECT"),
 		MaxUploadBytes: 16 << 20,
 	}

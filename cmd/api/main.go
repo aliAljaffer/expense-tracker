@@ -12,14 +12,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/api/migrations"
-	"github.com/aliAljaffer/expense-tracker/internal/auth"
-	"github.com/aliAljaffer/expense-tracker/internal/config"
-	"github.com/aliAljaffer/expense-tracker/internal/explain"
-	"github.com/aliAljaffer/expense-tracker/internal/httpapi"
-	"github.com/aliAljaffer/expense-tracker/internal/importer"
-	"github.com/aliAljaffer/expense-tracker/internal/ledger"
-	"github.com/aliAljaffer/expense-tracker/internal/migrate"
+	"github.com/aliAljaffer/grooszy/api/migrations"
+	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/config"
+	"github.com/aliAljaffer/grooszy/internal/explain"
+	"github.com/aliAljaffer/grooszy/internal/httpapi"
+	"github.com/aliAljaffer/grooszy/internal/importer"
+	"github.com/aliAljaffer/grooszy/internal/ledger"
+	"github.com/aliAljaffer/grooszy/internal/migrate"
 )
 
 func main() {

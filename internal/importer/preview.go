@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 // Row is one parsed transaction with the review signals shown before commit.

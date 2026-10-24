@@ -7,7 +7,7 @@ import { createDecipheriv, timingSafeEqual } from "node:crypto";
 import { hkdfSync } from "node:crypto";
 
 const PKCE_ALGORITHM = "aes-256-gcm";
-const PKCE_COOKIE_NAME = "et_pkce";
+const PKCE_COOKIE_NAME = "grooszy_pkce";
 
 function derivePkceKey(secret: string): Buffer {
   const derived = hkdfSync("sha256", secret, "", "", 32);

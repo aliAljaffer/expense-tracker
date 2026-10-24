@@ -7,7 +7,7 @@ export function SiteHeader() {
       <div className="shell site-header__inner">
         <Link href="/" className="wordmark">
           <span className="wordmark__mark" aria-hidden="true" />
-          Expense Tracker
+          grooszy
         </Link>
         <nav className="flex gap-6">
           <Link href="/health" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-interactive-focus-ring)] rounded px-2 py-1">

@@ -11,7 +11,7 @@ export interface SessionPayload {
 }
 
 const ALGORITHM = "aes-256-gcm";
-const COOKIE_NAME_PREFIX = "et_session";
+const COOKIE_NAME_PREFIX = "grooszy_session";
 const COOKIE_MAX_SIZE = 3800;
 const COOKIE_OPTIONS = {
   httpOnly: true,

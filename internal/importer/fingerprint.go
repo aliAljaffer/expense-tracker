@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 // Parsers do not expose a posting time, so every row hashes at midnight. The

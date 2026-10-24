@@ -3,16 +3,16 @@ package importer
 import (
 	"testing"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 func TestDefaultSelection(t *testing.T) {
 	// Table-driven tests for DefaultSelection() rule enforcement
 	tests := []struct {
-		name             string
-		rows             []Row
-		wantSelected     map[int]bool
-		wantHeldCount    int
+		name          string
+		rows          []Row
+		wantSelected  map[int]bool
+		wantHeldCount int
 	}{
 		{
 			name: "duplicate score 7 selected",
@@ -117,10 +117,10 @@ func TestDefaultSelection(t *testing.T) {
 		{
 			name: "multiple rows mixed",
 			rows: []Row{
-				{Transaction: statement.Transaction{PostedDate: "2026-01-05"}}, // 0: clean
+				{Transaction: statement.Transaction{PostedDate: "2026-01-05"}},                                                // 0: clean
 				{Transaction: statement.Transaction{PostedDate: "2026-01-06"}, Duplicate: &Duplicate{Score: 8, Exact: false}}, // 1: held
-				{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 7}}, // 2: selected
-				{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}}, // 3: held
+				{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 7}},                   // 2: selected
+				{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}},  // 3: held
 			},
 			wantSelected:  map[int]bool{0: true, 2: true},
 			wantHeldCount: 2,
@@ -169,10 +169,10 @@ func TestDefaultSelectionAndSummariseMustAgree(t *testing.T) {
 	// Note: NeedsReview may not equal held count because exact duplicates are held but
 	// not counted in NeedsReview (which tracks only score-based holds).
 	rows := []Row{
-		{Transaction: statement.Transaction{PostedDate: "2026-01-05"}}, // selected
-		{Transaction: statement.Transaction{PostedDate: "2026-01-06"}, Duplicate: &Duplicate{Score: 8, Exact: false}}, // held
-		{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 8}}, // held
-		{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}}, // held (exact)
+		{Transaction: statement.Transaction{PostedDate: "2026-01-05"}},                                                               // selected
+		{Transaction: statement.Transaction{PostedDate: "2026-01-06"}, Duplicate: &Duplicate{Score: 8, Exact: false}},                // held
+		{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 8}},                                  // held
+		{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}},                 // held (exact)
 		{Transaction: statement.Transaction{PostedDate: "2026-01-09"}, Duplicate: &Duplicate{Score: 5}, Anomaly: &Anomaly{Score: 5}}, // selected
 	}
 
@@ -207,10 +207,10 @@ func TestDefaultSelectionAndSummariseMustAgree(t *testing.T) {
 
 func TestSetDefaultSelection(t *testing.T) {
 	rows := []Row{
-		{Transaction: statement.Transaction{PostedDate: "2026-01-05"}}, // selected
+		{Transaction: statement.Transaction{PostedDate: "2026-01-05"}},                                                // selected
 		{Transaction: statement.Transaction{PostedDate: "2026-01-06"}, Duplicate: &Duplicate{Score: 8, Exact: false}}, // held
-		{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 7}}, // selected
-		{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}}, // held
+		{Transaction: statement.Transaction{PostedDate: "2026-01-07"}, Anomaly: &Anomaly{Score: 7}},                   // selected
+		{Transaction: statement.Transaction{PostedDate: "2026-01-08"}, Duplicate: &Duplicate{Score: 3, Exact: true}},  // held
 	}
 
 	p := &Preview{Rows: rows}

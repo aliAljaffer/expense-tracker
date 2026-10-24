@@ -14,7 +14,7 @@ describe("config", () => {
 
   it("returns config when all required vars are set", () => {
     process.env.OIDC_ISSUER = "https://keycloak.example.com/realms/homelab";
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     process.env.SESSION_SECRET = "test-secret-key-at-least-32-chars!";
     process.env.APP_ORIGIN = "https://expenses.example.com";
     process.env.API_BASE_URL = "https://api.example.com";
@@ -22,7 +22,7 @@ describe("config", () => {
     const config = getAuthConfig();
 
     expect(config.oidcIssuer).toBe("https://keycloak.example.com/realms/homelab");
-    expect(config.oidcClientId).toBe("expense-tracker");
+    expect(config.oidcClientId).toBe("grooszy");
     expect(config.sessionSecret).toBe("test-secret-key-at-least-32-chars!");
     expect(config.appOrigin).toBe("https://expenses.example.com");
     expect(config.apiBaseUrl).toBe("https://api.example.com");
@@ -31,7 +31,7 @@ describe("config", () => {
 
   it("includes OIDC_CLIENT_SECRET when set", () => {
     process.env.OIDC_ISSUER = "https://keycloak.example.com/realms/homelab";
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     process.env.OIDC_CLIENT_SECRET = "secret-value";
     process.env.SESSION_SECRET = "test-secret-key-at-least-32-chars!";
     process.env.APP_ORIGIN = "https://expenses.example.com";
@@ -44,7 +44,7 @@ describe("config", () => {
 
   it("throws when OIDC_ISSUER is missing", () => {
     delete process.env.OIDC_ISSUER;
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     process.env.SESSION_SECRET = "test-secret-key-at-least-32-chars!";
     process.env.APP_ORIGIN = "https://expenses.example.com";
     process.env.API_BASE_URL = "https://api.example.com";
@@ -68,7 +68,7 @@ describe("config", () => {
 
   it("throws when SESSION_SECRET is missing", () => {
     process.env.OIDC_ISSUER = "https://keycloak.example.com/realms/homelab";
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     delete process.env.SESSION_SECRET;
     process.env.APP_ORIGIN = "https://expenses.example.com";
     process.env.API_BASE_URL = "https://api.example.com";
@@ -80,7 +80,7 @@ describe("config", () => {
 
   it("throws when APP_ORIGIN is missing", () => {
     process.env.OIDC_ISSUER = "https://keycloak.example.com/realms/homelab";
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     process.env.SESSION_SECRET = "test-secret-key-at-least-32-chars!";
     delete process.env.APP_ORIGIN;
     process.env.API_BASE_URL = "https://api.example.com";
@@ -92,7 +92,7 @@ describe("config", () => {
 
   it("throws when API_BASE_URL is missing", () => {
     process.env.OIDC_ISSUER = "https://keycloak.example.com/realms/homelab";
-    process.env.OIDC_CLIENT_ID = "expense-tracker";
+    process.env.OIDC_CLIENT_ID = "grooszy";
     process.env.SESSION_SECRET = "test-secret-key-at-least-32-chars!";
     process.env.APP_ORIGIN = "https://expenses.example.com";
     delete process.env.API_BASE_URL;

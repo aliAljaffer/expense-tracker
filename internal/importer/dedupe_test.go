@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 func date(t *testing.T, s string) time.Time {

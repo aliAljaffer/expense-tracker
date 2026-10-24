@@ -18,11 +18,11 @@ func main() {
 
 	// Generate statement files
 	statements := map[string][]byte{
-		"alinma_ok.xlsx":           buildAlinmaXLSX(),
-		"alrajhi_ok.pdf":           buildAlrajhiPDF(),
-		"alinma_rejected.xlsx":     buildRejectedAlinmaXLSX(),
-		"alinma_duplicate.xlsx":    buildAlinmaWithDuplicates(),
-		"alrajhi_duplicate.pdf":    buildAlrajhiWithHeldDuplicate(),
+		"alinma_ok.xlsx":        buildAlinmaXLSX(),
+		"alrajhi_ok.pdf":        buildAlrajhiPDF(),
+		"alinma_rejected.xlsx":  buildRejectedAlinmaXLSX(),
+		"alinma_duplicate.xlsx": buildAlinmaWithDuplicates(),
+		"alrajhi_duplicate.pdf": buildAlrajhiWithHeldDuplicate(),
 	}
 
 	for name, data := range statements {

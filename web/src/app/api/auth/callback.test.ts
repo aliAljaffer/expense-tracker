@@ -133,7 +133,7 @@ describe("callback route", () => {
     expect(response.status).toBe(307);
     const location = response.headers.get("location");
     expect(location).toContain("/signin?error=missing_params");
-    expect(mockCookieStore.delete).toHaveBeenCalledWith("et_pkce");
+    expect(mockCookieStore.delete).toHaveBeenCalledWith("grooszy_pkce");
   });
 
   it("rejects mismatched state parameter", async () => {
@@ -161,6 +161,6 @@ describe("callback route", () => {
     expect(response.status).toBe(307);
     const location = response.headers.get("location");
     expect(location).toContain("/signin?error=invalid_pkce");
-    expect(mockCookieStore.delete).toHaveBeenCalledWith("et_pkce");
+    expect(mockCookieStore.delete).toHaveBeenCalledWith("grooszy_pkce");
   });
 });

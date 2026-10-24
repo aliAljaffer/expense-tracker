@@ -22,7 +22,7 @@ describe("session", () => {
       const chunks = getCookieChunks(encrypted);
 
       expect(chunks).toHaveLength(1);
-      expect(chunks[0].name).toBe("et_session.0");
+      expect(chunks[0].name).toBe("grooszy_session.0");
       expect(chunks[0].value).toBe("small-payload");
     });
 
@@ -31,9 +31,9 @@ describe("session", () => {
       const chunks = getCookieChunks(largePayload);
 
       expect(chunks.length).toBeGreaterThan(1);
-      expect(chunks[0].name).toBe("et_session.0");
+      expect(chunks[0].name).toBe("grooszy_session.0");
       expect(chunks[0].value.length).toBeLessThanOrEqual(3800);
-      expect(chunks[chunks.length - 1].name).toBe(`et_session.${chunks.length - 1}`);
+      expect(chunks[chunks.length - 1].name).toBe(`grooszy_session.${chunks.length - 1}`);
     });
 
     it("preserves full payload across chunks", () => {
@@ -49,7 +49,7 @@ describe("session", () => {
       const chunks = getCookieChunks(largePayload);
 
       chunks.forEach((chunk, index) => {
-        expect(chunk.name).toBe(`et_session.${index}`);
+        expect(chunk.name).toBe(`grooszy_session.${index}`);
       });
     });
   });

@@ -1,4 +1,4 @@
-# Expense Tracker
+# grooszy
 
 Self-hosted, private analysis of Saudi bank statements. Imports Alinma XLSX and
 Al Rajhi PDF exports, refuses any statement that does not reconcile against its

@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aliAljaffer/expense-tracker/parsers/alinma"
-	"github.com/aliAljaffer/expense-tracker/parsers/alrajhi"
-	"github.com/aliAljaffer/expense-tracker/parsers/statement"
+	"github.com/aliAljaffer/grooszy/parsers/alinma"
+	"github.com/aliAljaffer/grooszy/parsers/alrajhi"
+	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
 const previewTTL = 24 * time.Hour

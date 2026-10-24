@@ -73,7 +73,7 @@ describe("login route", () => {
 
     expect(response.status).toBe(307);
     expect(mockCookieStore.set).toHaveBeenCalledWith(
-      "et_pkce",
+      "grooszy_pkce",
       expect.any(String),
       expect.objectContaining({
         httpOnly: true,
