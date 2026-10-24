@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeaderFigures } from "../HeaderFigures";
 import { ReconciliationChecks } from "../ReconciliationChecks";
-import { RowsTable, HeldRowMarker } from "../RowsTable";
+import { RowsTable, HeldRowMarker, initialSelectedIds } from "../RowsTable";
 import { AnomalyNotice } from "../AnomalyNotice";
 import { StatusBanner } from "../StatusBanner";
 import {
@@ -162,7 +162,41 @@ describe("RowsTable", () => {
     expect(onToggle).toHaveBeenCalledWith(0);
   });
 
-  it("shows held row marker and keeps held rows unchecked by default", () => {
+  it("initialSelectedIds respects default_selected flags", () => {
+    const preview = fixture.alinma_ok as ImportPreview;
+    const rows = preview.rows || [];
+
+    const selected = initialSelectedIds(rows);
+
+    rows.forEach((row, index) => {
+      if (row.default_selected) {
+        expect(selected.has(index)).toBe(true);
+      } else {
+        expect(selected.has(index)).toBe(false);
+      }
+    });
+  });
+
+  it("initialSelectedIds excludes exact duplicates even if default_selected is true", () => {
+    const rows = [
+      {
+        posted_date: "2026-01-05",
+        description_raw: "test",
+        debit: 100,
+        credit: 0,
+        balance_after: 100,
+        kind: "card_purchase",
+        fingerprint: "abc123",
+        duplicate: { score: 10, exact: true, reason: "exact match" },
+        default_selected: true,
+      },
+    ];
+
+    const selected = initialSelectedIds(rows);
+    expect(selected.has(0)).toBe(false);
+  });
+
+  it("exact duplicate row is disabled with visible reason", () => {
     const preview = fixture.alinma_ok as ImportPreview;
     const selectedIds = new Set<number>();
     const onToggle = vi.fn();
@@ -177,16 +211,85 @@ describe("RowsTable", () => {
     );
 
     const checkboxes = screen.getAllByRole("checkbox");
+    const reasonTexts = screen.getAllByText("Already imported");
+
     rowsToRender.forEach((row, index) => {
-      const isDuplicateHeld = row.duplicate && row.duplicate.score >= 8;
-      const isHeld = isDuplicateHeld;
+      const isExactDuplicate = row.duplicate?.exact === true;
 
       const checkbox = checkboxes[index];
-      if (isHeld) {
+      if (isExactDuplicate) {
         expect(checkbox).toBeDisabled();
         expect(checkbox).not.toBeChecked();
       }
     });
+
+    expect(reasonTexts.length).toBeGreaterThan(0);
+  });
+
+  it("held row (score 8+) starts unchecked but is enabled", async () => {
+    const preview = fixture.alinma_anomaly as ImportPreview;
+    const selectedIds = new Set<number>();
+    const onToggle = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <RowsTable
+        rows={preview.rows || []}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    const heldRow = checkboxes[0];
+
+    expect(heldRow).not.toBeDisabled();
+    expect(heldRow).not.toBeChecked();
+
+    await user.click(heldRow);
+    expect(onToggle).toHaveBeenCalledWith(0);
+  });
+
+  it("held row label is accessible to assistive tech", () => {
+    const preview = fixture.alinma_anomaly as ImportPreview;
+    const selectedIds = new Set<number>();
+    const onToggle = vi.fn();
+
+    render(
+      <RowsTable
+        rows={preview.rows || []}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    const heldRowCheckbox = checkboxes[0];
+
+    expect(heldRowCheckbox.getAttribute("aria-label")).toMatch(/row 1/i);
+  });
+
+  it("exact duplicate row has aria-describedby pointing to reason text", () => {
+    const preview = fixture.alinma_ok as ImportPreview;
+    const selectedIds = new Set<number>();
+    const onToggle = vi.fn();
+
+    render(
+      <RowsTable
+        rows={preview.rows || []}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    const exactDupCheckbox = checkboxes[0];
+
+    const describedById = exactDupCheckbox.getAttribute("aria-describedby");
+    expect(describedById).toBeTruthy();
+    const reasonElement = document.getElementById(describedById || "");
+    expect(reasonElement).toBeInTheDocument();
+    expect(reasonElement?.textContent).toMatch(/Already imported/i);
   });
 
   it("renders Arabic text with dir='auto' for descriptions", () => {

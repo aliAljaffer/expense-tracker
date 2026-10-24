@@ -2,7 +2,7 @@
 
 /**
  * Table of parsed transaction rows with selection checkboxes.
- * Held rows (duplicate/anomaly score 8+) are unchecked by default.
+ * Held rows (duplicate/anomaly score 8+) are unchecked by default but can be selected.
  */
 
 import { displaySAR } from "@/lib/api/types";
@@ -12,6 +12,24 @@ interface RowsTableProps {
   rows: ImportRow[];
   selectedIds: Set<number>;
   onToggle: (index: number) => void;
+}
+
+/**
+ * Build initial selected IDs from the default_selected flags.
+ * Exact duplicates are never included, regardless of their flag.
+ */
+export function initialSelectedIds(rows: ImportRow[]): Set<number> {
+  const selected = new Set<number>();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.default_selected !== false) {
+      if (row.duplicate?.exact) {
+        continue;
+      }
+      selected.add(i);
+    }
+  }
+  return selected;
 }
 
 export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
@@ -27,7 +45,7 @@ export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
               scope="col"
               className="w-10 px-4 py-3 text-left font-[var(--weight-medium)] text-[var(--color-text-primary)]"
             >
-              <span className="sr-only">Select</span>
+              <span className="sr-only">Select or held for review</span>
             </th>
             <th
               scope="col"
@@ -75,11 +93,7 @@ export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const isDuplicateHeld =
-              row.duplicate && row.duplicate.score >= 8;
-            const isAnomalyHeld =
-              row.anomaly && row.anomaly.score >= 8;
-            const isHeld = isDuplicateHeld || isAnomalyHeld;
+            const isExactDuplicate = row.duplicate?.exact === true;
 
             return (
               <tr
@@ -87,14 +101,25 @@ export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
                 className="border-b border-[var(--color-border-default)] hover:bg-[var(--color-surface-sunken)]"
               >
                 <td className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(index)}
-                    onChange={() => onToggle(index)}
-                    disabled={isHeld && !selectedIds.has(index)}
-                    className="h-4 w-4 rounded border-[var(--color-border-default)] accent-[var(--color-action-primary)] disabled:opacity-50"
-                    aria-label={`Select row ${index + 1}`}
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(index)}
+                      onChange={() => onToggle(index)}
+                      disabled={isExactDuplicate}
+                      className="h-4 w-4 rounded border-[var(--color-border-default)] accent-[var(--color-action-primary)] disabled:opacity-50"
+                      aria-label={`Select row ${index + 1}${isExactDuplicate ? ', already imported' : ''}`}
+                      aria-describedby={isExactDuplicate ? `exact-dup-${index}` : undefined}
+                    />
+                    {isExactDuplicate && (
+                      <span
+                        id={`exact-dup-${index}`}
+                        className="text-[var(--text-xs)] text-[var(--color-text-tertiary)] whitespace-nowrap"
+                      >
+                        Already imported
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-[var(--color-text-primary)]">
                   {row.posted_date}

@@ -44,6 +44,7 @@ export interface ImportRow {
   fingerprint: string;
   duplicate?: DuplicateMatch;
   anomaly?: AnomalyMatch;
+  default_selected?: boolean;
 }
 
 export interface Summary {
