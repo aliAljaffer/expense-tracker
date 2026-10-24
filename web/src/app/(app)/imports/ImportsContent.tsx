@@ -9,10 +9,15 @@ export function ImportsContent() {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  function handleReset() {
+    setPreview(null);
+    setUploadError(null);
+  }
+
   if (preview) {
     return (
       <div className="stack--loose">
-        <ReviewScreen preview={preview} />
+        <ReviewScreen preview={preview} onReset={handleReset} />
       </div>
     );
   }

@@ -45,6 +45,16 @@ export function HeldRowMarker() {
 }
 
 export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
+  const sortedIndices = Array.from({ length: rows.length }, (_, i) => i)
+    .sort((a, b) => {
+      const dateA = rows[a]?.posted_date || "";
+      const dateB = rows[b]?.posted_date || "";
+      if (dateB !== dateA) {
+        return dateB.localeCompare(dateA);
+      }
+      return b - a;
+    });
+
   return (
     <div className="table__wrap">
       <table className="table">
@@ -66,20 +76,21 @@ export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {sortedIndices.map((originalIndex) => {
+            const row = rows[originalIndex]!;
             const isExactDuplicate = row.duplicate?.exact === true;
             const dateStr = row.posted_date;
             const descStr = row.description_raw;
 
             return (
-              <tr key={index}>
+              <tr key={originalIndex}>
                 <td>
                   <div className="cluster--snug">
                     <Checkbox
-                      checked={selectedIds.has(index)}
+                      checked={selectedIds.has(originalIndex)}
                       onChange={() => {
                         if (!isExactDuplicate) {
-                          onToggle(index);
+                          onToggle(originalIndex);
                         }
                       }}
                       disabled={isExactDuplicate}

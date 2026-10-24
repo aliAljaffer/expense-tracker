@@ -142,13 +142,13 @@ describe("RowsTable", () => {
     expect(headerCells.length).toBeGreaterThan(0);
   });
 
-  it("toggles checkbox selection when clicked", async () => {
+  it("toggles checkbox selection when clicked, preserving original row indices", async () => {
     const preview = fixture.alrajhi_ok as ImportPreview;
     const selectedIds = new Set<number>();
     const onToggle = vi.fn();
     const user = userEvent.setup();
 
-    render(
+    const { container } = render(
       <RowsTable
         rows={preview.rows || []}
         selectedIds={selectedIds}
@@ -159,7 +159,11 @@ describe("RowsTable", () => {
     const firstCheckbox = screen.getAllByRole("checkbox")[0];
     await user.click(firstCheckbox);
 
-    expect(onToggle).toHaveBeenCalledWith(0);
+    const rows = preview.rows || [];
+    const firstDisplayedDateStr = container.querySelector("tbody tr td:nth-child(2)")?.textContent;
+    const originalIndexOfFirstDisplayed = rows.findIndex(r => r.posted_date === firstDisplayedDateStr);
+
+    expect(onToggle).toHaveBeenCalledWith(originalIndexOfFirstDisplayed);
   });
 
   it("initialSelectedIds respects default_selected flags", () => {
@@ -434,5 +438,83 @@ describe("StatusBanner", () => {
     expect(
       screen.getByText(/Select rows above and commit to import them/)
     ).toBeInTheDocument();
+  });
+});
+
+describe("RowsTable sorting", () => {
+  it("sorts rows by posted_date descending (newest first)", () => {
+    const preview = fixture.alrajhi_ok as ImportPreview;
+    const selectedIds = new Set<number>();
+    const onToggle = vi.fn();
+
+    const { container } = render(
+      <RowsTable
+        rows={preview.rows || []}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
+    const rows = container.querySelectorAll("tbody tr");
+    const dates = Array.from(rows).map((row) => {
+      const dateCell = row.querySelector("td:nth-child(2)");
+      return dateCell?.textContent?.trim();
+    });
+
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i]!.localeCompare(dates[i - 1]!)).toBeLessThanOrEqual(0);
+    }
+  });
+
+  it("preserves original row indices for selection when displaying sorted rows", async () => {
+    const rows = [
+      {
+        posted_date: "2026-01-01",
+        description_raw: "First transaction",
+        debit: 100,
+        credit: 0,
+        balance_after: 900,
+        kind: "card_purchase",
+        fingerprint: "abc1",
+        default_selected: true,
+      },
+      {
+        posted_date: "2026-01-03",
+        description_raw: "Third transaction",
+        debit: 200,
+        credit: 0,
+        balance_after: 700,
+        kind: "card_purchase",
+        fingerprint: "abc3",
+        default_selected: true,
+      },
+      {
+        posted_date: "2026-01-02",
+        description_raw: "Second transaction",
+        debit: 150,
+        credit: 0,
+        balance_after: 750,
+        kind: "card_purchase",
+        fingerprint: "abc2",
+        default_selected: true,
+      },
+    ];
+
+    const selectedIds = new Set([0, 1, 2]);
+    const onToggle = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <RowsTable
+        rows={rows}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+
+    expect(onToggle).toHaveBeenCalledWith(1);
   });
 });

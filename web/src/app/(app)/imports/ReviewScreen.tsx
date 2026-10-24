@@ -1,21 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { type ImportPreview } from "@/lib/api/types";
 import { HeaderFigures } from "@/components/features/import-review/HeaderFigures";
 import { ReconciliationChecks } from "@/components/features/import-review/ReconciliationChecks";
 import { RowsTable, initialSelectedIds } from "@/components/features/import-review/RowsTable";
 import { AnomalyNotice } from "@/components/features/import-review/AnomalyNotice";
 import { StatusBanner } from "@/components/features/import-review/StatusBanner";
+import { ResumedBanner } from "@/components/features/import-review/ResumedBanner";
+import { ActionBar } from "@/components/features/import-review/ActionBar";
 import { commitImport, cancelImport } from "./actions";
 
 interface ReviewScreenProps {
   preview: ImportPreview;
+  onReset: () => void;
 }
 
-export function ReviewScreen({ preview }: ReviewScreenProps) {
-  const router = useRouter();
+export function ReviewScreen({ preview, onReset }: ReviewScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() =>
     initialSelectedIds(preview.rows || [])
   );
@@ -29,6 +31,8 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
   const isRejected = preview.status === "rejected";
   const isAlreadyImported = preview.already_imported;
   const canShowCommit = !isRejected && !isAlreadyImported;
+  const selectedCount = selectedIds.size;
+  const rowCount = preview.rows?.length || 0;
 
   function handleToggle(index: number) {
     const newIds = new Set(selectedIds);
@@ -69,7 +73,7 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
       if ("error" in result) {
         setError(result.error);
       } else {
-        router.push("/imports");
+        onReset();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Cancel failed";
@@ -89,12 +93,17 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
               {commitResult.inserted} row{commitResult.inserted === 1 ? "" : "s"} imported successfully.
             </p>
           </div>
-          <button
-            onClick={() => router.push("/imports")}
-            className="btn btn--primary"
-          >
-            Done
-          </button>
+          <div className="cluster--normal">
+            <Link href="/overview" className="btn btn--primary">
+              View overview
+            </Link>
+            <button
+              onClick={onReset}
+              className="btn btn--secondary"
+            >
+              Import another statement
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -126,7 +135,22 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
       )}
 
       {!isRejected && !isAlreadyImported && (
-        <StatusBanner variant="ready" showCommitControl={true} />
+        <StatusBanner variant="ready" showCommitControl={false} />
+      )}
+
+      {preview.resumed && (
+        <ResumedBanner />
+      )}
+
+      {canShowCommit && (
+        <ActionBar
+          selectedCount={selectedCount}
+          totalCount={rowCount}
+          isCommitting={isCommitting}
+          isCancelling={isCancelling}
+          onCommit={handleCommit}
+          onCancel={handleCancel}
+        />
       )}
 
       <div className="stack--snug">
@@ -155,25 +179,6 @@ export function ReviewScreen({ preview }: ReviewScreenProps) {
             />
           </div>
         </>
-      )}
-
-      {canShowCommit && (
-        <div className="cluster--normal">
-          <button
-            onClick={handleCommit}
-            disabled={isCommitting || isCancelling}
-            className="btn btn--primary"
-          >
-            {isCommitting ? "Committing..." : "Commit"}
-          </button>
-          <button
-            onClick={handleCancel}
-            disabled={isCommitting || isCancelling}
-            className="btn btn--secondary"
-          >
-            {isCancelling ? "Cancelling..." : "Cancel"}
-          </button>
-        </div>
       )}
     </div>
   );

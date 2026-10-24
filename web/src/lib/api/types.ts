@@ -80,6 +80,7 @@ export interface ImportPreview {
   reconciliation: Reconciliation;
   rows: ImportRow[];
   summary: Summary;
+  resumed?: boolean;
 }
 
 /**

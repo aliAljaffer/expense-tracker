@@ -460,6 +460,159 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // Import preview endpoint
+  if (pathname === "/api/imports" && req.method === "POST") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const preview = {
+      "import_id": 1,
+      "status": "pending",
+      "already_imported": false,
+      "resumed": false,
+      "bank": "Al Rajhi",
+      "account_number": "****5432",
+      "parser": "alrajhi",
+      "parser_version": "1",
+      "period_start": "2026-01-01",
+      "period_end": "2026-01-31",
+      "header": {
+        "opening_balance": 100000,
+        "closing_balance": 44567,
+        "stated_debit_total": 60000,
+        "stated_credit_total": 4567,
+        "stated_debit_count": 3,
+        "stated_credit_count": 1
+      },
+      "reconciliation": {
+        "ok": true,
+        "checks": [
+          { "name": "debit_total", "status": "pass", "parsed": "600.00", "stated": "600.00" },
+          { "name": "credit_total", "status": "pass", "parsed": "45.67", "stated": "45.67" },
+          { "name": "debit_count", "status": "pass", "parsed": "3", "stated": "3" },
+          { "name": "credit_count", "status": "pass", "parsed": "1", "stated": "1" },
+          { "name": "balance_walk", "status": "pass", "parsed": "445.67", "stated": "445.67" }
+        ],
+        "parsed_debit_total": 60000,
+        "parsed_credit_total": 4567,
+        "parsed_debit_count": 3,
+        "parsed_credit_count": 1
+      },
+      "rows": [
+        {
+          "posted_date": "2026-01-30",
+          "description_raw": "Transfer to Savings Account",
+          "debit": 50000,
+          "credit": 0,
+          "balance_after": 50000,
+          "kind": "external_transfer_out",
+          "fingerprint": "abc1",
+          "default_selected": true
+        },
+        {
+          "posted_date": "2026-01-20",
+          "description_raw": "Shopping Center Purchase",
+          "debit": 5000,
+          "credit": 0,
+          "balance_after": 95000,
+          "kind": "card_purchase",
+          "merchant_raw": "SHOPPING CENTER",
+          "card_last4": "1234",
+          "fingerprint": "abc2",
+          "default_selected": true
+        },
+        {
+          "posted_date": "2026-01-15",
+          "description_raw": "Salary Monthly Deposit",
+          "debit": 0,
+          "credit": 100000,
+          "balance_after": 100000,
+          "kind": "salary",
+          "fingerprint": "abc3",
+          "default_selected": true
+        },
+        {
+          "posted_date": "2026-01-10",
+          "description_raw": "Grocery Store Payment",
+          "debit": 4567,
+          "credit": 0,
+          "balance_after": 99567,
+          "kind": "card_purchase",
+          "merchant_raw": "SUPERMARKET",
+          "card_last4": "1234",
+          "fingerprint": "abc4",
+          "default_selected": true
+        },
+        {
+          "posted_date": "2026-01-05",
+          "description_raw": "Coffee Shop Transaction",
+          "debit": 433,
+          "credit": 0,
+          "balance_after": 104000,
+          "kind": "card_purchase",
+          "merchant_raw": "COFFEE SHOP",
+          "card_last4": "1234",
+          "fingerprint": "abc5",
+          "default_selected": true
+        },
+        {
+          "posted_date": "2026-01-02",
+          "description_raw": "ATM Cash Withdrawal",
+          "debit": 1000,
+          "credit": 0,
+          "balance_after": 105000,
+          "kind": "cash_withdrawal",
+          "fingerprint": "abc6",
+          "default_selected": true
+        }
+      ],
+      "summary": {
+        "rows": 6,
+        "exact_duplicates": 0,
+        "needs_review": 0,
+        "default_rows": 6,
+        "history_rows": 25,
+        "anomaly_ready": true
+      }
+    };
+
+    res.writeHead(200);
+    res.end(JSON.stringify(preview));
+    return;
+  }
+
+  // Import commit endpoint
+  if (pathname.startsWith("/api/imports/") && pathname.endsWith("/commit") && req.method === "POST") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ inserted: 6 }));
+    return;
+  }
+
+  // Import cancel endpoint
+  if (pathname.startsWith("/api/imports/") && req.method === "DELETE") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
   // Default 404
   res.writeHead(404);
   res.end(JSON.stringify({ error: "not_found" }));
