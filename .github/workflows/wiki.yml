@@ -1,0 +1,78 @@
+name: wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - .github/workflows/wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish docs to the wiki
+        run: |
+          set -euo pipefail
+          url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          wiki="$RUNNER_TEMP/wiki"
+
+          if ! git clone --depth 1 "$url" "$wiki" 2>/dev/null; then
+            # A wiki repository does not exist until the wiki is enabled and has one page.
+            # GitHub does not offer wikis on private repositories for every plan, so this
+            # is a warning rather than a failure: the docs in the repository stay the source.
+            echo "::warning::No wiki repository. Enable the wiki and create one page, then rerun this workflow."
+            {
+              echo "### Wiki sync skipped"
+              echo "The wiki repository is not reachable. Docs in \`docs/\` remain the source of truth."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          cp docs/*.md "$wiki/"
+
+          for page in docs/*.md; do
+            name="$(basename "$page" .md)"
+            text="$(awk '
+              FNR == 1 { text = ""; stop = 0 }
+              stop { next }
+              /^[[:space:]]*#/ { next }
+              /^[[:space:]]*```/ { next }
+              /^[[:space:]]*$/ { if (text != "") stop = 1; next }
+              { text = (text == "" ? $0 : text " " $0) }
+              END { print text }
+            ' "$page")"
+            printf -- '- [%s](%s): %s\n' "$name" "$name" "$text"
+          done | LC_ALL=C sort > "$RUNNER_TEMP/links.md"
+
+          {
+            echo "# Expense Tracker wiki"
+            echo
+            echo "Generated from docs/ on every push to main. Edit the page in the repository, not here."
+            echo
+            cat "$RUNNER_TEMP/links.md"
+          } > "$wiki/Home.md"
+
+          cd "$wiki"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki already matches docs/."
+            exit 0
+          fi
+          git commit -m "Publish docs from ${GITHUB_SHA::7}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

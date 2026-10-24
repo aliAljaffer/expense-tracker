@@ -13,6 +13,7 @@ import (
 
 	"github.com/aliAljaffer/expense-tracker/internal/auth"
 	"github.com/aliAljaffer/expense-tracker/internal/config"
+	"github.com/aliAljaffer/expense-tracker/internal/explain"
 	"github.com/aliAljaffer/expense-tracker/internal/httpapi"
 	"github.com/aliAljaffer/expense-tracker/internal/importer"
 	"github.com/aliAljaffer/expense-tracker/internal/ledger"
@@ -59,9 +60,11 @@ func run(log *slog.Logger) error {
 	}
 	go cleanupLoop(ctx, svc, log)
 
+	explainer := explain.New(explain.ConfigFromEnv())
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, log),
+		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, explainer, log),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      120 * time.Second,

@@ -15,6 +15,11 @@ owner's access token.
 | `OIDC_OWNER_SUBJECT` | yes | Keycloak subject of the only allowed user |
 | `LISTEN_ADDR` | no | Default `:8080` |
 | `MAX_UPLOAD_BYTES` | no | Default 16 MiB |
+| `EXPENSE_EXPLAIN_PROVIDER` | no | `openai` or `anthropic`. `openai` is assumed when a base URL is set |
+| `EXPENSE_EXPLAIN_BASE_URL` | no | Provider API root. No value is built in |
+| `EXPENSE_EXPLAIN_MODEL` | no | Model name the provider expects. No value is built in |
+| `EXPENSE_EXPLAIN_API_KEY` | no | Provider key. Never returned by the API and never logged |
+| `EXPENSE_EXPLAIN_TIMEOUT` | no | Whole seconds. Default 30 |
 
 The API refuses to start when a required value is missing. There is no
 authentication bypass.
@@ -272,6 +277,64 @@ not a fraud signal.
 
 `anomaly_ready` is false until the account has 20 spending rows. The app must
 show that the comparison is not available yet.
+
+## Explainers
+
+Optional prose explanations of figures the app already computed. The feature is
+off unless a base URL, a model, and an API key are all set. It never changes
+money, imports, scores, or stored records. See `docs/EXPLAINERS.md`.
+
+`GET /api/explainers/status`:
+
+```json
+{"enabled": true, "provider": "openai", "model": "synthetic-model"}
+```
+
+The status never carries the key or the base URL. A disabled explainer returns:
+
+```json
+{"enabled": false, "provider": "", "model": ""}
+```
+
+`POST /api/explanations`:
+
+```json
+{
+  "kind": "duplicate",
+  "account_kind": "credit_card",
+  "period": {"start": "2026-03-01", "end": "2026-03-31"},
+  "aggregates": {
+    "total_debit": 62400,
+    "transaction_count": 12,
+    "median_debit": 2575
+  }
+}
+```
+
+`kind` is one of `duplicate`, `anomaly`, `recurring`, `fees`, `cash_flow`.
+`account_kind` is one of `current`, `savings`, `credit_card`, or omitted.
+Aggregates allow only `total_debit`, `total_credit`, `transaction_count`,
+`spending_count`, `largest_debit`, `median_debit`, and `history_rows`. Money is
+integer halalas.
+
+The response is text only:
+
+```json
+{
+  "text": "Twelve withdrawals left the card this month, and the median purchase was 25.75 riyals.",
+  "model": "synthetic-model",
+  "provider": "openai"
+}
+```
+
+| Status | Meaning |
+|---|---|
+| 400 | Body carries a field outside the allowlist, or a value of the wrong type. The error names the field |
+| 409 | The explainer is disabled |
+| 413 | Body exceeds 64 KiB |
+| 502 | The provider call failed |
+
+The text is returned to the caller and never written to the database.
 
 ## Known limits
 

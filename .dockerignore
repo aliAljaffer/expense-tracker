@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+.env*
+docs
+node_modules
+statements
+web
+*.md
