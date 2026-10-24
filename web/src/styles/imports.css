@@ -76,6 +76,71 @@
   white-space: nowrap;
 }
 
+/* Headless UI checkbox styling */
+.import-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.import-checkbox__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  min-width: var(--size-control-md);
+  min-height: var(--size-control-md);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border-default); /* ds-allow-hardcode: 2px border for checkbox focus ring clearance */
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-card);
+  color: var(--color-action-primary);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.import-checkbox__control:hover:not(:disabled) {
+  border-color: var(--color-border-focus);
+  background-color: var(--color-surface-sunken);
+}
+
+.import-checkbox__control:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-color: var(--color-border-focus);
+}
+
+.import-checkbox[data-checked="true"] .import-checkbox__control {
+  background-color: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+  color: var(--color-text-on-action);
+}
+
+.import-checkbox[data-checked="true"] .import-checkbox__control:hover:not(:disabled) {
+  background-color: var(--color-action-primary-hover);
+  border-color: var(--color-action-primary-hover);
+}
+
+.import-checkbox[data-disabled="true"] .import-checkbox__control {
+  background-color: var(--color-surface-disabled);
+  border-color: var(--color-border-default);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.import-checkbox__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.import-checkbox__label {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
 .import-upload-progress {
   display: flex;
   flex-direction: column;

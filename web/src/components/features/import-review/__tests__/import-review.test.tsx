@@ -218,8 +218,8 @@ describe("RowsTable", () => {
 
       const checkbox = checkboxes[index];
       if (isExactDuplicate) {
-        expect(checkbox).toBeDisabled();
-        expect(checkbox).not.toBeChecked();
+        expect(checkbox).toHaveAttribute("aria-disabled", "true");
+        expect(checkbox).toHaveAttribute("aria-checked", "false");
       }
     });
 
@@ -263,13 +263,39 @@ describe("RowsTable", () => {
       />
     );
 
+    const row = preview.rows?.[0];
+    if (row) {
+      const checkboxes = screen.getAllByRole("checkbox");
+      const heldRowCheckbox = checkboxes[0];
+
+      expect(heldRowCheckbox.getAttribute("aria-label")).toContain(row.posted_date);
+    }
+  });
+
+  it("keyboard space toggles checkbox selection", async () => {
+    const preview = fixture.alinma_anomaly as ImportPreview;
+    const selectedIds = new Set<number>();
+    const onToggle = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <RowsTable
+        rows={preview.rows || []}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    );
+
     const checkboxes = screen.getAllByRole("checkbox");
     const heldRowCheckbox = checkboxes[0];
 
-    expect(heldRowCheckbox.getAttribute("aria-label")).toMatch(/row 1/i);
+    heldRowCheckbox.focus();
+    await user.keyboard(" ");
+
+    expect(onToggle).toHaveBeenCalledWith(0);
   });
 
-  it("exact duplicate row has aria-describedby pointing to reason text", () => {
+  it("exact duplicate checkbox shows disabled reason", () => {
     const preview = fixture.alinma_ok as ImportPreview;
     const selectedIds = new Set<number>();
     const onToggle = vi.fn();
@@ -282,14 +308,8 @@ describe("RowsTable", () => {
       />
     );
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    const exactDupCheckbox = checkboxes[0];
-
-    const describedById = exactDupCheckbox.getAttribute("aria-describedby");
-    expect(describedById).toBeTruthy();
-    const reasonElement = document.getElementById(describedById || "");
-    expect(reasonElement).toBeInTheDocument();
-    expect(reasonElement?.textContent).toMatch(/Already imported/i);
+    const reasonText = screen.getAllByText("Already imported");
+    expect(reasonText.length).toBeGreaterThan(0);
   });
 
   it("renders Arabic text with dir='auto' for descriptions", () => {

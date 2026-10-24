@@ -7,6 +7,7 @@
 
 import { displaySAR } from "@/lib/api/types";
 import type { ImportRow } from "@/lib/api/types";
+import { Checkbox } from "@/components/ui/headless-checkbox";
 
 interface RowsTableProps {
   rows: ImportRow[];
@@ -67,25 +68,26 @@ export function RowsTable({ rows, selectedIds, onToggle }: RowsTableProps) {
         <tbody>
           {rows.map((row, index) => {
             const isExactDuplicate = row.duplicate?.exact === true;
+            const dateStr = row.posted_date;
+            const descStr = row.description_raw;
 
             return (
               <tr key={index}>
                 <td>
                   <div className="cluster--snug">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedIds.has(index)}
-                      onChange={() => onToggle(index)}
+                      onChange={() => {
+                        if (!isExactDuplicate) {
+                          onToggle(index);
+                        }
+                      }}
                       disabled={isExactDuplicate}
-                      className="h-4 w-4 rounded border border-primary"
-                      aria-label={`Select row ${index + 1}${isExactDuplicate ? ', already imported' : ''}`}
-                      aria-describedby={isExactDuplicate ? `exact-dup-${index}` : undefined}
+                      label=""
+                      ariaLabel={`Select row ${dateStr} ${descStr}${isExactDuplicate ? ", Already imported" : ""}`}
                     />
                     {isExactDuplicate && (
-                      <span
-                        id={`exact-dup-${index}`}
-                        className="import-row-marker"
-                      >
+                      <span className="import-row-marker">
                         Already imported
                       </span>
                     )}
