@@ -15,3 +15,7 @@ statements stay in `statements/`, which Git ignores.
 
 Wiki pages are generated from the Markdown files in this folder after every
 merge to main. Edit the file here, never the wiki page.
+
+The workflow skips with a warning while the repository stays private, because a
+private repository on the free plan has no wiki. Enable the wiki and create one
+page, then rerun the workflow.
