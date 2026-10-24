@@ -30,9 +30,6 @@ export default defineConfig({
   testDir: "./web/e2e",
   use: {
     baseURL: APP_ORIGIN,
-    ...(!CLUSTER && {
-      // No special launch options for local mode
-    }),
     ...(CLUSTER && {
       launchOptions: {
         args: [

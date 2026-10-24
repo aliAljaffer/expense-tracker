@@ -3,14 +3,60 @@ set -euo pipefail
 
 NAMESPACE="expense-tracker-dev"
 RESET_DB=0
+PLAYWRIGHT_ARGS=()
 
 for arg in "$@"; do
   case "$arg" in
     --reset-db)
       RESET_DB=1
       ;;
+    *)
+      PLAYWRIGHT_ARGS+=("$arg")
+      ;;
   esac
 done
+
+echo "Starting port-forwards..."
+
+kubectl port-forward -n "$NAMESPACE" svc/expense-tracker-web 3000:3000 > /dev/null 2>&1 &
+WEB_PF_PID=$!
+
+kubectl port-forward -n "$NAMESPACE" svc/test-issuer 8900:8900 > /dev/null 2>&1 &
+ISSUER_PF_PID=$!
+
+kubectl port-forward -n "$NAMESPACE" svc/expense-tracker-api 8901:8080 > /dev/null 2>&1 &
+API_PF_PID=$!
+
+cleanup() {
+  echo "Cleaning up port-forwards..."
+  kill $WEB_PF_PID 2>/dev/null || true
+  kill $ISSUER_PF_PID 2>/dev/null || true
+  kill $API_PF_PID 2>/dev/null || true
+  wait $WEB_PF_PID 2>/dev/null || true
+  wait $ISSUER_PF_PID 2>/dev/null || true
+  wait $API_PF_PID 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+wait_for_port() {
+  local port=$1
+  local max_attempts=60
+  local attempt=0
+
+  echo "Waiting for port $port..."
+  while [ $attempt -lt $max_attempts ]; do
+    if curl -s http://127.0.0.1:$port > /dev/null 2>&1; then
+      echo "Port $port ready"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+  done
+
+  echo "Port $port failed to become ready after $max_attempts seconds"
+  return 1
+}
 
 reset_database() {
   if [ $RESET_DB -eq 0 ]; then
@@ -18,97 +64,29 @@ reset_database() {
   fi
 
   echo "Resetting database..."
-  kubectl exec -n "$NAMESPACE" deployment/expense-tracker-db-1 -- psql -U postgres -d test -c "
-    DROP TABLE IF EXISTS transactions CASCADE;
-    DROP TABLE IF EXISTS imports CASCADE;
-    DROP TABLE IF EXISTS accounts CASCADE;
-    DROP TABLE IF EXISTS users CASCADE;
-  " || echo "Warning: some tables may not exist"
-  echo "✓ Database reset complete"
+  kubectl exec -n "$NAMESPACE" expense-tracker-db-1 -c postgres -- psql -U postgres -d expense-tracker << 'EOF'
+TRUNCATE TABLE account CASCADE;
+TRUNCATE TABLE category CASCADE;
+TRUNCATE TABLE debt CASCADE;
+TRUNCATE TABLE import_preview CASCADE;
+TRUNCATE TABLE merchant CASCADE;
+TRUNCATE TABLE merchant_alias CASCADE;
+TRUNCATE TABLE recurring_series CASCADE;
+TRUNCATE TABLE shared_expense CASCADE;
+TRUNCATE TABLE statement_import CASCADE;
+TRUNCATE TABLE suggestion CASCADE;
+TRUNCATE TABLE transaction CASCADE;
+TRUNCATE TABLE user_decision CASCADE;
+EOF
+  echo "Database reset complete"
 }
 
-echo "Resetting database if requested..."
+wait_for_port 3000
+wait_for_port 8900
+wait_for_port 8901
+
 reset_database
 
-POD_NAME="e2e-test-$$"
-echo "Creating temporary test pod: $POD_NAME"
-
-cat > /tmp/e2e-pod.yaml << 'YAML'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: POD_NAME_PLACEHOLDER
-  namespace: NAMESPACE_PLACEHOLDER
-spec:
-  containers:
-  - name: test-runner
-    image: node:22-alpine
-    workingDir: /app
-    securityContext:
-      allowPrivilegeEscalation: false
-      runAsNonRoot: true
-      runAsUser: 1000
-      capabilities:
-        drop:
-        - ALL
-      seccompProfile:
-        type: RuntimeDefault
-    env:
-    - name: CLUSTER
-      value: "1"
-    - name: OIDC_ISSUER
-      value: http://test-issuer.expense-tracker-dev.svc:8900
-    - name: APP_ORIGIN
-      value: http://expense-tracker-web.expense-tracker-dev.svc:3000
-    - name: API_BASE_URL
-      value: http://expense-tracker-api.expense-tracker-dev.svc:8080
-    command:
-    - /bin/sh
-    - -c
-    - |
-      apk add --no-cache chromium tini
-      npm ci
-      npx playwright install
-      exec "$@"
-    - --
-    - npx playwright test "$@" --reporter=line --workers=1
-    volumeMounts:
-    - name: app
-      mountPath: /app
-    - name: tmp
-      mountPath: /tmp
-  volumes:
-  - name: app
-    emptyDir: {}
-  - name: tmp
-    emptyDir: {}
-  restartPolicy: Never
-YAML
-
-sed -i.bak "s/POD_NAME_PLACEHOLDER/$POD_NAME/g; s/NAMESPACE_PLACEHOLDER/$NAMESPACE/g" /tmp/e2e-pod.yaml
-
-trap "kubectl delete pod -n $NAMESPACE $POD_NAME 2>/dev/null || true" EXIT
-
-echo "Applying pod manifest..."
-kubectl apply -f /tmp/e2e-pod.yaml
-
-echo "Waiting for pod to be ready (max 300s)..."
-kubectl wait --for=condition=Ready pod/$POD_NAME -n $NAMESPACE --timeout=300s 2>/dev/null || {
-  echo "Pod failed to become ready. Checking logs..."
-  kubectl logs -n $NAMESPACE $POD_NAME || true
-  exit 1
-}
-
-echo "Copying application files into pod..."
-tar czf - \
-  --exclude=node_modules \
-  --exclude=.next \
-  --exclude=.git \
-  --exclude=statements \
-  web/e2e web/package.json web/package-lock.json playwright.config.ts | \
-  kubectl exec -i -n $NAMESPACE $POD_NAME -- tar xzf -
-
-echo "Running Playwright tests in pod..."
-kubectl exec -n $NAMESPACE $POD_NAME -- npx playwright test "$@" --reporter=line --workers=1
-
-echo "Test run complete"
+echo "Running Playwright tests..."
+export CLUSTER=1
+npx playwright test "${PLAYWRIGHT_ARGS[@]}" --reporter=line --workers=1
