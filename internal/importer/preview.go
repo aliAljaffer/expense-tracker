@@ -55,6 +55,7 @@ type Preview struct {
 	ImportID        int64                    `json:"import_id"`
 	Status          string                   `json:"status"`
 	AlreadyImported bool                     `json:"already_imported"`
+	Resumed         bool                     `json:"resumed"`
 	Bank            string                   `json:"bank"`
 	AccountNumber   string                   `json:"account_number"`
 	IBAN            string                   `json:"iban,omitempty"`

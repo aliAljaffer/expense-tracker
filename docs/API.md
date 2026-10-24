@@ -51,8 +51,11 @@ The uploaded file is parsed from memory and never written to disk. The database
 keeps the file SHA-256, parser version, period, header figures, reconciliation
 result, and import status.
 
-A file whose SHA-256 is already stored returns the earlier result with
-`already_imported: true` and creates nothing.
+A file whose SHA-256 is already stored returns the earlier result. For a pending
+import with a loadable preview, `resumed: true` indicates an earlier upload
+awaiting review that can now be committed. For an accepted (committed) import,
+`already_imported: true` indicates the file was already imported and cannot be
+committed again.
 
 ## Responses
 
@@ -63,6 +66,7 @@ A file whose SHA-256 is already stored returns the earlier result with
   "import_id": 12,
   "status": "pending",
   "already_imported": false,
+  "resumed": false,
   "bank": "alinma",
   "account_number": "00000000000000",
   "parser": "alinma",
@@ -111,6 +115,10 @@ A file whose SHA-256 is already stored returns the earlier result with
 ```
 
 All money is integer halalas.
+
+`already_imported` is true only when the file SHA-256 matches an accepted (committed)
+import. `resumed` is true when the file SHA-256 matches a pending import with a
+loadable preview, allowing the owner to review and commit an earlier upload.
 
 `default_selected` indicates whether the row is included in the default selection
 when the owner commits without providing explicit row choices. Rows with exact

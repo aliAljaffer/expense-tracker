@@ -63,7 +63,7 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 		switch rec.Status {
 		case "pending":
 			if p, err := s.store.LoadPreview(ctx, rec.ID); err == nil {
-				p.AlreadyImported = true
+				p.Resumed = true
 				p.SetDefaultSelection()
 				return p, nil
 			}
