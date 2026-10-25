@@ -16,6 +16,14 @@ if (!window.matchMedia) {
     }) as MediaQueryList;
 }
 
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 afterEach(() => {
   cleanup();
   document.documentElement.removeAttribute("data-theme");
