@@ -525,6 +525,8 @@ without waiting for the first of the month.
 
 ## Known limits
 
+- An Al Rajhi PDF is capped at 120 pages. A longer file is rejected as
+  unreadable before any page text is read.
 - The parsers do not expose a posting time, so fingerprints use midnight. The
   running balance still separates sequential rows.
 - Merchant normalization and category rules arrive with the overview phase.

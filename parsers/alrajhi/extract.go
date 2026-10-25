@@ -2,12 +2,17 @@ package alrajhi
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
 
 	"github.com/ledongthuc/pdf"
 )
+
+// MaxPages caps one PDF. A statement is a few pages; a file above this is
+// hostile or not a statement, and reading it would burn memory and CPU.
+const MaxPages = 120
 
 // extractLines turns a PDF into visual text lines, approximating the output of
 // `pdftotext -layout`. Without the layout the amount columns interleave and no
@@ -16,6 +21,9 @@ func extractLines(data []byte) ([]string, error) {
 	r, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
+	}
+	if n := r.NumPage(); n > MaxPages {
+		return nil, fmt.Errorf("alrajhi: pdf has %d pages, limit is %d", n, MaxPages)
 	}
 	var lines []string
 	for p := 1; p <= r.NumPage(); p++ {

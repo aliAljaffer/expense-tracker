@@ -260,38 +260,49 @@ type run struct {
 	text string
 }
 
-// buildPDF writes a single page with Courier text placed by text matrix. The
+// buildPDF writes one page with Courier text placed by text matrix. The
 // extractor reads positions, not content-stream order, so this is enough to
 // exercise it end to end.
 func buildPDF(lines [][]run) []byte {
-	var content strings.Builder
-	for i, line := range lines {
-		y := 800 - float64(i)*12
-		for _, r := range line {
-			fmt.Fprintf(&content, "BT /F1 9 Tf 1 0 0 1 %.2f %.2f Tm (%s) Tj ET\n", r.x, y, pdfEscape(r.text))
-		}
-	}
+	return buildPDFPages([][][]run{lines})
+}
 
+func buildPDFPages(pages [][][]run) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("%PDF-1.4\n")
-	offsets := make([]int, 6)
+	total := 3 + 2*len(pages)
+	offsets := make([]int, total+1)
 	add := func(n int, body string) {
 		offsets[n] = buf.Len()
 		fmt.Fprintf(&buf, "%d 0 obj\n%s\nendobj\n", n, body)
 	}
 	add(1, "<</Type/Catalog/Pages 2 0 R>>")
-	add(2, "<</Type/Pages/Kids[3 0 R]/Count 1>>")
-	add(3, "<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>")
-	add(4, "<</Type/Font/Subtype/Type1/BaseFont/Courier/Encoding/WinAnsiEncoding>>")
-	offsets[5] = buf.Len()
-	fmt.Fprintf(&buf, "5 0 obj\n<</Length %d>>\nstream\n%sendstream\nendobj\n", content.Len(), content.String())
+	kids := make([]string, len(pages))
+	for i := range pages {
+		kids[i] = fmt.Sprintf("%d 0 R", 4+2*i)
+	}
+	add(2, fmt.Sprintf("<</Type/Pages/Kids[%s]/Count %d>>", strings.Join(kids, " "), len(pages)))
+	add(3, "<</Type/Font/Subtype/Type1/BaseFont/Courier/Encoding/WinAnsiEncoding>>")
+	for i, lines := range pages {
+		var content strings.Builder
+		for j, line := range lines {
+			y := 800 - float64(j)*12
+			for _, r := range line {
+				fmt.Fprintf(&content, "BT /F1 9 Tf 1 0 0 1 %.2f %.2f Tm (%s) Tj ET\n", r.x, y, pdfEscape(r.text))
+			}
+		}
+		page := 4 + 2*i
+		add(page, fmt.Sprintf("<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 3 0 R>>>>/Contents %d 0 R>>", page+1))
+		offsets[page+1] = buf.Len()
+		fmt.Fprintf(&buf, "%d 0 obj\n<</Length %d>>\nstream\n%sendstream\nendobj\n", page+1, content.Len(), content.String())
+	}
 
 	xref := buf.Len()
-	buf.WriteString("xref\n0 6\n0000000000 65535 f \n")
-	for i := 1; i <= 5; i++ {
+	fmt.Fprintf(&buf, "xref\n0 %d\n0000000000 65535 f \n", total+1)
+	for i := 1; i <= total; i++ {
 		fmt.Fprintf(&buf, "%010d 00000 n \n", offsets[i])
 	}
-	fmt.Fprintf(&buf, "trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n", xref)
+	fmt.Fprintf(&buf, "trailer\n<</Size %d/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n", total+1, xref)
 	return buf.Bytes()
 }
 
@@ -339,5 +350,29 @@ func TestExtractAndParse(t *testing.T) {
 	}
 	if got := s.Transactions[0].MerchantRaw; got != "SAMPLE STORE TRADING" {
 		t.Errorf("merchant = %q", got)
+	}
+}
+
+func pages(n int) [][][]run {
+	pages := make([][][]run, n)
+	for i := range pages {
+		pages[i] = [][]run{{{40, fmt.Sprintf("Page %d", i+1)}}}
+	}
+	return pages
+}
+
+func TestExtractRejectsPDFOverPageLimit(t *testing.T) {
+	_, err := extractLines(buildPDFPages(pages(MaxPages + 1)))
+	if err == nil {
+		t.Fatal("expected the page limit error")
+	}
+	if want := fmt.Sprintf("limit is %d", MaxPages); !strings.Contains(err.Error(), want) {
+		t.Fatalf("error = %q, want it to contain %q", err, want)
+	}
+}
+
+func TestExtractAcceptsPDFAtPageLimit(t *testing.T) {
+	if _, err := extractLines(buildPDFPages(pages(MaxPages))); err != nil {
+		t.Fatalf("pdf at the limit: %v", err)
 	}
 }
