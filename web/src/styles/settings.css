@@ -1,0 +1,14 @@
+/* Settings screen styles */
+
+.settings-form {
+  margin-top: var(--space-6);
+  max-width: var(--size-container-prose);
+}
+
+.settings-form__actions {
+  justify-content: flex-start;
+}
+
+.settings-form .field__input[aria-invalid="true"] {
+  border-color: var(--color-border-error);
+}

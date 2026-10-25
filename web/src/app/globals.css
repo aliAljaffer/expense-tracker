@@ -4,6 +4,7 @@
 @import "../styles/overview.css";
 @import "../styles/suggestions.css";
 @import "../styles/pagination.css";
+@import "../styles/settings.css";
 
 :root {
   color-scheme: light;

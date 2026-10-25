@@ -84,11 +84,17 @@ export async function proxyToApi(
 
   const url = new URL(path, authConfig.apiBaseUrl);
 
-  const upstreamResponse = await fetch(url, {
+  const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
     headers: forwardHeaders,
     body: request.body,
-  });
+  };
+
+  if (request.body) {
+    init.duplex = "half";
+  }
+
+  const upstreamResponse = await fetch(url, init);
 
   const responseHeaders = new Headers(upstreamResponse.headers);
   responseHeaders.delete("set-cookie");

@@ -29,6 +29,9 @@ export function SiteHeader() {
           <Link href="/suggestions" className="nav__link" aria-current={isCurrentPage("/suggestions") ? "page" : undefined}>
             Suggestions
           </Link>
+          <Link href="/settings" className="nav__link" aria-current={isCurrentPage("/settings") ? "page" : undefined}>
+            Settings
+          </Link>
         </nav>
         <ThemeToggle />
       </div>

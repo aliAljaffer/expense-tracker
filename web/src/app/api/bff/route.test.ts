@@ -43,4 +43,26 @@ describe("BFF route handler", () => {
     const response = await GET(mockRequest, mockParams);
     expect(response.status).toBe(400);
   });
+
+  it("rejects a path outside the allowlist", async () => {
+    const { GET } = await import("./[...path]/route");
+
+    const response = await GET(
+      { method: "GET", headers: new Headers(), body: null } as unknown as NextRequest,
+      { params: Promise.resolve({ path: ["unknown"] }) }
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects a method the route does not use", async () => {
+    const { PUT } = await import("./[...path]/route");
+
+    const response = await PUT(
+      { method: "PUT", headers: new Headers(), body: null } as unknown as NextRequest,
+      { params: Promise.resolve({ path: ["accounts"] }) }
+    );
+
+    expect(response.status).toBe(405);
+  });
 });

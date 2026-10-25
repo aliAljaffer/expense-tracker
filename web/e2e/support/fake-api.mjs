@@ -11,6 +11,22 @@ let lastHeaders = {
 
 let simulateReadyzUnavailable = false;
 let bnplVariant = "insufficient_data"; // or "ok"
+let reminderEmail = "";
+
+const readJsonBody = (req) =>
+  new Promise((resolve) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(body || "{}"));
+      } catch {
+        resolve({});
+      }
+    });
+  });
 
 const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantId = null) => {
   const merchants = [
@@ -82,7 +98,7 @@ const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantI
   };
 };
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -451,6 +467,63 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify({ ok: true, variant: bnplVariant }));
       return;
     }
+  }
+
+  if (pathname === "/api/settings") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    if (req.method === "GET") {
+      res.writeHead(200);
+      res.end(JSON.stringify({ reminder_email: reminderEmail }));
+      return;
+    }
+
+    if (req.method === "PUT") {
+      const body = await readJsonBody(req);
+      const value = typeof body.reminder_email === "string" ? body.reminder_email.trim() : "";
+
+      if (!value || !value.includes("@")) {
+        res.writeHead(422);
+        res.end(JSON.stringify({ error: "invalid email address" }));
+        return;
+      }
+
+      reminderEmail = value;
+      res.writeHead(200);
+      res.end(JSON.stringify({ reminder_email: reminderEmail }));
+      return;
+    }
+  }
+
+  if (pathname === "/api/settings/reminder/test" && req.method === "POST") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    if (!reminderEmail) {
+      res.writeHead(422);
+      res.end(JSON.stringify({ error: "no reminder email set" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ sent: true }));
+    return;
+  }
+
+  if (pathname === "/__reminder-email" && req.method === "DELETE") {
+    reminderEmail = "";
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true }));
+    return;
   }
 
   // Last headers recording endpoint
