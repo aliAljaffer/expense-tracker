@@ -469,9 +469,9 @@ const server = createServer((req, res) => {
       return;
     }
 
-    let rowCount = 6;
-    let hasExactDuplicates = false;
-    let hasAnomalies = false;
+    const rowCount = 120;
+    const hasExactDuplicates = true;
+    const hasAnomalies = true;
 
     let rows = [
       {
@@ -542,48 +542,42 @@ const server = createServer((req, res) => {
       }
     ];
 
-    if (req.headers["content-length"] > 10000 || req.url.includes("large=true")) {
-      rowCount = 120;
-      hasExactDuplicates = true;
-      hasAnomalies = true;
+    const extraRows = Array.from({ length: 114 }, (_, i) => {
+      const isExactDuplicate = i === 20;
+      const hasAnomaly = i === 50;
+      const base = {
+        "description_raw": `Transaction ${i + 1}`,
+        "debit": i % 2 === 0 ? Math.floor(Math.random() * 50000) + 1000 : 0,
+        "credit": i % 2 === 0 ? 0 : Math.floor(Math.random() * 50000) + 1000,
+        "balance_after": 100000 - (i + 1) * 500,
+        "kind": ["card_purchase", "online_purchase", "salary", "bill_payment"][i % 4],
+        "merchant_raw": ["STORE", "VENDOR", "MERCHANT"][i % 3],
+        "card_last4": "1234",
+        "fingerprint": isExactDuplicate ? "abc5" : `fp${100 + i}`,
+        "posted_date": `2026-01-${String((30 - Math.floor(i / 5)) % 30 || 1).padStart(2, '0')}`,
+        "default_selected": !isExactDuplicate && !hasAnomaly
+      };
 
-      const extraRows = Array.from({ length: 114 }, (_, i) => {
-        const isExactDuplicate = i === 20;
-        const hasAnomaly = i === 50;
-        const base = {
-          "description_raw": `Transaction ${i + 1}`,
-          "debit": i % 2 === 0 ? Math.floor(Math.random() * 50000) + 1000 : 0,
-          "credit": i % 2 === 0 ? 0 : Math.floor(Math.random() * 50000) + 1000,
-          "balance_after": 100000 - (i + 1) * 500,
-          "kind": ["card_purchase", "online_purchase", "salary", "bill_payment"][i % 4],
-          "merchant_raw": ["STORE", "VENDOR", "MERCHANT"][i % 3],
-          "card_last4": "1234",
-          "fingerprint": isExactDuplicate ? "abc5" : `fp${100 + i}`,
-          "posted_date": `2026-01-${String((30 - Math.floor(i / 5)) % 30 || 1).padStart(2, '0')}`,
-          "default_selected": !isExactDuplicate && !hasAnomaly
+      if (isExactDuplicate) {
+        base.duplicate = {
+          exact: true,
+          score: 100,
+          reason: "Exact fingerprint match"
         };
+      }
 
-        if (isExactDuplicate) {
-          base.duplicate = {
-            exact: true,
-            score: 100,
-            reason: "Exact fingerprint match"
-          };
-        }
+      if (hasAnomaly) {
+        base.anomaly = {
+          score: 8.5,
+          reason: "Unusual amount for this merchant"
+        };
+        base.default_selected = false;
+      }
 
-        if (hasAnomaly) {
-          base.anomaly = {
-            score: 8.5,
-            reason: "Unusual amount for this merchant"
-          };
-          base.default_selected = false;
-        }
+      return base;
+    });
 
-        return base;
-      });
-
-      rows = [...rows, ...extraRows];
-    }
+    rows = [...rows, ...extraRows];
 
     const preview = {
       "import_id": 1,

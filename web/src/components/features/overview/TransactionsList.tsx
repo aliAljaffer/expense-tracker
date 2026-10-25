@@ -7,7 +7,7 @@ import { getTransactions } from "@/lib/api/overview";
 import type { TransactionsResponse, Transaction } from "@/lib/api/types";
 import type { GetTransactionsParams } from "@/lib/api/overview";
 import { Pagination } from "@/components/ui/pagination";
-import { calculatePagination, clampPage, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
+import { calculatePagination, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
 
 interface TransactionsListProps {
   searchParams: {
@@ -96,7 +96,6 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   }) : null;
 
   const clampedPage = pageInfo ? pageInfo.clampedPage : page;
-  const pageCount = pageInfo ? pageInfo.pageCount : 0;
 
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(currentSearchParams);

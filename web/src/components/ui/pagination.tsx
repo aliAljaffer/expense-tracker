@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { Listbox } from "@headlessui/react";
 import {
   calculatePagination,
@@ -37,16 +36,6 @@ export function Pagination({
     currentPage: info.clampedPage,
     totalPages: info.pageCount,
   });
-
-  const [isListboxOpen, setIsListboxOpen] = useState(false);
-  const listboxButtonRef = useRef<HTMLButtonElement>(null);
-
-  const displayText =
-    total === 0
-      ? "No rows"
-      : total === 1
-        ? "1 row"
-        : `${total} rows`;
 
   const showingText =
     total === 0
@@ -143,11 +132,8 @@ export function Pagination({
           >
             <div className="pagination__listbox-wrapper">
               <Listbox.Button
-                ref={listboxButtonRef}
                 id="per-page-listbox"
                 className="pagination__listbox-button"
-                onClick={() => setIsListboxOpen(!isListboxOpen)}
-                data-open={isListboxOpen}
               >
                 <span className="pagination__listbox-value">{displayPerPage}</span>
                 <svg
@@ -164,13 +150,12 @@ export function Pagination({
                 </svg>
               </Listbox.Button>
 
-              <Listbox.Options className="pagination__listbox-options" data-open={isListboxOpen}>
+              <Listbox.Options className="pagination__listbox-options">
                 {perPageOptions.map((option) => (
                   <Listbox.Option
                     key={option}
                     value={option}
                     className="pagination__listbox-option"
-                    data-selected={option === displayPerPage}
                   >
                     {option}
                   </Listbox.Option>

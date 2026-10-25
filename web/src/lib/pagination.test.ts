@@ -5,7 +5,6 @@ import {
   validatePerPage,
   clampPage,
   DEFAULT_PER_PAGE,
-  PER_PAGE_OPTIONS,
 } from "./pagination";
 
 describe("pagination", () => {

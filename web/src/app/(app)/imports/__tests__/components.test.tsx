@@ -61,8 +61,8 @@ describe("ReviewScreen", () => {
     render(<ReviewScreen preview={preview} onReset={mockOnReset} />);
     const user = userEvent.setup();
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[0]);
+    const rowCheckbox = screen.getByRole("checkbox", { name: /select row/i });
+    await user.click(rowCheckbox);
 
     const commitButton = screen.getByRole("button", { name: /commit/i });
     await user.click(commitButton);
@@ -203,5 +203,38 @@ describe("ReviewScreen", () => {
     render(<ReviewScreen preview={preview} onReset={mockOnReset} />);
 
     expect(screen.queryByText(/Resumed your earlier upload/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps selection across pages and commits ids from every page", async () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      posted_date: `2026-01-${String(i + 1).padStart(2, "0")}`,
+      description_raw: `Row ${i}`,
+      debit: 100,
+      credit: 0,
+      balance_after: 1000 - i * 10,
+      kind: "card_purchase",
+      fingerprint: `fp-${i}`,
+      default_selected: true,
+    }));
+    const preview = {
+      ...fixture.alrajhi_ok,
+      rows,
+      summary: { ...fixture.alrajhi_ok.summary, rows: 30, default_rows: 30 },
+    } as ImportPreview;
+    vi.mocked(commitImport).mockResolvedValue({ inserted: 29 });
+
+    render(<ReviewScreen preview={preview} onReset={mockOnReset} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /select row 2026-01-25/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText(/Showing 26 to 30 of 30 rows/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^commit/i }));
+
+    const [, selectedIds] = vi.mocked(commitImport).mock.calls[0];
+    expect(selectedIds).toHaveLength(29);
+    expect(selectedIds).toContain(0);
+    expect(selectedIds).not.toContain(24);
   });
 });

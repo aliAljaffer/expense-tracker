@@ -17,7 +17,7 @@ interface RowsTableProps {
   rows: ImportRow[];
   selectedIds: Set<number>;
   onToggle: (index: number) => void;
-  onSelectAllPage?: (indices: number[]) => void;
+  onPageSelectionChange?: (indices: number[], select: boolean) => void;
   onSelectAllRows?: (indices: number[]) => void;
   onClearSelection?: () => void;
   enablePagination?: boolean;
@@ -56,7 +56,7 @@ export function RowsTable({
   rows,
   selectedIds,
   onToggle,
-  onSelectAllPage,
+  onPageSelectionChange,
   onSelectAllRows,
   onClearSelection,
   enablePagination = false,
@@ -108,22 +108,7 @@ export function RowsTable({
   };
 
   const handleSelectAllOnPage = () => {
-    if (isPageHeaderChecked) {
-      pageSelectableIndices.forEach((idx) => {
-        if (selectedIds.has(idx)) {
-          const newIds = new Set(selectedIds);
-          newIds.delete(idx);
-          selectedIds.clear();
-          newIds.forEach((id) => selectedIds.add(id));
-        }
-      });
-    } else {
-      pageSelectableIndices.forEach((idx) => {
-        if (!selectedIds.has(idx)) {
-          selectedIds.add(idx);
-        }
-      });
-    }
+    onPageSelectionChange?.(pageSelectableIndices, !isPageHeaderChecked);
   };
 
   const handleSelectAllRows = () => {
