@@ -6,6 +6,7 @@
 @import "../styles/pagination.css";
 @import "../styles/settings.css";
 @import "../styles/charts.css";
+@import "../styles/transactions.css";
 
 :root {
   color-scheme: light;
