@@ -423,7 +423,7 @@ median cadence in days, and transaction ids.
 {
   "status": "ok",
   "period": {"from": "2026-02", "to": "2026-12"},
-  "summary": "Nine recurring payments found. The largest is rent (SAR 3500.00/month).",
+  "summary": "Nine recurring payments found. The largest is rent (3,500.00 SAR/month).",
   "evidence": {
     "recurring_series": [
       {
@@ -460,7 +460,7 @@ the 3-month average.
 {
   "status": "ok",
   "period": {"from": "2026-01", "to": "2026-12"},
-  "summary": "BNPL commitments are rising: SAR 4500.00 this month vs SAR 3500.00 average.",
+  "summary": "BNPL commitments are rising: 4,500.00 SAR this month vs 3,500.00 SAR average.",
   "evidence": {
     "months": [
       {

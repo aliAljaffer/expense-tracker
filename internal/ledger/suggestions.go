@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aliAljaffer/grooszy/internal/importer"
@@ -264,9 +266,9 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 	count := len(out.Evidence.Series)
 	largest := out.Evidence.Series[0]
 	if count == 1 {
-		out.Summary = fmt.Sprintf("One recurring payment found: %s (SAR %.2f/month).", largest.Merchant, float64(largest.MedianAmount)/100)
+		out.Summary = fmt.Sprintf("One recurring payment found: %s (%s/month).", largest.Merchant, formatHalalas(largest.MedianAmount))
 	} else {
-		out.Summary = fmt.Sprintf("%d recurring payments found. The largest is %s (SAR %.2f/month).", count, largest.Merchant, float64(largest.MedianAmount)/100)
+		out.Summary = fmt.Sprintf("%d recurring payments found. The largest is %s (%s/month).", count, largest.Merchant, formatHalalas(largest.MedianAmount))
 	}
 	out.Limits = "Recurring series must appear in at least 3 distinct months with stable amounts and consistent cadence. May not detect recently started payments."
 	out.NextStep = "Review and categorize the recurring payments."
@@ -440,13 +442,36 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 	latest := out.Evidence.Months[len(out.Evidence.Months)-1]
 
 	if latest.IsRising {
-		out.Summary = fmt.Sprintf("BNPL commitments are rising: SAR %.2f this month vs SAR %.2f average.", float64(latest.BNPLOutflow)/100, float64(*latest.ThreeMonthAverage)/100)
+		out.Summary = fmt.Sprintf("BNPL commitments are rising: %s this month vs %s average.", formatHalalas(latest.BNPLOutflow), formatHalalas(*latest.ThreeMonthAverage))
 	} else {
-		out.Summary = fmt.Sprintf("BNPL commitments are stable or falling: SAR %.2f this month vs SAR %.2f average.", float64(latest.BNPLOutflow)/100, float64(*latest.ThreeMonthAverage)/100)
+		out.Summary = fmt.Sprintf("BNPL commitments are stable or falling: %s this month vs %s average.", formatHalalas(latest.BNPLOutflow), formatHalalas(*latest.ThreeMonthAverage))
 	}
 
 	out.Limits = "BNPL identification uses known provider names (Tabby, Tamara, Postpay, Spotii, Cashew) and manual merchant tagging. Unknown providers will not be detected."
 	out.NextStep = "Review upcoming BNPL payment dates and plan repayment."
 
 	return out, nil
+}
+
+// formatHalalas renders integer halalas the way the web tables do: "3,500.00 SAR".
+func formatHalalas(halalas int64) string {
+	sign := ""
+	magnitude := uint64(halalas)
+	if halalas < 0 {
+		sign = "-"
+		magnitude = uint64(-(halalas + 1)) + 1
+	}
+
+	riyals := strconv.FormatUint(magnitude/100, 10)
+
+	var b strings.Builder
+	b.WriteString(sign)
+	for i, digit := range riyals {
+		if i > 0 && (len(riyals)-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteRune(digit)
+	}
+	fmt.Fprintf(&b, ".%02d SAR", magnitude%100)
+	return b.String()
 }

@@ -118,6 +118,9 @@ func TestRecurringWithMultipleMerchants(t *testing.T) {
 	if len(cafe.TransactionIDs) != 3 {
 		t.Fatalf("cafe transaction ids = %d, want 3", len(cafe.TransactionIDs))
 	}
+	if want := "2 recurring payments found. The largest is Rent Agency (500.00 SAR/month)."; result.Summary != want {
+		t.Fatalf("summary = %q, want %q", result.Summary, want)
+	}
 }
 
 func TestRecurringRequires3DistinctMonths(t *testing.T) {
@@ -284,6 +287,9 @@ func TestBNPLRisingTrend(t *testing.T) {
 	if latest.BNPLOutflow != 4500 {
 		t.Fatalf("latest outflow = %d, want 4500", latest.BNPLOutflow)
 	}
+	if want := "BNPL commitments are rising: 45.00 SAR this month vs 36.66 SAR average."; result.Summary != want {
+		t.Fatalf("summary = %q, want %q", result.Summary, want)
+	}
 }
 
 func TestBNPLFlatTrend(t *testing.T) {
@@ -312,6 +318,29 @@ func TestBNPLFlatTrend(t *testing.T) {
 	latest := result.Evidence.Months[len(result.Evidence.Months)-1]
 	if latest.IsRising {
 		t.Fatalf("latest month should not be marked as rising for flat trend")
+	}
+	if want := "BNPL commitments are stable or falling: 20.00 SAR this month vs 20.00 SAR average."; result.Summary != want {
+		t.Fatalf("summary = %q, want %q", result.Summary, want)
+	}
+}
+
+func TestFormatHalalas(t *testing.T) {
+	tests := []struct {
+		halalas int64
+		want    string
+	}{
+		{0, "0.00 SAR"},
+		{1, "0.01 SAR"},
+		{99, "0.99 SAR"},
+		{100, "1.00 SAR"},
+		{1234567, "12,345.67 SAR"},
+		{-1234567, "-12,345.67 SAR"},
+		{123456789012, "1,234,567,890.12 SAR"},
+	}
+	for _, tt := range tests {
+		if got := formatHalalas(tt.halalas); got != tt.want {
+			t.Errorf("formatHalalas(%d) = %q, want %q", tt.halalas, got, tt.want)
+		}
 	}
 }
 
