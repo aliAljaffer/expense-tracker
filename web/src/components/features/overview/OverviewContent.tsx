@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { getAccounts, getMonthlyOverview } from "@/lib/api/overview";
 import { type AccountsResponse, type MonthlyResponse } from "@/lib/api/types";
 import { AccountsTable } from "./AccountsTable";
+import { MonthlyMoneyChart } from "./MonthlyMoneyChart";
 import { MonthlyTable } from "./MonthlyTable";
 
 export function OverviewContent() {
@@ -77,6 +78,7 @@ export function OverviewContent() {
 
   return (
     <div className="overview-sections">
+      <MonthlyMoneyChart months={monthly.months} />
       <AccountsTable accounts={accounts.accounts} />
       <MonthlyTable months={monthly.months} />
     </div>
