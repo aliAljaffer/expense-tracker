@@ -28,6 +28,234 @@ const readJsonBody = (req) =>
     });
   });
 
+const readRawBody = (req) =>
+  new Promise((resolve) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+
+const importedFiles = new Set();
+const importFileById = new Map();
+let nextImportId = 1;
+
+const alinmaRows = [
+  {
+    posted_date: "2026-01-05",
+    description_raw: "SAR 25.75 تم الشراء مع Apple Pay App بواسطة Mada Card *0630 في SAMPLE CO",
+    debit: 2575,
+    credit: 0,
+    balance_after: 97425,
+    kind: "card_purchase",
+    merchant_raw: "SAMPLE CO",
+    card_last4: "0630",
+    fingerprint: "alinma-1",
+    default_selected: true,
+  },
+  {
+    posted_date: "2026-01-06",
+    description_raw: "معاملة شراء عبر الإنترنت SAR من SAMPLE ONLINE",
+    debit: 1000,
+    credit: 0,
+    balance_after: 96425,
+    kind: "online_purchase",
+    merchant_raw: "SAMPLE ONLINE",
+    fingerprint: "alinma-2",
+    default_selected: true,
+  },
+  {
+    posted_date: "2026-01-07",
+    description_raw: "معاملة إعادة الشراء SAR من SAMPLE ONLINE",
+    debit: 0,
+    credit: 1000,
+    balance_after: 97425,
+    kind: "refund",
+    merchant_raw: "SAMPLE ONLINE",
+    fingerprint: "alinma-3",
+    default_selected: true,
+  },
+];
+
+function buildPreview(filename) {
+  const importId = nextImportId++;
+  importFileById.set(importId, filename);
+
+  const base = {
+    import_id: importId,
+    status: "pending",
+    already_imported: importedFiles.has(filename),
+    resumed: false,
+    account_number: "****0001",
+    parser_version: "1",
+    period_start: "2026-01-01",
+    period_end: "2026-01-31",
+  };
+
+  if (filename.includes("rejected")) {
+    return {
+      ...base,
+      status: "rejected",
+      bank: "Alinma",
+      parser: "alinma",
+      header: {
+        opening_balance: 100000,
+        closing_balance: 118600,
+        stated_debit_total: 62500,
+        stated_credit_total: 81000,
+        stated_debit_count: 1,
+        stated_credit_count: 1,
+      },
+      reconciliation: {
+        ok: false,
+        checks: [
+          { name: "debit_total", status: "fail", parsed: "625.00", stated: "625.00" },
+          { name: "balance_walk", status: "fail", parsed: "984.25", stated: "1,186.00" },
+        ],
+        parsed_debit_total: 62500,
+        parsed_credit_total: 81000,
+        parsed_debit_count: 1,
+        parsed_credit_count: 1,
+      },
+      rows: alinmaRows,
+      summary: {
+        rows: alinmaRows.length,
+        exact_duplicates: 0,
+        needs_review: 0,
+        default_rows: alinmaRows.length,
+        history_rows: 0,
+        anomaly_ready: true,
+      },
+    };
+  }
+
+  if (filename.includes("alinma")) {
+    return {
+      ...base,
+      bank: "Alinma",
+      parser: "alinma",
+      header: {
+        opening_balance: 100000,
+        closing_balance: 118600,
+        stated_debit_total: 62400,
+        stated_credit_total: 81000,
+        stated_debit_count: 12,
+        stated_credit_count: 3,
+      },
+      reconciliation: {
+        ok: true,
+        checks: [
+          { name: "debit_total", status: "pass", parsed: "624.00", stated: "624.00" },
+          { name: "credit_total", status: "pass", parsed: "810.00", stated: "810.00" },
+          { name: "balance_walk", status: "pass", parsed: "1,186.00", stated: "1,186.00" },
+        ],
+        parsed_debit_total: 62400,
+        parsed_credit_total: 81000,
+        parsed_debit_count: 12,
+        parsed_credit_count: 3,
+      },
+      rows: alinmaRows,
+      summary: {
+        rows: alinmaRows.length,
+        exact_duplicates: 0,
+        needs_review: 0,
+        default_rows: alinmaRows.length,
+        history_rows: 0,
+        anomaly_ready: true,
+      },
+    };
+  }
+
+  const rows = [
+    {
+      posted_date: "2026-01-05",
+      description_raw: "POS purchase Apple pay (Domestic) SAMPLE STORE",
+      debit: 2575,
+      credit: 0,
+      balance_after: 97425,
+      kind: "card_purchase",
+      merchant_raw: "SAMPLE STORE",
+      card_last4: "0000",
+      fingerprint: "alrajhi-1",
+      default_selected: true,
+    },
+    {
+      posted_date: "2026-01-06",
+      description_raw: "Online purchase Apple pay (Domestic) SAMPLE ONLINE",
+      debit: 1000,
+      credit: 0,
+      balance_after: 96425,
+      kind: "online_purchase",
+      merchant_raw: "SAMPLE ONLINE",
+      fingerprint: "alrajhi-2",
+      default_selected: true,
+    },
+  ];
+
+  if (filename.includes("duplicate.pdf")) {
+    rows.push({
+      posted_date: "2026-01-05",
+      description_raw: "POS purchase Apple pay (Domestic) SAMPLE STORE",
+      debit: 2575,
+      credit: 0,
+      balance_after: 93850,
+      kind: "card_purchase",
+      merchant_raw: "SAMPLE STORE",
+      card_last4: "0000",
+      fingerprint: "alrajhi-1",
+      duplicate: { exact: true, score: 100, reason: "Exact fingerprint match" },
+      default_selected: false,
+    });
+    rows.push({
+      posted_date: "2026-01-12",
+      description_raw: "POS purchase Apple pay (Domestic) UNUSUAL MERCHANT",
+      debit: 90000,
+      credit: 0,
+      balance_after: 3850,
+      kind: "card_purchase",
+      merchant_raw: "UNUSUAL MERCHANT",
+      card_last4: "0000",
+      fingerprint: "alrajhi-3",
+      anomaly: { score: 8.5, reason: "Unusual amount for this merchant" },
+      default_selected: false,
+    });
+  }
+
+  return {
+    ...base,
+    bank: "Al Rajhi",
+    parser: "alrajhi",
+    header: {
+      opening_balance: 100000,
+      closing_balance: 44567,
+      stated_debit_total: 60000,
+      stated_credit_total: 4567,
+      stated_debit_count: 3,
+      stated_credit_count: 1,
+    },
+    reconciliation: {
+      ok: true,
+      checks: [
+        { name: "debit_total", status: "pass", parsed: "600.00", stated: "600.00" },
+        { name: "credit_total", status: "pass", parsed: "45.67", stated: "45.67" },
+        { name: "balance_walk", status: "pass", parsed: "445.67", stated: "445.67" },
+      ],
+      parsed_debit_total: 60000,
+      parsed_credit_total: 4567,
+      parsed_debit_count: 3,
+      parsed_credit_count: 1,
+    },
+    rows,
+    summary: {
+      rows: rows.length,
+      exact_duplicates: rows.filter((row) => row.duplicate?.exact).length,
+      needs_review: 0,
+      default_rows: rows.filter((row) => row.default_selected).length,
+      history_rows: 0,
+      anomaly_ready: true,
+    },
+  };
+}
+
 const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantId = null) => {
   const merchants = [
     { id: 1, name: "Rent Agency" },
@@ -542,162 +770,20 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const rowCount = 120;
-    const hasExactDuplicates = true;
-    const hasAnomalies = true;
-
-    let rows = [
-      {
-        "posted_date": "2026-01-30",
-        "description_raw": "Transfer to Savings Account",
-        "debit": 50000,
-        "credit": 0,
-        "balance_after": 50000,
-        "kind": "external_transfer_out",
-        "fingerprint": "abc1",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-20",
-        "description_raw": "Shopping Center Purchase",
-        "debit": 5000,
-        "credit": 0,
-        "balance_after": 95000,
-        "kind": "card_purchase",
-        "merchant_raw": "SHOPPING CENTER",
-        "card_last4": "1234",
-        "fingerprint": "abc2",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-15",
-        "description_raw": "Salary Monthly Deposit",
-        "debit": 0,
-        "credit": 100000,
-        "balance_after": 100000,
-        "kind": "salary",
-        "fingerprint": "abc3",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-10",
-        "description_raw": "Grocery Store Payment",
-        "debit": 4567,
-        "credit": 0,
-        "balance_after": 99567,
-        "kind": "card_purchase",
-        "merchant_raw": "SUPERMARKET",
-        "card_last4": "1234",
-        "fingerprint": "abc4",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-05",
-        "description_raw": "Coffee Shop Transaction",
-        "debit": 433,
-        "credit": 0,
-        "balance_after": 104000,
-        "kind": "card_purchase",
-        "merchant_raw": "COFFEE SHOP",
-        "card_last4": "1234",
-        "fingerprint": "abc5",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-02",
-        "description_raw": "ATM Cash Withdrawal",
-        "debit": 1000,
-        "credit": 0,
-        "balance_after": 105000,
-        "kind": "cash_withdrawal",
-        "fingerprint": "abc6",
-        "default_selected": true
-      }
-    ];
-
-    const extraRows = Array.from({ length: 114 }, (_, i) => {
-      const isExactDuplicate = i === 20;
-      const hasAnomaly = i === 50;
-      const base = {
-        "description_raw": `Transaction ${i + 1}`,
-        "debit": i % 2 === 0 ? Math.floor(Math.random() * 50000) + 1000 : 0,
-        "credit": i % 2 === 0 ? 0 : Math.floor(Math.random() * 50000) + 1000,
-        "balance_after": 100000 - (i + 1) * 500,
-        "kind": ["card_purchase", "online_purchase", "salary", "bill_payment"][i % 4],
-        "merchant_raw": ["STORE", "VENDOR", "MERCHANT"][i % 3],
-        "card_last4": "1234",
-        "fingerprint": isExactDuplicate ? "abc5" : `fp${100 + i}`,
-        "posted_date": `2026-01-${String((30 - Math.floor(i / 5)) % 30 || 1).padStart(2, '0')}`,
-        "default_selected": !isExactDuplicate && !hasAnomaly
-      };
-
-      if (isExactDuplicate) {
-        base.duplicate = {
-          exact: true,
-          score: 100,
-          reason: "Exact fingerprint match"
-        };
-      }
-
-      if (hasAnomaly) {
-        base.anomaly = {
-          score: 8.5,
-          reason: "Unusual amount for this merchant"
-        };
-        base.default_selected = false;
-      }
-
-      return base;
-    });
-
-    rows = [...rows, ...extraRows];
-
-    const preview = {
-      "import_id": 1,
-      "status": "pending",
-      "already_imported": false,
-      "resumed": false,
-      "bank": "Al Rajhi",
-      "account_number": "****5432",
-      "parser": "alrajhi",
-      "parser_version": "1",
-      "period_start": "2026-01-01",
-      "period_end": "2026-01-31",
-      "header": {
-        "opening_balance": 100000,
-        "closing_balance": 44567,
-        "stated_debit_total": 60000,
-        "stated_credit_total": 4567,
-        "stated_debit_count": 3,
-        "stated_credit_count": 1
-      },
-      "reconciliation": {
-        "ok": true,
-        "checks": [
-          { "name": "debit_total", "status": "pass", "parsed": "600.00", "stated": "600.00" },
-          { "name": "credit_total", "status": "pass", "parsed": "45.67", "stated": "45.67" },
-          { "name": "debit_count", "status": "pass", "parsed": "3", "stated": "3" },
-          { "name": "credit_count", "status": "pass", "parsed": "1", "stated": "1" },
-          { "name": "balance_walk", "status": "pass", "parsed": "445.67", "stated": "445.67" }
-        ],
-        "parsed_debit_total": 60000,
-        "parsed_credit_total": 4567,
-        "parsed_debit_count": 3,
-        "parsed_credit_count": 1
-      },
-      "rows": rows,
-      "summary": {
-        "rows": rowCount,
-        "exact_duplicates": hasExactDuplicates ? 1 : 0,
-        "needs_review": hasAnomalies ? 1 : 0,
-        "default_rows": rowCount - (hasExactDuplicates ? 1 : 0) - (hasAnomalies ? 1 : 0),
-        "history_rows": 25,
-        "anomaly_ready": true
-      }
-    };
+    const body = await readRawBody(req);
+    const filename = /filename="([^"]*)"/.exec(body.toString("latin1"))?.[1] || "";
 
     res.writeHead(200);
-    res.end(JSON.stringify(preview));
+    res.end(JSON.stringify(buildPreview(filename)));
+    return;
+  }
+
+  // Clears import state between specs
+  if (pathname === "/__imports" && req.method === "DELETE") {
+    importedFiles.clear();
+    importFileById.clear();
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
 
@@ -710,8 +796,14 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    const importId = parseInt(pathname.split("/")[3], 10);
+    const filename = importFileById.get(importId);
+    if (filename) {
+      importedFiles.add(filename);
+    }
+
     res.writeHead(200);
-    res.end(JSON.stringify({ inserted: 6 }));
+    res.end(JSON.stringify({ inserted: 3 }));
     return;
   }
 

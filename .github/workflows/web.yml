@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths:
       - web/**
+      - cmd/e2e-fixturegen/**
+      - .claude
+      - playwright.config.ts
       - .github/workflows/web.yml
   pull_request:
     paths:
       - web/**
+      - cmd/e2e-fixturegen/**
+      - .claude
+      - playwright.config.ts
       - .github/workflows/web.yml
 
 permissions:
@@ -127,17 +133,79 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - run: npm ci
       - run: npm ci
         working-directory: web
       - run: npx playwright install --with-deps chromium
       - run: npm run build
         working-directory: web
-      - run: npx playwright test auth.spec.ts smoke.spec.ts
+      - run: go run ./cmd/e2e-fixturegen
+      - run: npx playwright test
+
+  render-gates:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chrome
+      - run: npm run build
+        working-directory: web
+      - name: Snapshot the pages against the fake API
+        run: |
+          node web/e2e/support/start-servers.mjs &
+          SERVER_PID=$!
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/signin > /dev/null && break
+            sleep 1
+          done
+          npm run snapshot --prefix web
+          kill "$SERVER_PID"
+      - name: Assert the snapshots exist
+        run: |
+          count=$(find web/test/snapshots -name '*.html' | wc -l)
+          echo "snapshot files: $count"
+          test "$count" -gt 0
+      - name: Render gates
+        env:
+          DS_REQUIRE_BROWSER: "1"
+        run: |
+          for f in web/test/snapshots/*-light.html; do
+            node .claude/scripts/verify_states.mjs "$f"
+            node .claude/scripts/axe_audit.mjs "$f"
+          done
+          for f in web/test/snapshots/*-dark.html; do
+            node .claude/scripts/verify_states.mjs "$f" --dark
+            node .claude/scripts/axe_audit.mjs "$f" --dark
+          done
+          node .claude/scripts/verify_overflow.mjs web/test/snapshots
+          node .claude/scripts/slop_tells.mjs --strict web/test/snapshots/*.html
+          node .claude/scripts/verify_target_size.mjs web/test/snapshots
+          node .claude/scripts/verify_mobile_first.mjs web/test/snapshots
+          node .claude/scripts/verify_responsive.mjs web/test/snapshots
+          node .claude/scripts/lint_intent.mjs web/test/snapshots
+          python3 .claude/scripts/lint_hardcodes.py web/src
+          python3 .claude/scripts/check_no_emoji.py web/src
+          python3 .claude/scripts/lint_native_select.py web/src
 
   image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, typecheck, unit, build, design, e2e]
+    needs: [lint, typecheck, unit, build, design, e2e, render-gates]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:

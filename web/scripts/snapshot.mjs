@@ -12,7 +12,7 @@ const routes = [
 
 mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch({ channel: "chrome" });
+const browser = await chromium.launch({ channel: "chrome" }).catch(() => chromium.launch());
 
 for (const [name, path] of routes) {
   for (const theme of ["light", "dark"]) {

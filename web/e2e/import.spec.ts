@@ -1,8 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "path";
 
+const API_BASE_URL = `http://127.0.0.1:${process.env.API_PORT || "8901"}`;
+
+async function uploadStatement(page: Page, filename: string) {
+  await page.goto("/imports");
+  await page.locator("input[type='file']").setInputFiles(resolve("web/e2e/.tmp", filename));
+  await page.getByRole("button", { name: "Upload" }).click();
+  await expect(page.getByRole("heading", { name: "Statement details" })).toBeVisible({
+    timeout: 15000,
+  });
+}
+
 test.describe("Phase 5W: Import Review", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    await request.delete(`${API_BASE_URL}/__imports`);
+
     await page.goto("/signin");
     const signInButton = page.getByRole("link", { name: "Continue to Keycloak" });
     await signInButton.click();
@@ -13,185 +26,90 @@ test.describe("Phase 5W: Import Review", () => {
   });
 
   test("Upload Alinma XLSX and verify header figures and rows", async ({ page }) => {
-    // Navigate to imports page
-    await page.goto("/imports");
+    await uploadStatement(page, "alinma_ok.xlsx");
 
-    // Find and upload Alinma file
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
+    await expect(page.getByText("1,000.00 SAR", { exact: true })).toBeVisible();
+    await expect(page.getByText("1,186.00 SAR", { exact: true })).toBeVisible();
 
-    // Wait for upload to complete
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
+    await expect(page.locator("table")).toBeVisible();
+    expect(await page.locator("tbody tr").count()).toBeGreaterThan(0);
 
-    // Verify header figures are displayed
-    const openingBalance = page.getByText(/1.*000/); // Opening balance 1000.00 SAR
-    await expect(openingBalance).toBeVisible();
-
-    const closingBalance = page.getByText(/1.*186/); // Closing balance 1186.00 SAR
-    await expect(closingBalance).toBeVisible();
-
-    // Verify rows are visible
-    const rowsTable = page.locator("table");
-    await expect(rowsTable).toBeVisible();
-
-    const rows = page.locator("tbody tr");
-    const rowCount = await rows.count();
-    expect(rowCount).toBeGreaterThan(0);
-
-    // Verify Arabic text appears in descriptions
-    const arabicText = page.getByText(/تم الشراء/);
-    await expect(arabicText).toBeVisible();
+    await expect(page.getByText(/تم الشراء/).first()).toBeVisible();
   });
 
   test("Held rows are unselected and selectable", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alrajhi_duplicate.pdf");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
+    const checkboxes = page.locator("[role='checkbox']");
+    expect(await checkboxes.count()).toBeGreaterThan(0);
 
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
+    const heldSelectable = page.locator(
+      "[role='checkbox'][aria-checked='false']:not([aria-disabled='true'])"
+    );
+    expect(await heldSelectable.count()).toBeGreaterThan(0);
 
-    // Get all checkboxes for rows
-    const checkboxes = page.locator("input[type='checkbox'][role='checkbox']");
-    const checkboxCount = await checkboxes.count();
-
-    // Verify there are checkboxes (at least one for the header and some for rows)
-    expect(checkboxCount).toBeGreaterThan(0);
-
-    // Check that at least one checkbox is unchecked (for held rows)
-    const uncheckedCheckbox = page.locator("input[type='checkbox'][role='checkbox']:not(:checked)");
-    const uncheckedCount = await uncheckedCheckbox.count();
-
-    // Some rows might be held, so we should have at least some unchecked
-    if (uncheckedCount > 0) {
-      // Try to click an unchecked checkbox to select it
-      await uncheckedCheckbox.first().click();
-      // Verify it becomes checked
-      await expect(uncheckedCheckbox.first()).toBeChecked({ timeout: 5000 }).catch(() => {
-        // It's OK if not all checkboxes can be checked, some might be disabled
-      });
-    }
+    const heldRow = page.locator("[role='checkbox'][aria-label*='UNUSUAL MERCHANT']");
+    await expect(heldRow).toHaveAttribute("aria-checked", "false");
+    await heldRow.click();
+    await expect(heldRow).toHaveAttribute("aria-checked", "true");
   });
 
   test("Al Rajhi PDF upload succeeds with header and rows", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alrajhi_ok.pdf");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alrajhi_ok.pdf"));
+    await expect(page.getByText("445.67 SAR", { exact: true })).toBeVisible();
 
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
-
-    // Verify header figures (Al Rajhi: 445.67 closing balance)
-    const closingBalance = page.getByText(/445/);
-    await expect(closingBalance).toBeVisible();
-
-    // Verify rows table
-    const rowsTable = page.locator("table");
-    await expect(rowsTable).toBeVisible();
-
-    const rows = page.locator("tbody tr");
-    const rowCount = await rows.count();
-    expect(rowCount).toBeGreaterThan(0);
+    await expect(page.locator("table")).toBeVisible();
+    expect(await page.locator("tbody tr").count()).toBeGreaterThan(0);
   });
 
   test("Failed reconciliation statement shows no commit control", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alinma_rejected.xlsx");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_rejected.xlsx"));
-
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
-
-    // Verify rejection message is shown
-    const rejectionMessage = page.getByText(/reconciliation|failed|rejected/i);
-    await expect(rejectionMessage).toBeVisible();
-
-    // Verify commit button is not present
-    const commitButton = page.getByRole("button", { name: /commit|import/i });
-    await expect(commitButton).not.toBeVisible();
+    await expect(page.getByText("Import rejected")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Commit/ })).toHaveCount(0);
   });
 
   test("Re-upload same file shows already imported message", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alinma_ok.xlsx");
 
-    // First upload
-    let fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
+    await page.getByRole("button", { name: /^Commit/ }).click();
+    await expect(page.getByRole("heading", { name: "Import successful" })).toBeVisible();
+    await page.getByRole("button", { name: "Import another statement" }).click();
 
-    // Commit the first upload
-    const firstCommitButton = page.getByRole("button", { name: /commit|import/i }).first();
-    if (await firstCommitButton.isVisible()) {
-      await firstCommitButton.click();
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
-    }
+    await page.locator("input[type='file']").setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
+    await page.getByRole("button", { name: "Upload" }).click();
 
-    // Second upload of same file
-    fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
-
-    // Should show already imported message
-    const alreadyImportedMessage = page.getByText(/already.*imported/i);
-    await expect(alreadyImportedMessage).toBeVisible();
+    await expect(page.getByText("Already imported")).toBeVisible();
   });
 
   test("Cancel review leaves nothing inserted", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alinma_duplicate.xlsx");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_duplicate.xlsx"));
+    await expect(page.locator("table")).toBeVisible();
 
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
+    await page.getByRole("button", { name: "Cancel" }).click();
 
-    // Find and click cancel button
-    const cancelButton = page.getByRole("button", { name: /cancel/i });
-    if (await cancelButton.isVisible()) {
-      await cancelButton.click();
-      await page.waitForLoadState("networkidle", { timeout: 5000 });
-    }
+    await expect(page.getByRole("heading", { name: "Upload" })).toBeVisible();
+    await expect(page.locator("table")).toHaveCount(0);
   });
 
   test("Exact duplicate row is disabled with reason shown", async ({ page }) => {
-    await page.goto("/imports");
+    await uploadStatement(page, "alrajhi_duplicate.pdf");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alrajhi_duplicate.pdf"));
+    const disabledCheckboxes = page.locator("[role='checkbox'][aria-disabled='true']");
+    expect(await disabledCheckboxes.count()).toBeGreaterThan(0);
 
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
-
-    // Look for disabled checkboxes
-    const disabledCheckboxes = page.locator("input[type='checkbox'][disabled]");
-    const disabledCount = await disabledCheckboxes.count();
-
-    // If there are disabled checkboxes, verify they have a reason
-    if (disabledCount > 0) {
-      // Look for "Already imported" or similar text near disabled rows
-      const alreadyImportedText = page.getByText(/already.*imported|duplicate/i);
-      await expect(alreadyImportedText).toBeVisible();
-    }
+    await expect(page.getByText("Already imported").first()).toBeVisible();
+    await expect(page.getByText("Exact fingerprint match").first()).toBeVisible();
   });
 
-  test("No statement file left on disk after import", async ({ page }) => {
-    await page.goto("/imports");
+  test("Commit succeeds and clears the review", async ({ page }) => {
+    await uploadStatement(page, "alinma_ok.xlsx");
 
-    const fileInput = page.locator("input[type='file']");
-    await fileInput.setInputFiles(resolve("web/e2e/.tmp/alinma_ok.xlsx"));
+    await page.getByRole("button", { name: /^Commit/ }).click();
 
-    await page.waitForLoadState("networkidle", { timeout: 10000 });
-
-    // Commit the import
-    const commitButton = page.getByRole("button", { name: /commit|import/i }).first();
-    if (await commitButton.isVisible()) {
-      await commitButton.click();
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
-    }
-
-    // Verify upload was successful and check that temp files are cleaned
-    // This is a best-effort check via the API response
-    const successMessage = page.getByText(/success|imported|completed/i);
-    await expect(successMessage).toBeVisible().catch(() => {
-      // Success might not always show a message
-    });
+    await expect(page.getByRole("heading", { name: "Import successful" })).toBeVisible();
+    await expect(page.locator("table")).toHaveCount(0);
   });
 });
