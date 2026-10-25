@@ -42,7 +42,7 @@ func testExplainer(t *testing.T, provider, baseURL string) *explain.Explainer {
 
 func explainServer(t *testing.T, ex *explain.Explainer) http.Handler {
 	t.Helper()
-	return New(nil, nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1<<20, ex,
+	return New(nil, nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1<<20, ex, nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 

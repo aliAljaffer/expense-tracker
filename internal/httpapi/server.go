@@ -15,6 +15,7 @@ import (
 	"github.com/aliAljaffer/grooszy/internal/explain"
 	"github.com/aliAljaffer/grooszy/internal/importer"
 	"github.com/aliAljaffer/grooszy/internal/ledger"
+	"github.com/aliAljaffer/grooszy/internal/reminder"
 )
 
 type Authenticator interface {
@@ -29,14 +30,24 @@ type Server struct {
 	log       *slog.Logger
 	// explain is optional. A nil explainer reports disabled and refuses
 	// explanations, so the feature can never go live by accident.
-	explain *explain.Explainer
+	explain  *explain.Explainer
+	settings settingsStore
+	// mail is optional. A nil or disabled mailer refuses test sends.
+	mail *reminder.Mailer
 }
 
-func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload int64, ex *explain.Explainer, log *slog.Logger) http.Handler {
+func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload int64, ex *explain.Explainer, mail *reminder.Mailer, log *slog.Logger) http.Handler {
 	if maxUpload <= 0 {
 		maxUpload = 16 << 20
 	}
-	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, log: log}
+	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, mail: mail, log: log}
+	if led != nil {
+		s.settings = led
+	}
+	return s.routes()
+}
+
+func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
@@ -53,6 +64,9 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	mux.Handle("GET /api/suggestions/card-coverage", s.protect(s.cardCoverage))
 	mux.Handle("GET /api/suggestions/recurring", s.protect(s.recurring))
 	mux.Handle("GET /api/suggestions/bnpl", s.protect(s.bnpl))
+	mux.Handle("GET /api/settings", s.protect(s.getSettings))
+	mux.Handle("PUT /api/settings", s.protect(s.putSettings))
+	mux.Handle("POST /api/settings/reminder/test", s.protect(s.testReminder))
 	return http.TimeoutHandler(mux, 90*time.Second, `{"error":"request timed out"}`)
 }
 

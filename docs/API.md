@@ -20,6 +20,11 @@ owner's access token.
 | `GROOSZY_EXPLAIN_MODEL` | no | Model name the provider expects. No value is built in |
 | `GROOSZY_EXPLAIN_API_KEY` | no | Provider key. Never returned by the API and never logged |
 | `GROOSZY_EXPLAIN_TIMEOUT` | no | Whole seconds. Default 30 |
+| `SMTP_ADDR` | no | SMTP `host:port`. Empty disables the monthly reminder |
+| `SMTP_USER` | no | SMTP username. Empty sends without authentication |
+| `SMTP_PASS` | no | SMTP password. Never returned by the API and never logged |
+| `SMTP_FROM` | no | Envelope sender, a bare address. Required when `SMTP_ADDR` is set |
+| `REMINDER_TZ` | no | IANA zone that sets the send hour. Default `UTC` |
 
 The API refuses to start when a required value is missing. There is no
 authentication bypass.
@@ -477,6 +482,46 @@ the 3-month average.
 Insufficient_data when no merchants are marked as BNPL or fewer than 3 months
 of BNPL transactions exist. Returns ok with all months (rising and flat/falling)
 when 3+ months of data exist.
+
+## Settings and the monthly reminder
+
+The API emails the owner on the first of every month, at 08:00 in `REMINDER_TZ`,
+asking for the latest statements. The send happens once per month, and
+`reminder_last_sent` is recorded only after a successful send. Leaving
+`SMTP_ADDR` empty disables reminders: the API logs one line at startup and never
+sends.
+
+All settings routes require the bearer token and return 503
+`{"error":"database unavailable"}` when the database is not reachable.
+
+### GET /api/settings
+
+```json
+{"reminder_email": "owner@example.com"}
+```
+
+`reminder_email` is an empty string when the owner has not set an address.
+
+### PUT /api/settings
+
+Body:
+
+```json
+{"reminder_email": "owner@example.com"}
+```
+
+The address is validated with `net/mail.ParseAddress`. An empty or invalid
+address returns 422 with `{"error":"..."}` and stores nothing. On success the
+stored address is returned in the same shape as `GET /api/settings`.
+
+### POST /api/settings/reminder/test
+
+Sends the reminder now to the stored address, so delivery can be checked
+without waiting for the first of the month.
+
+- 200 `{"sent": true}` when the email was accepted by the SMTP server.
+- 422 `{"error": "no reminder email set"}` when no address is stored.
+- 502 `{"error": "..."}` when sending fails or email is disabled.
 
 ## Known limits
 

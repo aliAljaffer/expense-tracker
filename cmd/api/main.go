@@ -21,6 +21,7 @@ import (
 	"github.com/aliAljaffer/grooszy/internal/importer"
 	"github.com/aliAljaffer/grooszy/internal/ledger"
 	"github.com/aliAljaffer/grooszy/internal/migrate"
+	"github.com/aliAljaffer/grooszy/internal/reminder"
 )
 
 func main() {
@@ -81,9 +82,21 @@ func run(log *slog.Logger) error {
 
 	explainer := explain.New(explain.ConfigFromEnv())
 
+	remCfg, err := reminder.ConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	rem := reminder.New(led, remCfg, log)
+	if remCfg.Mailer.Enabled() {
+		log.Info("monthly reminder enabled", "timezone", remCfg.Location.String())
+	} else {
+		log.Info("monthly reminder disabled, SMTP_ADDR is not set")
+	}
+	go rem.Loop(ctx)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, explainer, log),
+		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, explainer, &remCfg.Mailer, log),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      120 * time.Second,

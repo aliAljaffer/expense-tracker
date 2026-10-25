@@ -21,7 +21,7 @@ type stubAuth struct {
 func (s stubAuth) Authenticate(*http.Request) (auth.Identity, error) { return s.id, s.err }
 
 func newTestServer(a Authenticator) http.Handler {
-	return New(nil, nil, a, 1<<20, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return New(nil, nil, a, 1<<20, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func TestHealthIsPublic(t *testing.T) {
@@ -93,7 +93,7 @@ func TestOwnerCanReadIdentity(t *testing.T) {
 }
 
 func TestUploadRejectsOversizedFile(t *testing.T) {
-	h := New(nil, nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024, nil,
+	h := New(nil, nil, stubAuth{id: auth.Identity{Subject: "owner"}}, 1024, nil, nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
