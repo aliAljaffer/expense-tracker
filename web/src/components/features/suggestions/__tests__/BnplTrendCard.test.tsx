@@ -58,6 +58,24 @@ describe("BnplTrendCard", () => {
     expect(screen.getByText(/Review upcoming BNPL/)).toBeInTheDocument();
   });
 
+  it("renders the chart title above the months table", () => {
+    render(<BnplTrendCard data={mockOkResponse} />);
+
+    expect(screen.getByText("Monthly outflow")).toBeInTheDocument();
+    expect(screen.getByText("BNPL payments per month")).toBeInTheDocument();
+  });
+
+  it("renders ChartEmpty when the period has no months", () => {
+    render(
+      <BnplTrendCard
+        data={{ ...mockOkResponse, evidence: { months: [] } }}
+      />
+    );
+
+    expect(screen.getByText("No BNPL payments in this period")).toBeInTheDocument();
+    expect(screen.getByText(/BNPL commitments are rising/)).toBeInTheDocument();
+  });
+
   it("formats money correctly", () => {
     render(<BnplTrendCard data={mockOkResponse} />);
 

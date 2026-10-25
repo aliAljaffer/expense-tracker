@@ -1,12 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { displaySAR } from "@/lib/api/types";
 import type { RecurringResponse } from "@/lib/api/types";
+import {
+  ChartCard,
+  ChartEmpty,
+  ChartTooltip,
+  chartAxisProps,
+  chartGridProps,
+} from "@/components/ui/chart";
 
 interface RecurringPaymentsCardProps {
   data: RecurringResponse;
   lead?: boolean;
+}
+
+const MAX_SERIES = 5;
+const MAX_MERCHANT_CHARS = 16;
+
+function truncateMerchant(value: string): string {
+  return value.length > MAX_MERCHANT_CHARS
+    ? `${value.slice(0, MAX_MERCHANT_CHARS - 1)}...`
+    : value;
 }
 
 export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsCardProps) {
@@ -25,6 +50,9 @@ export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsC
   }
 
   const series = data.evidence.recurring_series;
+  const chartSeries = [...series]
+    .sort((a, b) => b.total_amount - a.total_amount)
+    .slice(0, MAX_SERIES);
 
   return (
     <div className={`suggestion-card${lead ? " suggestion-card--lead" : ""}`}>
@@ -34,6 +62,42 @@ export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsC
       </div>
 
       <div className="suggestion-card__body">
+        <ChartCard
+          title="Top recurring series"
+          lede="By total amount over the period"
+          className="suggestion-card__chart"
+        >
+          {chartSeries.length === 0 ? (
+            <ChartEmpty message="No recurring series in this period" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartSeries}
+                layout="vertical"
+                margin={{ top: 0, right: 8, bottom: 0, left: 0 }}
+              >
+                <CartesianGrid {...chartGridProps} horizontal={false} vertical />
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="merchant"
+                  width={104}
+                  tickFormatter={truncateMerchant}
+                  {...chartAxisProps}
+                />
+                <Tooltip content={<ChartTooltip money />} />
+                <Bar
+                  dataKey="total_amount"
+                  name="Total"
+                  fill="var(--color-chart-2)"
+                  barSize={16}
+                  radius={[0, 4, 4, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
         <div className="suggestion-card__period">
           Period: {data.period.from} to {data.period.to}
         </div>

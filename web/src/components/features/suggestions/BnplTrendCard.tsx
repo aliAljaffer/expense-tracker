@@ -1,12 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { displaySAR } from "@/lib/api/types";
 import type { BnplResponse } from "@/lib/api/types";
+import {
+  ChartCard,
+  ChartEmpty,
+  ChartTooltip,
+  chartAxisProps,
+  chartGridProps,
+} from "@/components/ui/chart";
 
 interface BnplTrendCardProps {
   data: BnplResponse;
   lead?: boolean;
+}
+
+function axisSAR(value: number): string {
+  return String(Math.round(value / 100));
 }
 
 export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
@@ -25,6 +45,7 @@ export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
   }
 
   const months = data.evidence.months;
+  const chartMonths = [...months].sort((a, b) => a.month.localeCompare(b.month));
 
   return (
     <div className={`suggestion-card${lead ? " suggestion-card--lead" : ""}`}>
@@ -34,6 +55,34 @@ export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
       </div>
 
       <div className="suggestion-card__body">
+        <ChartCard
+          title="Monthly outflow"
+          lede="BNPL payments per month"
+          className="suggestion-card__chart"
+        >
+          {chartMonths.length === 0 ? (
+            <ChartEmpty message="No BNPL payments in this period" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartMonths} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="month" {...chartAxisProps} />
+                <YAxis {...chartAxisProps} width={40} tickFormatter={axisSAR} />
+                <Tooltip content={<ChartTooltip money />} />
+                <Line
+                  type="monotone"
+                  dataKey="bnpl_outflow"
+                  name="Outflow"
+                  stroke="var(--color-chart-1)"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
         <div className="suggestion-card__period">
           Period: {data.period.from} to {data.period.to}
         </div>

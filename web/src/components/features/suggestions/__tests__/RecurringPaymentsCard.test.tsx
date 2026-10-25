@@ -68,6 +68,24 @@ describe("RecurringPaymentsCard", () => {
     expect(screen.getByText("42,000.00 SAR")).toBeInTheDocument();
   });
 
+  it("renders the chart title above the series table", () => {
+    render(<RecurringPaymentsCard data={mockOkResponse} />);
+
+    expect(screen.getByText("Top recurring series")).toBeInTheDocument();
+    expect(screen.getByText("By total amount over the period")).toBeInTheDocument();
+  });
+
+  it("renders ChartEmpty when the period has no series", () => {
+    render(
+      <RecurringPaymentsCard
+        data={{ ...mockOkResponse, evidence: { recurring_series: [] } }}
+      />
+    );
+
+    expect(screen.getByText("No recurring series in this period")).toBeInTheDocument();
+    expect(screen.getByText(/Nine recurring payments found/)).toBeInTheDocument();
+  });
+
   it("links to filtered transactions with merchant and date range", () => {
     render(<RecurringPaymentsCard data={mockOkResponse} />);
 
