@@ -8,6 +8,14 @@ import type { TransactionsResponse, Transaction } from "@/lib/api/types";
 import type { GetTransactionsParams } from "@/lib/api/overview";
 import { Pagination } from "@/components/ui/pagination";
 import { calculatePagination, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
+import { SpendingChart, CHART_ROW_LIMIT } from "./SpendingChart";
+
+interface ChartRows {
+  rows: Transaction[];
+  totalCount: number;
+  from?: string;
+  to?: string;
+}
 
 interface TransactionsListProps {
   searchParams: {
@@ -26,6 +34,8 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [chart, setChart] = useState<ChartRows | null>(null);
+  const [chartUnavailable, setChartUnavailable] = useState(false);
   const router = useRouter();
   const currentSearchParams = useSearchParams();
 
@@ -34,6 +44,8 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   const validPerPage = PER_PAGE_OPTIONS.includes(perPage) ? perPage : DEFAULT_PER_PAGE;
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTransactions() {
       try {
         setIsLoading(true);
@@ -78,6 +90,21 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
         const result = await getTransactions(params);
         setData(result);
+
+        setChartUnavailable(false);
+        getTransactions({ ...params, limit: CHART_ROW_LIMIT, offset: 0 })
+          .then((chartResult) => {
+            if (cancelled) return;
+            setChart({
+              rows: chartResult.rows,
+              totalCount: chartResult.total_count,
+              from: params.from,
+              to: params.to,
+            });
+          })
+          .catch(() => {
+            if (!cancelled) setChartUnavailable(true);
+          });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load transactions";
         setError(message);
@@ -87,6 +114,10 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
     }
 
     loadTransactions();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, page, validPerPage]);
 
   const pageInfo = data ? calculatePagination({
@@ -147,6 +178,14 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
       <div className="transactions-summary">
         Total: {data.total_count} transaction{data.total_count !== 1 ? "s" : ""} | Debit: {displaySAR(data.total_debit)} | Credit: {displaySAR(data.total_credit)}
       </div>
+
+      <SpendingChart
+        rows={chart?.rows ?? []}
+        totalCount={chart?.totalCount ?? 0}
+        from={chart?.from}
+        to={chart?.to}
+        unavailable={chartUnavailable}
+      />
 
       <div className="transactions-table-wrapper">
         <table className="transactions-table">
