@@ -14,15 +14,24 @@
 }
 
 .suggestions-page__title {
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-medium);
+  max-width: var(--size-measure-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
 }
 
 .suggestions-page__lede {
-  margin-top: var(--space-2);
-  font-size: var(--text-sm);
+  margin-top: var(--space-3);
+  max-width: var(--size-measure-prose);
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
+}
+
+@media (max-width: 359px) {
+  .suggestions-page__title {
+    font-size: var(--text-4xl);
+  }
 }
 
 .suggestions-cards {
@@ -39,9 +48,35 @@
   padding: var(--space-6);
 }
 
+.suggestion-card--lead {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-raised);
+}
+
+.suggestion-card--lead .suggestion-card__title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.suggestion-card--lead .suggestion-card__summary {
+  max-width: var(--size-measure-prose);
+  margin-top: var(--space-2);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+}
+
 @media (min-width: 640px) {
   .suggestion-card {
     padding: var(--space-8);
+  }
+
+  .suggestion-card--lead {
+    padding: var(--space-10);
   }
 }
 
@@ -75,7 +110,10 @@
 }
 
 .suggestion-card__table-wrapper {
+  min-width: 0;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) var(--color-surface-sunken);
 }
 
 .suggestion-card__table {

@@ -63,12 +63,20 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-2);
   padding-block: var(--space-3);
+}
+
+.site-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .wordmark {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: var(--space-2);
   min-height: var(--size-control-md);
@@ -378,6 +386,10 @@ p {
 @media (min-width: 640px) {
   .shell {
     padding-inline: var(--space-8);
+  }
+
+  .site-header__inner {
+    gap: var(--space-4);
   }
 
   .display {

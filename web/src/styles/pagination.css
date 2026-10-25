@@ -53,8 +53,8 @@
 }
 
 .pagination__button:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-border-focus); /* ds-allow-hardcode: 2px focus ring */
+  outline-offset: 2px; /* ds-allow-hardcode: 2px focus ring gap */
 }
 
 .pagination__button:disabled {
@@ -72,8 +72,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--size-control-md);
+  min-height: var(--size-control-md);
   padding: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-primary);
@@ -92,8 +92,8 @@
 }
 
 .pagination__page:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-border-focus); /* ds-allow-hardcode: 2px focus ring */
+  outline-offset: 2px; /* ds-allow-hardcode: 2px focus ring gap */
 }
 
 .pagination__page--active {
@@ -113,8 +113,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  min-width: 44px;
+  height: var(--size-control-md);
+  min-width: var(--size-control-md);
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
 }
@@ -140,7 +140,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 44px;
+  min-height: var(--size-control-md);
   padding: var(--space-2) var(--space-3);
   gap: var(--space-2);
   font-size: var(--text-sm);
@@ -159,8 +159,8 @@
 }
 
 .pagination__listbox-button:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-border-focus); /* ds-allow-hardcode: 2px focus ring */
+  outline-offset: 2px; /* ds-allow-hardcode: 2px focus ring gap */
 }
 
 .pagination__listbox-button:disabled {
@@ -180,8 +180,8 @@
 }
 
 .pagination__listbox-chevron {
-  width: 20px;
-  height: 20px;
+  width: var(--size-icon-md);
+  height: var(--size-icon-md);
   color: var(--color-text-secondary);
   flex-shrink: 0;
   transition: transform var(--duration-fast) var(--ease-out);
@@ -214,7 +214,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: var(--size-control-md);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-text-primary);
@@ -236,8 +236,8 @@
 }
 
 .pagination__listbox-option:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: -2px;
+  outline: 2px solid var(--color-border-focus); /* ds-allow-hardcode: 2px focus ring */
+  outline-offset: -2px; /* ds-allow-hardcode: 2px focus ring gap */
 }
 
 /* Mobile-first responsive */
@@ -259,7 +259,7 @@
 
   .pagination__button {
     flex: 1;
-    min-width: 44px;
+    min-width: var(--size-control-md);
   }
 
   .pagination__button--prev,

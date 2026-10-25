@@ -78,19 +78,89 @@
 
 /* Navigation */
 .nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  align-items: center;
+  display: none;
 }
 
 .nav__link {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-control-md);
   padding: var(--space-1) var(--space-2);
   color: var(--color-text-secondary);
   text-decoration: none;
   font-size: var(--text-sm);
+  white-space: nowrap;
   transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (min-width: 768px) {
+  .nav {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .nav-menu {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .nav {
+    gap: var(--space-4);
+  }
+}
+
+.nav-menu {
+  position: relative;
+}
+
+.nav-menu__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.nav-menu__link {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-control-md);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  transition: background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.nav-menu__link:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+}
+
+.nav-menu__link:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.nav-menu__link[aria-current="page"] {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
 }
 
 .nav__link:hover {
@@ -166,7 +236,7 @@
 /* Secondary button - neutral */
 .btn--secondary {
   background-color: var(--color-action-secondary);
-  color: var(--color-text-on-action);
+  color: var(--color-text-primary);
   border-color: var(--color-action-secondary);
 }
 
@@ -200,7 +270,7 @@
 /* Button secondary alias */
 .button--secondary {
   background-color: var(--color-action-secondary);
-  color: var(--color-text-on-action);
+  color: var(--color-text-primary);
   border-color: var(--color-action-secondary);
 }
 
@@ -403,7 +473,7 @@
 .field__select,
 .field__textarea {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
   font-size: var(--text-sm);

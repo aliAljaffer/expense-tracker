@@ -11,7 +11,13 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
   return (
     <div className="overview-section">
       <h2 className="overview-section__title">Accounts</h2>
-      <div className="overview-table-wrapper">
+      <p className="overview-table-hint">Scroll to see all columns</p>
+      <div
+        className="overview-table-wrapper"
+        role="region"
+        aria-label="Accounts table"
+        tabIndex={0}
+      >
         <table className="overview-table">
           <thead>
             <tr>

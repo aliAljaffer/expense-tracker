@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+const links = [
+  { href: "/health", label: "Health" },
+  { href: "/imports", label: "Import" },
+  { href: "/overview", label: "Overview" },
+  { href: "/suggestions", label: "Suggestions" },
+  { href: "/settings", label: "Settings" },
+];
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -16,24 +25,54 @@ export function SiteHeader() {
           <span className="wordmark__mark" aria-hidden="true" />
           grooszy
         </Link>
-        <nav className="nav">
-          <Link href="/health" className="nav__link" aria-current={isCurrentPage("/health") ? "page" : undefined}>
-            Health
-          </Link>
-          <Link href="/imports" className="nav__link" aria-current={isCurrentPage("/imports") ? "page" : undefined}>
-            Import
-          </Link>
-          <Link href="/overview" className="nav__link" aria-current={isCurrentPage("/overview") ? "page" : undefined}>
-            Overview
-          </Link>
-          <Link href="/suggestions" className="nav__link" aria-current={isCurrentPage("/suggestions") ? "page" : undefined}>
-            Suggestions
-          </Link>
-          <Link href="/settings" className="nav__link" aria-current={isCurrentPage("/settings") ? "page" : undefined}>
-            Settings
-          </Link>
+
+        <nav className="nav" aria-label="Primary">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="nav__link"
+              aria-current={isCurrentPage(link.href) ? "page" : undefined}
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
-        <ThemeToggle />
+
+        <div className="site-header__actions">
+          <Popover className="nav-menu">
+            <PopoverButton className="icon-button" aria-label="Menu">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              >
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </PopoverButton>
+            <PopoverPanel className="nav-menu__panel">
+              {({ close }) => (
+                <>
+                  {links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="nav-menu__link"
+                      aria-current={isCurrentPage(link.href) ? "page" : undefined}
+                      onClick={() => close()}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </>
+              )}
+            </PopoverPanel>
+          </Popover>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

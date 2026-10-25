@@ -23,7 +23,13 @@ export function MonthlyTable({ months }: MonthlyTableProps) {
   return (
     <div className="overview-section">
       <h2 className="overview-section__title">Monthly summary</h2>
-      <div className="overview-table-wrapper">
+      <p className="overview-table-hint">Scroll to see all columns</p>
+      <div
+        className="overview-table-wrapper"
+        role="region"
+        aria-label="Monthly summary table"
+        tabIndex={0}
+      >
         <table className="overview-table">
           <thead>
             <tr>

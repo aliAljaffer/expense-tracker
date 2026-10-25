@@ -6,9 +6,10 @@ import type { BnplResponse } from "@/lib/api/types";
 
 interface BnplTrendCardProps {
   data: BnplResponse;
+  lead?: boolean;
 }
 
-export function BnplTrendCard({ data }: BnplTrendCardProps) {
+export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -26,7 +27,7 @@ export function BnplTrendCard({ data }: BnplTrendCardProps) {
   const months = data.evidence.months;
 
   return (
-    <div className="suggestion-card">
+    <div className={`suggestion-card${lead ? " suggestion-card--lead" : ""}`}>
       <div className="suggestion-card__header">
         <h3 className="suggestion-card__title">BNPL trend</h3>
         <p className="suggestion-card__summary">{data.summary}</p>

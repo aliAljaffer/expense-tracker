@@ -6,9 +6,10 @@ import type { CardCoverageResponse } from "@/lib/api/types";
 
 interface CreditCardCoverageCardProps {
   data: CardCoverageResponse;
+  lead?: boolean;
 }
 
-export function CreditCardCoverageCard({ data }: CreditCardCoverageCardProps) {
+export function CreditCardCoverageCard({ data, lead = false }: CreditCardCoverageCardProps) {
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -27,7 +28,7 @@ export function CreditCardCoverageCard({ data }: CreditCardCoverageCardProps) {
   const uncoveredMonths = months.filter(m => m.uncovered > 0);
 
   return (
-    <div className="suggestion-card">
+    <div className={`suggestion-card${lead ? " suggestion-card--lead" : ""}`}>
       <div className="suggestion-card__header">
         <h3 className="suggestion-card__title">Credit card coverage</h3>
         <p className="suggestion-card__summary">{data.summary}</p>

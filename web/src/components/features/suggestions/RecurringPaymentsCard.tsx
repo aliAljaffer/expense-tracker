@@ -6,9 +6,10 @@ import type { RecurringResponse } from "@/lib/api/types";
 
 interface RecurringPaymentsCardProps {
   data: RecurringResponse;
+  lead?: boolean;
 }
 
-export function RecurringPaymentsCard({ data }: RecurringPaymentsCardProps) {
+export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsCardProps) {
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -26,7 +27,7 @@ export function RecurringPaymentsCard({ data }: RecurringPaymentsCardProps) {
   const series = data.evidence.recurring_series;
 
   return (
-    <div className="suggestion-card">
+    <div className={`suggestion-card${lead ? " suggestion-card--lead" : ""}`}>
       <div className="suggestion-card__header">
         <h3 className="suggestion-card__title">Recurring payments</h3>
         <p className="suggestion-card__summary">{data.summary}</p>

@@ -7,6 +7,19 @@ import { CreditCardCoverageCard } from "./CreditCardCoverageCard";
 import { RecurringPaymentsCard } from "./RecurringPaymentsCard";
 import { BnplTrendCard } from "./BnplTrendCard";
 
+type LeadSuggestion = "coverage" | "recurring" | "bnpl" | null;
+
+export function leadSuggestion(
+  cardCoverage: CardCoverageResponse,
+  recurring: RecurringResponse,
+  bnpl: BnplResponse
+): LeadSuggestion {
+  if (cardCoverage.status === "ok") return "coverage";
+  if (recurring.status === "ok") return "recurring";
+  if (bnpl.status === "ok") return "bnpl";
+  return null;
+}
+
 export function SuggestionsContent() {
   const [cardCoverage, setCardCoverage] = useState<CardCoverageResponse | null>(null);
   const [recurring, setRecurring] = useState<RecurringResponse | null>(null);
@@ -68,11 +81,13 @@ export function SuggestionsContent() {
     return null;
   }
 
+  const lead = leadSuggestion(cardCoverage, recurring, bnpl);
+
   return (
     <div className="suggestions-cards">
-      <CreditCardCoverageCard data={cardCoverage} />
-      <RecurringPaymentsCard data={recurring} />
-      <BnplTrendCard data={bnpl} />
+      <CreditCardCoverageCard data={cardCoverage} lead={lead === "coverage"} />
+      <RecurringPaymentsCard data={recurring} lead={lead === "recurring"} />
+      <BnplTrendCard data={bnpl} lead={lead === "bnpl"} />
     </div>
   );
 }
