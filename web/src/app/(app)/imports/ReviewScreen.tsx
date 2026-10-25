@@ -44,6 +44,20 @@ export function ReviewScreen({ preview, onReset }: ReviewScreenProps) {
     setSelectedIds(newIds);
   }
 
+  function handleSelectAllRows(indices: number[]) {
+    setSelectedIds(new Set(indices));
+  }
+
+  function handlePageSelectionChange(indices: number[], select: boolean) {
+    const newIds = new Set(selectedIds);
+    indices.forEach((index) => (select ? newIds.add(index) : newIds.delete(index)));
+    setSelectedIds(newIds);
+  }
+
+  function handleClearSelection() {
+    setSelectedIds(new Set());
+  }
+
   async function handleCommit() {
     setIsCommitting(true);
     setError(null);
@@ -176,6 +190,10 @@ export function ReviewScreen({ preview, onReset }: ReviewScreenProps) {
               rows={preview.rows}
               selectedIds={selectedIds}
               onToggle={handleToggle}
+              onPageSelectionChange={handlePageSelectionChange}
+              onSelectAllRows={handleSelectAllRows}
+              onClearSelection={handleClearSelection}
+              enablePagination={true}
             />
           </div>
         </>
