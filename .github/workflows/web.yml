@@ -171,7 +171,8 @@ jobs:
           node web/e2e/support/start-servers.mjs &
           SERVER_PID=$!
           for _ in $(seq 1 60); do
-            curl -sf http://127.0.0.1:3000/signin > /dev/null && break
+            curl -sf http://127.0.0.1:3000/signin > /dev/null &&
+              curl -sf http://127.0.0.1:8901/healthz > /dev/null && break
             sleep 1
           done
           npm run snapshot --prefix web
