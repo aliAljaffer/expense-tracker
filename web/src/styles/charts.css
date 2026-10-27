@@ -39,6 +39,12 @@
 
 .chart-card__plot {
   height: var(--chart-plot-height);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-card__plot svg {
+  max-width: 100%;
 }
 
 /* theme.css emits the chart ramp in dark mode under the data-viz names only. */

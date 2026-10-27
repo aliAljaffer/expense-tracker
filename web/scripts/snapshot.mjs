@@ -81,6 +81,10 @@ async function capture(context, [name, path, prepare]) {
       const container = wrapper.closest(".recharts-responsive-container");
       if (!svg || !container) return;
       wrapper.remove();
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
+      svg.style.maxWidth = "100%";
+      svg.style.display = "block";
       container.appendChild(svg);
     });
   }, css);
