@@ -95,6 +95,24 @@ export GROOSZY_EXPLAIN_MODEL="<provider model name>"
 export GROOSZY_EXPLAIN_API_KEY="<provider key>"
 ```
 
+### OpenCode inference
+
+OpenCode Console serves an OpenAI-compatible endpoint. Create a key in the
+Console and copy it once; the app never needs a console login.
+
+```
+export GROOSZY_EXPLAIN_PROVIDER="openai"
+export GROOSZY_EXPLAIN_BASE_URL="https://opencode.ai/inference/openai/v1"
+export GROOSZY_EXPLAIN_MODEL="deepseek-v4.1-flash"
+export GROOSZY_EXPLAIN_API_KEY="<the oc_sk_ key>"
+export GROOSZY_EXPLAIN_TIMEOUT="45"
+```
+
+The model list is at `https://opencode.ai/inference/v1/models`. Free-tier models
+return 429 outside the OpenCode client, so use a paid model or an OpenCode Go
+plan. The deployed dev stack reads the key from the `grooszy-explain` Secret in
+`grooszy-dev`; the key is never committed.
+
 The Anthropic messages endpoint uses the `anthropic` provider and the provider
 root as the base URL. The app appends `/v1/messages` itself:
 
