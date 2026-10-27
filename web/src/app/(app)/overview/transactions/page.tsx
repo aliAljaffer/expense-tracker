@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TransactionsList } from "@/components/features/overview/TransactionsList";
 import TransactionsLoading from "./loading";
-import TransactionsError from "./error";
 
 export const metadata: Metadata = { title: "Transactions" };
 export const dynamic = "force-dynamic";
@@ -11,6 +10,7 @@ interface TransactionsPageProps {
   searchParams: Promise<{
     month?: string;
     bucket?: string;
+    kind?: string;
     account?: string;
     merchant?: string;
     from?: string;
@@ -39,7 +39,7 @@ export default async function TransactionsPage(props: TransactionsPageProps) {
         )}
       </div>
 
-      <Suspense fallback={<TransactionsLoading />} fallback-error={<TransactionsError error={new Error("Failed to load transactions")} reset={() => {}} />}>
+      <Suspense fallback={<TransactionsLoading />}>
         <TransactionsList searchParams={searchParams} />
       </Suspense>
     </div>
