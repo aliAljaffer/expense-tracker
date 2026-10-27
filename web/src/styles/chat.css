@@ -1,0 +1,212 @@
+/* Chat screen styles */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat__intro {
+  max-width: var(--size-measure-prose);
+}
+
+.chat__title {
+  max-width: var(--size-measure-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.chat__lede {
+  margin-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+
+.chat__panel {
+  margin-top: var(--space-8);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-card);
+  overflow: hidden;
+}
+
+.chat__transcript {
+  height: 22rem;
+  padding: var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chat__transcript:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.chat__empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  gap: var(--space-3);
+}
+
+.chat__empty-title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.chat__empty-text {
+  max-width: var(--size-measure-prose);
+  color: var(--color-text-primary);
+}
+
+.chat__empty-note {
+  max-width: var(--size-measure-prose);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.chat__messages {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat__message {
+  width: 100%;
+  max-width: var(--size-measure-prose);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow-wrap: anywhere;
+}
+
+.chat__message--user {
+  align-self: flex-end;
+  background-color: var(--color-surface-sunken);
+}
+
+.chat__message--assistant {
+  background-color: var(--color-surface-raised);
+}
+
+.chat__message--pending {
+  border-style: dashed;
+  background-color: var(--color-surface-card);
+}
+
+.chat__speaker {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.chat__text {
+  margin-top: var(--space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat__pending {
+  color: var(--color-text-secondary);
+  animation: chat-pending-pulse var(--duration-slow) var(--ease-in-out) infinite alternate;
+}
+
+.chat__banner {
+  margin: 0 var(--space-4) var(--space-4);
+}
+
+.chat__retry {
+  margin-top: var(--space-3);
+}
+
+.chat__composer {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-page);
+}
+
+.chat__input {
+  width: 100%;
+  min-height: var(--size-control-lg);
+  resize: vertical;
+}
+
+.chat__input:hover:not(:disabled) {
+  background-color: var(--color-surface-raised);
+}
+
+.chat__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chat__send {
+  width: 100%;
+}
+
+.chat__send:disabled {
+  border-color: transparent;
+}
+
+.chat__send[data-pending] {
+  border-color: var(--color-border-default);
+  background-color: var(--color-action-secondary);
+  color: var(--color-text-secondary);
+}
+
+@keyframes chat-pending-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (min-width: 640px) {
+  .chat__panel {
+    margin-top: var(--space-10);
+  }
+
+  .chat__transcript {
+    height: 30rem;
+    padding: var(--space-6);
+  }
+
+  .chat__banner {
+    margin: 0 var(--space-6) var(--space-4);
+  }
+
+  .chat__composer {
+    padding: var(--space-6);
+  }
+
+  .chat__send {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat__pending {
+    animation: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .chat__title {
+    font-size: var(--text-4xl);
+  }
+}

@@ -8,6 +8,7 @@ const ALLOWED_ROUTES: Record<string, readonly string[]> = {
   "suggestions/card-coverage": ["GET"],
   "suggestions/recurring": ["GET"],
   "suggestions/bnpl": ["GET"],
+  chat: ["POST"],
   settings: ["GET", "PUT"],
   "settings/reminder/test": ["POST"],
 };

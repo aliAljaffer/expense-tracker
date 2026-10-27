@@ -714,6 +714,41 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (pathname === "/api/chat" && req.method === "POST") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+    const last = messages[messages.length - 1];
+
+    if (
+      messages.length < 1 ||
+      messages.length > 8 ||
+      !last ||
+      last.role !== "user" ||
+      typeof last.content !== "string" ||
+      !last.content.trim()
+    ) {
+      res.writeHead(422);
+      res.end(JSON.stringify({ error: "messages must end with a user message" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(
+      JSON.stringify({
+        reply:
+          "In the months you imported, spending peaked in March 2026 at SAR 4,805.75. Bills were the largest part at SAR 3,750.00, and the rest was card, online and cash spending.",
+      })
+    );
+    return;
+  }
+
   if (pathname === "/api/settings") {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
