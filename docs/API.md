@@ -491,6 +491,9 @@ asking for the latest statements. The send happens once per month, and
 `SMTP_ADDR` empty disables reminders: the API logs one line at startup and never
 sends.
 
+See `docs/REMINDERS.md` for the full schedule, SMTP setup, and the settings
+screen.
+
 All settings routes require the bearer token and return 503
 `{"error":"database unavailable"}` when the database is not reachable.
 

@@ -39,6 +39,9 @@ it, scores duplicates, and stores approved rows. The web app is next.
 
 All examples in these documents are synthetic. Real statements stay out of Git.
 
+Operating notes: `docs/OPERATIONS.md`, `docs/REMINDERS.md`, `docs/BACKUPS.md`,
+`docs/PRIVACY.md`.
+
 ## Scope
 
 Statement import first. The user exports a file from the bank app and uploads
