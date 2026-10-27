@@ -12,3 +12,4 @@ __pycache__/
 *.log
 *.tsbuildinfo
 web/e2e/.tmp/
+web/test/snapshots/
