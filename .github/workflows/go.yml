@@ -49,6 +49,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - run: test -n "$DATABASE_URL" || { echo "DATABASE_URL is unset; DB tests would skip"; exit 1; }
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go build ./...

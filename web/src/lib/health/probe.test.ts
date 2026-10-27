@@ -129,18 +129,13 @@ describe("probe", () => {
     });
   });
 
-  it("does not leak API_BASE_URL value into response reason", async () => {
-    const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-    mockFetch.mockResolvedValueOnce({
-      status: 200,
-      json: async () => ({ status: "ok" }),
-    });
+  it("reports a missing API_BASE_URL without leaking a value", async () => {
+    delete process.env.API_BASE_URL;
 
     const result = await probeHealth();
 
-    if (result.reason) {
-      expect(result.reason).not.toContain("localhost");
-      expect(result.reason).not.toContain("8080");
-    }
+    expect(result.status).toBe("unknown");
+    expect(result.reason).toBe("API_BASE_URL not configured");
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

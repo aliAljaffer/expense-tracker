@@ -46,32 +46,27 @@ describe("pagination", () => {
 
   describe("generatePageList", () => {
     it("shows all pages when total is 7 or less", () => {
-      const result = generatePageList({ currentPage: 3, totalPages: 7 });
-      expect(result).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      expect(generatePageList({ currentPage: 3, totalPages: 7 })).toEqual([
+        1, 2, 3, 4, 5, 6, 7,
+      ]);
     });
 
-    it("shows first, current neighbors, and last with ellipsis for many pages", () => {
-      const result = generatePageList({ currentPage: 5, totalPages: 10 });
-      expect(result[0]).toBe(1);
-      expect(result[result.length - 1]).toBe(10);
-      expect(result).toContain(4);
-      expect(result).toContain(5);
-      expect(result).toContain(6);
-      expect(result).toContain("...");
+    it("puts an ellipsis on both sides in the middle", () => {
+      expect(generatePageList({ currentPage: 5, totalPages: 10 })).toEqual([
+        1, "...", 4, 5, 6, "...", 10,
+      ]);
     });
 
-    it("omits left ellipsis near start", () => {
-      const result = generatePageList({ currentPage: 3, totalPages: 10 });
-      const firstEllipsisIdx = result.indexOf("...");
-      expect(firstEllipsisIdx).toBeGreaterThan(-1);
-      expect(result.slice(0, firstEllipsisIdx)).toEqual([1, 2, 3, 4]);
+    it("omits the left ellipsis near start", () => {
+      expect(generatePageList({ currentPage: 3, totalPages: 10 })).toEqual([
+        1, 2, 3, 4, "...", 10,
+      ]);
     });
 
-    it("omits right ellipsis near end", () => {
-      const result = generatePageList({ currentPage: 8, totalPages: 10 });
-      const lastEllipsisIdx = result.lastIndexOf("...");
-      expect(lastEllipsisIdx).toBeGreaterThan(-1);
-      expect(result.slice(lastEllipsisIdx + 1)).toEqual([7, 8, 9, 10]);
+    it("omits the right ellipsis near end", () => {
+      expect(generatePageList({ currentPage: 8, totalPages: 10 })).toEqual([
+        1, "...", 7, 8, 9, 10,
+      ]);
     });
   });
 
@@ -98,15 +93,10 @@ describe("pagination", () => {
       expect(clampPage(5, 0, 25)).toBe(1);
     });
 
-    it("clamps page to valid range", () => {
+    it("clamps below 1 and above the last page, keeping valid pages", () => {
       expect(clampPage(0, 100, 25)).toBe(1);
-      expect(clampPage(10, 100, 25)).toBe(4);
-    });
-
-    it("allows valid page numbers", () => {
-      expect(clampPage(1, 100, 25)).toBe(1);
       expect(clampPage(2, 100, 25)).toBe(2);
-      expect(clampPage(4, 100, 25)).toBe(4);
+      expect(clampPage(10, 100, 25)).toBe(4);
     });
   });
 });

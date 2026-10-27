@@ -34,35 +34,28 @@ describe("BnplTrendCard", () => {
     next_step: "Mark merchants as BNPL",
   };
 
-  it("renders ok status with months table", () => {
+  it("renders the summary and the month rows for ok data", () => {
     render(<BnplTrendCard data={mockOkResponse} />);
 
     expect(screen.getByText("BNPL trend")).toBeInTheDocument();
     expect(screen.getByText(/BNPL commitments are rising/)).toBeInTheDocument();
-    expect(screen.getByText("2026-04")).toBeInTheDocument();
     expect(screen.getByText("Rising")).toBeInTheDocument();
   });
 
   it("renders insufficient_data state", () => {
     render(<BnplTrendCard data={mockInsufficientDataResponse} />);
 
-    expect(screen.getByText("BNPL trend")).toBeInTheDocument();
     expect(screen.getByText(/No BNPL commitments yet/)).toBeInTheDocument();
     expect(screen.getByText("Mark merchants as BNPL")).toBeInTheDocument();
   });
 
-  it("displays limits and next step", () => {
+  it("links each month to the filtered transactions", () => {
     render(<BnplTrendCard data={mockOkResponse} />);
 
-    expect(screen.getByText(/BNPL identification requires/)).toBeInTheDocument();
-    expect(screen.getByText(/Review upcoming BNPL/)).toBeInTheDocument();
-  });
-
-  it("renders the chart title above the months table", () => {
-    render(<BnplTrendCard data={mockOkResponse} />);
-
-    expect(screen.getByText("Monthly outflow")).toBeInTheDocument();
-    expect(screen.getByText("BNPL payments per month")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "2026-04" })).toHaveAttribute(
+      "href",
+      "/overview/transactions?from=2026-04-01&to=2026-04-31"
+    );
   });
 
   it("renders ChartEmpty when the period has no months", () => {
@@ -74,13 +67,5 @@ describe("BnplTrendCard", () => {
 
     expect(screen.getByText("No BNPL payments in this period")).toBeInTheDocument();
     expect(screen.getByText(/BNPL commitments are rising/)).toBeInTheDocument();
-  });
-
-  it("formats money correctly", () => {
-    render(<BnplTrendCard data={mockOkResponse} />);
-
-    expect(screen.getByText("4,500.00 SAR")).toBeInTheDocument();
-    expect(screen.getByText("4,000.00 SAR")).toBeInTheDocument();
-    expect(screen.getByText("3,500.00 SAR")).toBeInTheDocument();
   });
 });

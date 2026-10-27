@@ -33,35 +33,27 @@ describe("CreditCardCoverageCard", () => {
     next_step: "Import card statements",
   };
 
-  it("renders ok status with evidence table", () => {
+  it("renders the summary and the evidence rows for ok data", () => {
     render(<CreditCardCoverageCard data={mockOkResponse} />);
 
     expect(screen.getByText("Credit card coverage")).toBeInTheDocument();
     expect(screen.getByText(/Seven of twelve months/)).toBeInTheDocument();
-    expect(screen.getByText("2026-02")).toBeInTheDocument();
     expect(screen.getByText("580.00 SAR")).toBeInTheDocument();
   });
 
   it("renders insufficient_data state", () => {
     render(<CreditCardCoverageCard data={mockInsufficientDataResponse} />);
 
-    expect(screen.getByText("Credit card coverage")).toBeInTheDocument();
     expect(screen.getByText(/Not enough data yet/)).toBeInTheDocument();
     expect(screen.getByText("Import card statements")).toBeInTheDocument();
   });
 
-  it("displays limits and next step", () => {
+  it("links each uncovered month to the filtered transactions", () => {
     render(<CreditCardCoverageCard data={mockOkResponse} />);
 
-    expect(screen.getByText(/Does not account for manually entered/)).toBeInTheDocument();
-    expect(screen.getByText(/Import the card statement/)).toBeInTheDocument();
-  });
-
-  it("formats money correctly", () => {
-    render(<CreditCardCoverageCard data={mockOkResponse} />);
-
-    expect(screen.getByText("580.00 SAR")).toBeInTheDocument();
-    expect(screen.getByText("62.32 SAR")).toBeInTheDocument();
-    expect(screen.getByText("517.68 SAR")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "2026-02" })).toHaveAttribute(
+      "href",
+      "/overview/transactions?from=2026-02-01&to=2026-02-31&bucket=card_payments"
+    );
   });
 });

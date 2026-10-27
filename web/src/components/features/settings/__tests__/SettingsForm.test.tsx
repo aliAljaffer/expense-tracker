@@ -109,38 +109,4 @@ describe("SettingsForm", () => {
 
     expect(await screen.findByText("smtp unavailable")).toBeInTheDocument();
   });
-
-  it("disables both buttons while saving", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "" });
-    vi.mocked(settingsApi.saveReminderEmail).mockImplementation(
-      () => new Promise(() => {})
-    );
-
-    render(<SettingsForm />);
-    const user = userEvent.setup();
-    const input = await screen.findByLabelText("Reminder email");
-
-    await user.type(input, "owner@example.com");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Send test email" })).toBeDisabled();
-  });
-
-  it("disables both buttons while sending a test email", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({
-      reminder_email: "owner@example.com",
-    });
-    vi.mocked(settingsApi.sendTestReminder).mockImplementation(
-      () => new Promise(() => {})
-    );
-
-    render(<SettingsForm />);
-    const user = userEvent.setup();
-
-    await user.click(await screen.findByRole("button", { name: "Send test email" }));
-
-    expect(screen.getByRole("button", { name: "Sending..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-  });
 });

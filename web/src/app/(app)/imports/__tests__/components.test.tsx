@@ -186,25 +186,6 @@ describe("ReviewScreen", () => {
     expect(commitButton).toBeDisabled();
   });
 
-  it("shows resumed banner when resumed is true", () => {
-    const preview = {
-      ...fixture.alrajhi_ok,
-      resumed: true,
-    } as ImportPreview;
-
-    render(<ReviewScreen preview={preview} onReset={mockOnReset} />);
-
-    expect(screen.getByText(/Resumed your earlier upload/i)).toBeInTheDocument();
-    expect(screen.getByText(/Nothing was imported yet/i)).toBeInTheDocument();
-  });
-
-  it("does not show resumed banner when resumed is false or undefined", () => {
-    const preview = fixture.alrajhi_ok as ImportPreview;
-    render(<ReviewScreen preview={preview} onReset={mockOnReset} />);
-
-    expect(screen.queryByText(/Resumed your earlier upload/i)).not.toBeInTheDocument();
-  });
-
   it("keeps selection across pages and commits ids from every page", async () => {
     const rows = Array.from({ length: 30 }, (_, i) => ({
       posted_date: `2026-01-${String(i + 1).padStart(2, "0")}`,

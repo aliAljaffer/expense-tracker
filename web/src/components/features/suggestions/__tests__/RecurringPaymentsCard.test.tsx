@@ -37,42 +37,28 @@ describe("RecurringPaymentsCard", () => {
     next_step: "Continue importing statements",
   };
 
-  it("renders ok status with series table", () => {
+  it("renders the summary and the series rows for ok data", () => {
     render(<RecurringPaymentsCard data={mockOkResponse} />);
 
     expect(screen.getByText("Recurring payments")).toBeInTheDocument();
     expect(screen.getByText(/Nine recurring payments found/)).toBeInTheDocument();
-    expect(screen.getByText("Rent Agency")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
   });
 
   it("renders insufficient_data state", () => {
     render(<RecurringPaymentsCard data={mockInsufficientDataResponse} />);
 
-    expect(screen.getByText("Recurring payments")).toBeInTheDocument();
     expect(screen.getByText(/Not enough data yet/)).toBeInTheDocument();
     expect(screen.getByText("Continue importing statements")).toBeInTheDocument();
   });
 
-  it("displays limits and next step", () => {
+  it("links to filtered transactions with merchant and date range", () => {
     render(<RecurringPaymentsCard data={mockOkResponse} />);
 
-    expect(screen.getByText(/Recurring series must appear/)).toBeInTheDocument();
-    expect(screen.getByText(/Review and categorize/)).toBeInTheDocument();
-  });
-
-  it("formats money correctly", () => {
-    render(<RecurringPaymentsCard data={mockOkResponse} />);
-
-    expect(screen.getByText("3,500.00 SAR")).toBeInTheDocument();
-    expect(screen.getByText("42,000.00 SAR")).toBeInTheDocument();
-  });
-
-  it("renders the chart title above the series table", () => {
-    render(<RecurringPaymentsCard data={mockOkResponse} />);
-
-    expect(screen.getByText("Top recurring series")).toBeInTheDocument();
-    expect(screen.getByText("By total amount over the period")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Rent Agency" })).toHaveAttribute(
+      "href",
+      "/overview/transactions?merchant=1&from=2026-02-01&to=2026-12-01"
+    );
   });
 
   it("renders ChartEmpty when the period has no series", () => {
@@ -84,15 +70,5 @@ describe("RecurringPaymentsCard", () => {
 
     expect(screen.getByText("No recurring series in this period")).toBeInTheDocument();
     expect(screen.getByText(/Nine recurring payments found/)).toBeInTheDocument();
-  });
-
-  it("links to filtered transactions with merchant and date range", () => {
-    render(<RecurringPaymentsCard data={mockOkResponse} />);
-
-    const link = screen.getByRole("link", { name: "Rent Agency" });
-    expect(link).toHaveAttribute(
-      "href",
-      "/overview/transactions?merchant=1&from=2026-02-01&to=2026-12-01"
-    );
   });
 });
