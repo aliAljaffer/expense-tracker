@@ -87,6 +87,11 @@ async function capture(context, [name, path, prepare]) {
       svg.style.display = "block";
       container.appendChild(svg);
     });
+
+    // Recharts leaves a hidden measurement span at the page edge. Its text is
+    // as wide as the platform font makes it, so it widened the static page on
+    // Linux while fitting on macOS.
+    document.querySelectorAll("#recharts_measurement_span").forEach((span) => span.remove());
   }, css);
 
   for (const theme of ["light", "dark"]) {
