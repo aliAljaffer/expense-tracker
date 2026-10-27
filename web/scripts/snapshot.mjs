@@ -44,6 +44,7 @@ const routes = [
   ["imports-review", "/imports", uploadAlinma],
   ["suggestions", "/suggestions", (page) => page.waitForSelector(".suggestions-cards")],
   ["settings", "/settings", saveReminder],
+  ["chat", "/chat", (page) => page.waitForSelector(".chat")],
 ];
 
 mkdirSync(outDir, { recursive: true });
