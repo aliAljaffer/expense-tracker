@@ -53,7 +53,8 @@ never logged (`docs/API.md`).
 
 ## What leaves the process
 
-Two outbound payloads can carry statement or spending data. Both are optional.
+The reminder email and the LLM endpoints can carry statement or spending data.
+Both are optional.
 
 ### Reminder email
 
@@ -76,6 +77,14 @@ outside the allowlist is rejected before any provider call.
 The model sees no transaction description, merchant name, account number, or
 IBAN. The response is returned to the caller and never stored
 (`docs/API.md`).
+
+### Chat
+
+`POST /api/chat` uses the same explainer settings. Each request sends the last
+six months of monthly totals and the three suggestion summaries, already
+formatted as amounts. It sends no transaction row, merchant name, account
+number, IBAN, balance, or file content. An empty database answers without a
+provider call. See `docs/CHAT.md`.
 
 ### Authentication traffic
 

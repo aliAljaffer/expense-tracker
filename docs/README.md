@@ -6,6 +6,7 @@ statements stay in `statements/`, which Git ignores.
 | File | Contents |
 |---|---|
 | `docs/API.md` | Environment variables, authentication, import endpoints, duplicate and anomaly scoring, local development |
+| `docs/CHAT.md` | The owner-only chat endpoint, its message limits, and the aggregate-only privacy boundary |
 | `docs/BACKUPS.md` | What a backup must contain, how a restore works, and the missing backup schedule |
 | `docs/DATA-MODEL.md` | Tables and fields for the Tier 1 and Tier 2 features |
 | `docs/FEATURES.md` | Prioritized feature list with the rationale for each tier |

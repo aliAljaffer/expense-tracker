@@ -360,6 +360,49 @@ The response is text only:
 
 The text is returned to the caller and never written to the database.
 
+### POST /api/chat
+
+An owner-only conversation with Gersz about the last six months. The handler
+reads monthly totals and the three suggestion summaries from the ledger on each
+request and sends them with the conversation as one provider call. Nothing is
+streamed and no conversation is stored.
+
+```json
+{
+  "messages": [
+    {"role": "user", "content": "How much did I spend in May?"},
+    {"role": "assistant", "content": "You spent 3,500.00 SAR in May."},
+    {"role": "user", "content": "Where can I cut back?"}
+  ]
+}
+```
+
+- 1 to 8 messages. The last message must be `user`.
+- Each `content` is at most 2000 characters and may not be blank.
+- `role` is `user` or `assistant`. Any other role, including `system`, returns
+  422.
+- 64 KiB body limit. One provider call per request, bounded by
+  `GROOSZY_EXPLAIN_TIMEOUT` and the configured maximum output tokens.
+
+Success returns:
+
+```json
+{"reply": "You spent 3,500.00 SAR in May. Card payments cover the largest share, so importing the card statement would sharpen the picture."}
+```
+
+| Status | Meaning |
+|---|---|
+| 422 | Bad shape: empty conversation, more than 8 messages, blank content, content over 2000 characters, an unsupported role, or a last message from the assistant |
+| 503 | `{"error":"chat is not configured"}` when the base URL, model, or key is missing; `{"error":"database unavailable"}` when the ledger is not reachable |
+| 502 | `{"error":"the model did not answer"}` when the provider fails or returns no text |
+
+The model sees monthly income, spending, card payments, uncategorised spending,
+transaction counts, and the three suggestion summaries. It never sees a
+transaction description, merchant name, account number, IBAN, per-account
+balance, or file content. The recurring summary is rebuilt without the merchant
+name for this reason. With no transactions stored, the endpoint answers with a
+fixed sentence and calls no provider. See `docs/CHAT.md`.
+
 ## Suggestion endpoints
 
 All suggestion endpoints are read-only, deterministic, and return insufficient_data

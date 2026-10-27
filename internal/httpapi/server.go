@@ -32,6 +32,8 @@ type Server struct {
 	// explanations, so the feature can never go live by accident.
 	explain  *explain.Explainer
 	settings settingsStore
+	// chatLedger feeds the chat endpoint. Nil returns 503.
+	chatLedger chatReader
 	// mail is optional. A nil or disabled mailer refuses test sends.
 	mail *reminder.Mailer
 }
@@ -43,6 +45,7 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, mail: mail, log: log}
 	if led != nil {
 		s.settings = led
+		s.chatLedger = led
 	}
 	return s.routes()
 }
@@ -61,6 +64,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("DELETE /api/imports/{id}", s.protect(s.cancel))
 	mux.Handle("GET /api/explainers/status", s.protect(s.explainStatus))
 	mux.Handle("POST /api/explanations", s.protect(s.explanation))
+	mux.Handle("POST /api/chat", s.protect(s.chat))
 	mux.Handle("GET /api/suggestions/card-coverage", s.protect(s.cardCoverage))
 	mux.Handle("GET /api/suggestions/recurring", s.protect(s.recurring))
 	mux.Handle("GET /api/suggestions/bnpl", s.protect(s.bnpl))

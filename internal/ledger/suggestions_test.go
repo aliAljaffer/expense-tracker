@@ -338,8 +338,8 @@ func TestFormatHalalas(t *testing.T) {
 		{123456789012, "1,234,567,890.12 SAR"},
 	}
 	for _, tt := range tests {
-		if got := formatHalalas(tt.halalas); got != tt.want {
-			t.Errorf("formatHalalas(%d) = %q, want %q", tt.halalas, got, tt.want)
+		if got := FormatHalalas(tt.halalas); got != tt.want {
+			t.Errorf("FormatHalalas(%d) = %q, want %q", tt.halalas, got, tt.want)
 		}
 	}
 }
