@@ -30,7 +30,7 @@ describe("TransactionFilters", () => {
     const user = userEvent.setup();
     render(<TransactionFilters months={months} />);
 
-    const trigger = screen.getByRole("button", { name: "Filter" });
+    const trigger = screen.getByRole("button", { name: /^Filter: / });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
 
     await user.click(trigger);
@@ -48,7 +48,7 @@ describe("TransactionFilters", () => {
     searchParams.current = new URLSearchParams("month=2026-02&per_page=50&page=3");
     render(<TransactionFilters months={months} />);
 
-    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: /^Filter: / }));
     await user.click(screen.getByRole("option", { name: "Card payments" }));
 
     const pushed = pushedParams();
@@ -64,7 +64,7 @@ describe("TransactionFilters", () => {
     searchParams.current = new URLSearchParams("bucket=transfers&page=2");
     render(<TransactionFilters months={months} />);
 
-    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: /^Filter: / }));
     await user.click(screen.getByRole("option", { name: "Card purchase" }));
 
     const pushed = pushedParams();
@@ -78,7 +78,7 @@ describe("TransactionFilters", () => {
     searchParams.current = new URLSearchParams("from=2026-03-01&to=2026-03-31&page=4");
     render(<TransactionFilters months={months} />);
 
-    await user.click(screen.getByRole("button", { name: "Month" }));
+    await user.click(screen.getByRole("button", { name: /^Month: / }));
     await user.click(screen.getByRole("option", { name: "February 2026" }));
 
     const pushed = pushedParams();
@@ -111,7 +111,7 @@ describe("TransactionFilters", () => {
     const user = userEvent.setup();
     render(<TransactionFilters months={months} />);
 
-    screen.getByRole("button", { name: "Filter" }).focus();
+    screen.getByRole("button", { name: /^Filter: / }).focus();
     await user.keyboard("{Enter}{ArrowDown}{Enter}");
 
     const pushed = pushedParams();
@@ -123,7 +123,7 @@ describe("TransactionFilters", () => {
     const user = userEvent.setup();
     render(<TransactionFilters months={months} />);
 
-    const trigger = screen.getByRole("button", { name: "Filter" });
+    const trigger = screen.getByRole("button", { name: /^Filter: / });
     trigger.focus();
 
     await user.keyboard("{Enter}");

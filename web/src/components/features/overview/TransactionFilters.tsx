@@ -126,9 +126,9 @@ export function TransactionFilters({ months }: TransactionFiltersProps) {
             <div className="transactions-filters__menu">
               <Listbox.Button
                 className="transactions-filters__button"
-                aria-label="Month"
                 onKeyDown={openWithEnter}
               >
+                <span className="visually-hidden">Month: </span>
                 <span className="transactions-filters__value">
                   {selectedMonth ? monthLabel(selectedMonth) : "All months"}
                 </span>
@@ -156,9 +156,9 @@ export function TransactionFilters({ months }: TransactionFiltersProps) {
             <div className="transactions-filters__menu">
               <Listbox.Button
                 className="transactions-filters__button"
-                aria-label="Filter"
                 onKeyDown={openWithEnter}
               >
+                <span className="visually-hidden">Filter: </span>
                 <span className="transactions-filters__value">{activeLabel ?? "All transactions"}</span>
                 <Chevron />
               </Listbox.Button>
