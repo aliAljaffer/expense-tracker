@@ -13,6 +13,6 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./vitest.setup.ts"],
     pool: "threads",
-    isolate: false,
+    // isolate: false made 9 tests depend on file order; keep every file in its own environment
   },
 });
