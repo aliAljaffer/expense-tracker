@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { displaySAR } from "@/lib/api/types";
-import { getTransactions } from "@/lib/api/overview";
+import { getMonthlyOverview, getTransactions } from "@/lib/api/overview";
 import type { TransactionsResponse, Transaction } from "@/lib/api/types";
 import type { GetTransactionsParams } from "@/lib/api/overview";
 import { Pagination } from "@/components/ui/pagination";
 import { calculatePagination, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
 import { SpendingChart, CHART_ROW_LIMIT } from "./SpendingChart";
+import { TransactionFilters } from "./TransactionFilters";
 
 interface ChartRows {
   rows: Transaction[];
@@ -21,6 +22,7 @@ interface TransactionsListProps {
   searchParams: {
     month?: string;
     bucket?: string;
+    kind?: string;
     account?: string;
     merchant?: string;
     from?: string;
@@ -36,12 +38,29 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [chart, setChart] = useState<ChartRows | null>(null);
   const [chartUnavailable, setChartUnavailable] = useState(false);
+  const [months, setMonths] = useState<string[]>([]);
   const router = useRouter();
   const currentSearchParams = useSearchParams();
 
   const page = Math.max(1, parseInt(searchParams.page || "1", 10));
   const perPage = parseInt(searchParams.per_page || DEFAULT_PER_PAGE.toString(), 10);
   const validPerPage = PER_PAGE_OPTIONS.includes(perPage) ? perPage : DEFAULT_PER_PAGE;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMonthlyOverview()
+      .then((result) => {
+        if (!cancelled) setMonths(result.months.map((month) => month.month));
+      })
+      .catch(() => {
+        // The month picker falls back to the month already in the URL.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +91,10 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
 
         if (searchParams.bucket) {
           params.bucket = searchParams.bucket;
+        }
+
+        if (searchParams.kind) {
+          params.kind = searchParams.kind;
         }
 
         if (searchParams.account) {
@@ -142,34 +165,45 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <TransactionFilters months={months} />
+        <div>Loading...</div>
+      </>
+    );
   }
 
   if (error) {
     return (
-      <div className="overview-error-box">
-        <div className="overview-error-icon">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="24" height="24">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
+      <>
+        <TransactionFilters months={months} />
+        <div className="overview-error-box">
+          <div className="overview-error-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="24" height="24">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <div className="overview-error-content">
+            <h2 className="overview-error-title">Failed to load transactions</h2>
+            <p className="overview-error-text">{error}</p>
+          </div>
         </div>
-        <div className="overview-error-content">
-          <h2 className="overview-error-title">Failed to load transactions</h2>
-          <p className="overview-error-text">{error}</p>
-        </div>
-      </div>
+      </>
     );
   }
 
   if (!data || data.rows.length === 0) {
     return (
-      <div className="overview-empty-state">
-        <p className="overview-empty-state__text">No transactions found</p>
-      </div>
+      <>
+        <TransactionFilters months={months} />
+        <div className="overview-empty-state">
+          <p className="overview-empty-state__text">No transactions found</p>
+        </div>
+      </>
     );
   }
 
@@ -178,6 +212,8 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
       <div className="transactions-summary">
         Total: {data.total_count} transaction{data.total_count !== 1 ? "s" : ""} | Debit: {displaySAR(data.total_debit)} | Credit: {displaySAR(data.total_credit)}
       </div>
+
+      <TransactionFilters months={months} />
 
       <SpendingChart
         rows={chart?.rows ?? []}

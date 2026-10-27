@@ -256,7 +256,7 @@ function buildPreview(filename) {
   };
 }
 
-const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantId = null) => {
+const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantId = null, range = {}) => {
   const merchants = [
     { id: 1, name: "Rent Agency" },
     { id: 2, name: "Supermarket X" },
@@ -301,6 +301,18 @@ const generateTransactions = (offset = 0, limit = 100, bucket = "all", merchantI
 
   if (merchantId) {
     filtered = filtered.filter(t => t.merchant_id === merchantId);
+  }
+
+  if (range.kind) {
+    filtered = filtered.filter(t => t.kind === range.kind);
+  }
+
+  if (range.from) {
+    filtered = filtered.filter(t => t.posted_date >= range.from);
+  }
+
+  if (range.to) {
+    filtered = filtered.filter(t => t.posted_date <= range.to);
   }
 
   if (bucket === "spending") {
@@ -515,8 +527,13 @@ const server = createServer(async (req, res) => {
     const limit = parseInt(url.searchParams.get("limit") || "100");
     const bucket = url.searchParams.get("bucket") || "all";
     const merchantId = url.searchParams.get("merchant_id") ? parseInt(url.searchParams.get("merchant_id")) : null;
+    const range = {
+      kind: url.searchParams.get("kind"),
+      from: url.searchParams.get("from"),
+      to: url.searchParams.get("to"),
+    };
 
-    const data = generateTransactions(offset, limit, bucket, merchantId);
+    const data = generateTransactions(offset, limit, bucket, merchantId, range);
 
     res.writeHead(200);
     res.end(JSON.stringify(data));
