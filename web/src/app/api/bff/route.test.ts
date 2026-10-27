@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
+const { proxyToApi } = vi.hoisted(() => ({
+  proxyToApi: vi.fn(async () => new Response(null, { status: 200 })),
+}));
+
+vi.mock("@/lib/bff/proxy", () => ({ proxyToApi }));
+
 interface RouteParams {
   params: Promise<{ path: string[] }>;
 }
@@ -64,5 +70,27 @@ describe("BFF route handler", () => {
     );
 
     expect(response.status).toBe(405);
+  });
+
+  it("passes the incoming query string to the proxy", async () => {
+    const { GET } = await import("./[...path]/route");
+    proxyToApi.mockClear();
+
+    const search = "?from=2026-03-01&to=2026-03-31&bucket=day&limit=500&offset=0";
+
+    await GET(
+      {
+        method: "GET",
+        headers: new Headers(),
+        body: null,
+        nextUrl: new URL(`https://app.example.com/api/bff/transactions${search}`),
+      } as unknown as NextRequest,
+      { params: Promise.resolve({ path: ["transactions"] }) }
+    );
+
+    expect(proxyToApi).toHaveBeenCalledWith(
+      expect.objectContaining({ search }),
+      "/api/transactions"
+    );
   });
 });

@@ -8,6 +8,7 @@ export interface ProxyRequest {
   headers: Headers;
   method: string;
   body?: ReadableStream<Uint8Array> | null;
+  search?: string;
 }
 
 export async function proxyToApi(
@@ -83,6 +84,10 @@ export async function proxyToApi(
   forwardHeaders.set("authorization", `Bearer ${session.accessToken}`);
 
   const url = new URL(path, authConfig.apiBaseUrl);
+
+  if (request.search) {
+    url.search = request.search;
+  }
 
   const init: RequestInit & { duplex?: "half" } = {
     method: request.method,

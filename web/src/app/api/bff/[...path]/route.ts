@@ -38,6 +38,7 @@ async function handler(request: NextRequest, props: { params: Promise<{ path: st
       method: request.method,
       headers: request.headers,
       body: request.body,
+      search: request.nextUrl.search,
     },
     path
   );

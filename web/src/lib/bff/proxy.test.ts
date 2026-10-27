@@ -308,6 +308,79 @@ describe("proxyToApi", () => {
     expect(body).not.toContain("test-access-token");
   });
 
+  it("forwards the query string unchanged", async () => {
+    const { refreshIfExpiring } = await import("@/lib/auth/session");
+    vi.mocked(refreshIfExpiring).mockResolvedValueOnce({
+      accessToken: "test-access-token",
+      refreshToken: "test-refresh-token",
+      expiresAt: Date.now() + 3600 * 1000,
+      subject: "test-subject",
+    });
+
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", `http://localhost:${port}`);
+
+    const search = "?from=2026-03-01&to=2026-03-31&limit=500&offset=0";
+    let upstreamUrl = "";
+
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      upstreamUrl = String(url);
+      return new Response(JSON.stringify({ data: "test" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const request: ProxyRequest = {
+      method: "GET",
+      headers: new Headers(),
+      search,
+    };
+
+    const response = await proxyToApi(request, "/api/transactions");
+    expect(response.status).toBe(200);
+    expect(upstreamUrl).toBe(`http://localhost:${port}/api/transactions${search}`);
+  });
+
+  it("sends no query string when the request has none", async () => {
+    const { refreshIfExpiring } = await import("@/lib/auth/session");
+    vi.mocked(refreshIfExpiring).mockResolvedValueOnce({
+      accessToken: "test-access-token",
+      refreshToken: "test-refresh-token",
+      expiresAt: Date.now() + 3600 * 1000,
+      subject: "test-subject",
+    });
+
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", `http://localhost:${port}`);
+
+    let upstreamUrl = "";
+
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      upstreamUrl = String(url);
+      return new Response(JSON.stringify({ data: "test" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const request: ProxyRequest = {
+      method: "GET",
+      headers: new Headers(),
+    };
+
+    const response = await proxyToApi(request, "/api/transactions");
+    expect(response.status).toBe(200);
+    expect(upstreamUrl).toBe(`http://localhost:${port}/api/transactions`);
+    expect(upstreamUrl).not.toContain("?");
+  });
+
   it("forwards only allowed headers", async () => {
     const { refreshIfExpiring } = await import("@/lib/auth/session");
     vi.mocked(refreshIfExpiring).mockResolvedValueOnce({
