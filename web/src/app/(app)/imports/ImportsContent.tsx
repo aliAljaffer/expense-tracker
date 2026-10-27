@@ -16,14 +16,14 @@ export function ImportsContent() {
 
   if (preview) {
     return (
-      <div className="stack--loose">
+      <div className="imports-page stack--loose">
         <ReviewScreen preview={preview} onReset={handleReset} />
       </div>
     );
   }
 
   return (
-    <div className="stack--xl">
+    <div className="imports-page stack--xl">
       <div className="card">
         <h2 className="panel__title" style={{ marginBottom: "var(--space-4)" }}>Upload</h2>
 

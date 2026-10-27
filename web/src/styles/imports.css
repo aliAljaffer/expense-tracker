@@ -266,6 +266,10 @@
   gap: var(--space-4);
 }
 
+.imports-page {
+  overflow-x: clip;
+}
+
 .rows-table__actions {
   display: flex;
   flex-wrap: wrap;
