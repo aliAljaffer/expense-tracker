@@ -203,6 +203,13 @@ jobs:
           python3 .claude/scripts/lint_hardcodes.py web/src
           python3 .claude/scripts/check_no_emoji.py web/src
           python3 .claude/scripts/lint_native_select.py web/src
+      - name: Upload the gate snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-snapshots
+          path: web/test/snapshots
+          retention-days: 7
 
   image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
