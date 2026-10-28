@@ -9,7 +9,7 @@ import (
 )
 
 // providerCallsPerMinute caps the endpoints that spend money at a provider.
-// The owner is the only caller, so one key covers the deployment.
+// shortcut: the window is per process, so extra API replicas multiply the limit.
 const providerCallsPerMinute = 10
 
 type window struct {
