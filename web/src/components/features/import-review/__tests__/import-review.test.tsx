@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeaderFigures } from "../HeaderFigures";
 import { ReconciliationChecks } from "../ReconciliationChecks";
-import { RowsTable, HeldRowMarker, initialSelectedIds } from "../RowsTable";
+import { RowsTable, initialSelectedIds } from "../RowsTable";
 import { AnomalyNotice } from "../AnomalyNotice";
 import { type ImportPreview } from "@/lib/api/types";
 import fixture from "../../../../../test/fixtures/preview.json";
@@ -279,13 +279,6 @@ describe("RowsTable", () => {
   });
 });
 
-describe("HeldRowMarker", () => {
-  it("renders held row marker with icon and message", () => {
-    render(<HeldRowMarker />);
-
-    expect(screen.getByText("Held for review")).toBeInTheDocument();
-  });
-});
 
 describe("AnomalyNotice", () => {
   it("shows notice when anomaly_ready is false", () => {

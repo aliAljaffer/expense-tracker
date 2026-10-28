@@ -46,11 +46,7 @@ func run(log *slog.Logger) error {
 	}
 	defer store.Close()
 
-	led, err := ledger.Open(ctx, cfg.DatabaseURL)
-	if err != nil {
-		return err
-	}
-	defer led.Close()
+	led := ledger.New(store.Pool())
 
 	if err := migrate.Apply(ctx, store.Pool(), migrations.FS); err != nil {
 		dbURL := cfg.DatabaseURL

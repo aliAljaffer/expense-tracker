@@ -1,153 +1,55 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/aliAljaffer/grooszy/internal/auth"
 	"github.com/aliAljaffer/grooszy/internal/ledger"
 )
 
-func (s *Server) cardCoverage(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	store := s.readStore(w)
-	if store == nil {
-		return
-	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
-		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
-	}
-	result, err := store.CardCoverage(r.Context(), from, to)
-	switch {
-	case errors.Is(err, ledger.ErrBadFilter):
-		writeError(w, http.StatusBadRequest, err.Error())
-	case err != nil:
-		s.log.Error("read card coverage failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not read card coverage")
-	default:
-		writeJSON(w, http.StatusOK, result)
-	}
+// suggestionReads maps the URL name to the ledger query behind it.
+var suggestionReads = map[string]func(*ledger.Store, context.Context, string, string) (any, error){
+	"card-coverage": func(s *ledger.Store, ctx context.Context, from, to string) (any, error) {
+		return s.CardCoverage(ctx, from, to)
+	},
+	"recurring": func(s *ledger.Store, ctx context.Context, from, to string) (any, error) {
+		return s.Recurring(ctx, from, to)
+	},
+	"bnpl": func(s *ledger.Store, ctx context.Context, from, to string) (any, error) {
+		return s.BNPL(ctx, from, to)
+	},
+	"salary-trend": func(s *ledger.Store, ctx context.Context, from, to string) (any, error) {
+		return s.SalaryTrend(ctx, from, to)
+	},
+	"transfer-matches": func(s *ledger.Store, ctx context.Context, from, to string) (any, error) {
+		return s.TransferMatches(ctx, from, to)
+	},
 }
 
-func (s *Server) recurring(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	store := s.readStore(w)
-	if store == nil {
-		return
-	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
-		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
-	}
-	result, err := store.Recurring(r.Context(), from, to)
-	switch {
-	case errors.Is(err, ledger.ErrBadFilter):
-		writeError(w, http.StatusBadRequest, err.Error())
-	case err != nil:
-		s.log.Error("read recurring failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not read recurring")
-	default:
-		writeJSON(w, http.StatusOK, result)
-	}
-}
-
-func (s *Server) bnpl(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	store := s.readStore(w)
-	if store == nil {
-		return
-	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
-		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
-	}
-	result, err := store.BNPL(r.Context(), from, to)
-	switch {
-	case errors.Is(err, ledger.ErrBadFilter):
-		writeError(w, http.StatusBadRequest, err.Error())
-	case err != nil:
-		s.log.Error("read bnpl failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not read bnpl")
-	default:
-		writeJSON(w, http.StatusOK, result)
-	}
-}
-
-func (s *Server) salaryTrend(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	store := s.readStore(w)
-	if store == nil {
-		return
-	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
-		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
-	}
-	result, err := store.SalaryTrend(r.Context(), from, to)
-	switch {
-	case errors.Is(err, ledger.ErrBadFilter):
-		writeError(w, http.StatusBadRequest, err.Error())
-	case err != nil:
-		s.log.Error("read salary trend failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not read salary trend")
-	default:
-		writeJSON(w, http.StatusOK, result)
-	}
-}
-
-func (s *Server) transferMatches(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	store := s.readStore(w)
-	if store == nil {
-		return
-	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
-		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
-	}
-	result, err := store.TransferMatches(r.Context(), from, to)
-	switch {
-	case errors.Is(err, ledger.ErrBadFilter):
-		writeError(w, http.StatusBadRequest, err.Error())
-	case err != nil:
-		s.log.Error("read transfer matches failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not read transfer matches")
-	default:
-		writeJSON(w, http.StatusOK, result)
+func (s *Server) suggestionRead(name string) func(http.ResponseWriter, *http.Request, auth.Identity) {
+	return func(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+		store := s.readStore(w)
+		if store == nil {
+			return
+		}
+		from, to, ok := monthWindow(w, r)
+		if !ok {
+			return
+		}
+		result, err := suggestionReads[name](store, r.Context(), from, to)
+		switch {
+		case errors.Is(err, ledger.ErrBadFilter):
+			writeError(w, http.StatusBadRequest, err.Error())
+		case err != nil:
+			s.log.Error("read suggestion failed", "suggestion", name, "error", err)
+			writeError(w, http.StatusInternalServerError, "could not read the suggestion")
+		default:
+			writeJSON(w, http.StatusOK, result)
+		}
 	}
 }
 

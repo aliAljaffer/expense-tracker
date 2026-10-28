@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aliAljaffer/grooszy/internal/importer"
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -20,10 +20,6 @@ const (
 	amountTolerancePercent = 20
 	maxGapDays             = 45
 )
-
-func isBNPLMerchant(name string) bool {
-	return importer.IsBNPLMerchant(name)
-}
 
 type CardCoverageMonth struct {
 	Month             string  `json:"month"`
@@ -76,10 +72,9 @@ func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (Ca
 				TransactionIDs:    []int64{},
 			}
 
-			rows, queryErr := s.db.QueryContext(ctx, `
+			rows, queryErr := s.db.Query(ctx, `
 				select id from transaction
 				where kind = 'card_payment' and debit > 0
-				  and account_id = (select account_id from transaction where posted_date = $1 limit 1)
 				  and posted_date >= $1 and posted_date < $1::date + interval '1 month'
 				order by posted_date`,
 				m.Month+"-01")
@@ -175,7 +170,7 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 	last := time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.UTC).
 		AddDate(0, 1, 0).AddDate(0, 0, -1).Format("2006-01-02")
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select m.id, m.canonical_name,
 		       count(distinct t.id),
 		       count(distinct to_char(t.posted_date, 'YYYY-MM')),
@@ -206,7 +201,7 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 		series.MedianAmount = int64(math.Round(median))
 		series.TransactionIDs = []int64{}
 
-		dateAmountRows, dateErr := s.db.QueryContext(ctx, `
+		dateAmountRows, dateErr := s.db.Query(ctx, `
 			select t.posted_date, t.debit from transaction t
 			join merchant m on t.merchant_id = m.id
 			where m.id = $1 and t.debit > 0 and t.counts_as_spending
@@ -242,7 +237,7 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 			series.CadenceDays = &cadenceDays
 		}
 
-		txRows, queryErr := s.db.QueryContext(ctx, `
+		txRows, queryErr := s.db.Query(ctx, `
 			select t.id from transaction t
 			join merchant m on t.merchant_id = m.id
 			where m.id = $1 and t.debit > 0 and t.counts_as_spending
@@ -387,7 +382,7 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 	last := time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.UTC).
 		AddDate(0, 1, 0).AddDate(0, 0, -1).Format("2006-01-02")
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select to_char(t.posted_date, 'YYYY-MM'),
 		       sum(t.debit),
 		       count(*)
@@ -411,7 +406,7 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 			return out, fmt.Errorf("read bnpl row: %w", err)
 		}
 
-		txRows, queryErr := s.db.QueryContext(ctx, `
+		txRows, queryErr := s.db.Query(ctx, `
 			select t.id from transaction t
 			join merchant m on t.merchant_id = m.id
 			where m.is_bnpl = true and t.debit > 0
@@ -528,12 +523,12 @@ func (s *Store) SuggestionDecision(ctx context.Context, kind string) (string, er
 		return "", fmt.Errorf("%w: unknown suggestion kind", ErrBadFilter)
 	}
 	var decision string
-	err := s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRow(ctx, `
 		select payload->>'decision' from user_decision
 		where kind = $1
 		order by created_at desc
 		limit 1`, kind).Scan(&decision)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {
@@ -546,27 +541,27 @@ func (s *Store) SetSuggestionDecision(ctx context.Context, kind, decision string
 	if !ValidSuggestionKind(kind) || !ValidSuggestionDecision(decision) {
 		return fmt.Errorf("%w: unknown suggestion decision", ErrBadFilter)
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin suggestion decision: %w", err)
 	}
-	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
 		return fmt.Errorf("clear suggestion decision: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `
+	if _, err := tx.Exec(ctx, `
 		insert into user_decision (kind, payload)
 		values ($1, jsonb_build_object('decision', $2::text))`, kind, decision); err != nil {
 		return fmt.Errorf("store suggestion decision: %w", err)
 	}
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 func (s *Store) ClearSuggestionDecision(ctx context.Context, kind string) error {
 	if !ValidSuggestionKind(kind) {
 		return fmt.Errorf("%w: unknown suggestion kind", ErrBadFilter)
 	}
-	if _, err := s.db.ExecContext(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
+	if _, err := s.db.Exec(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
 		return fmt.Errorf("clear suggestion decision: %w", err)
 	}
 	return nil
@@ -633,7 +628,7 @@ func (s *Store) SalaryTrend(ctx context.Context, fromMonth, toMonth string) (Sal
 		return out, err
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select to_char(posted_date, 'YYYY-MM'), sum(credit), count(*)
 		from transaction
 		where `+salaryCreditSQL("3")+`
@@ -748,7 +743,7 @@ func (s *Store) TransferMatches(ctx context.Context, fromMonth, toMonth string) 
 		return out, err
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select t.id, t.account_id, t.posted_date, t.debit, t.credit, t.counts_as_spending,
 		       a.bank, a.number
 		from transaction t
@@ -788,11 +783,16 @@ func (s *Store) TransferMatches(ctx context.Context, fromMonth, toMonth string) 
 	}
 
 	used := map[int64]bool{}
+	creditsByAmount := map[int64][]int{}
+	for i, c := range credits {
+		creditsByAmount[c.amount] = append(creditsByAmount[c.amount], i)
+	}
 	for _, d := range debits {
 		best := -1
 		var bestGap int64
-		for i, c := range credits {
-			if used[c.id] || c.accountID == d.accountID || c.amount != d.amount {
+		for _, i := range creditsByAmount[d.amount] {
+			c := credits[i]
+			if used[c.id] || c.accountID == d.accountID {
 				continue
 			}
 			gap := int64(math.Abs(c.date.Sub(d.date).Hours() / 24))

@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -135,6 +136,7 @@ func TestUploadCommitAndFingerprintParity(t *testing.T) {
 	svc := NewService(store)
 	ctx := context.Background()
 	first := tx("2026-01-05", 2575, 0, "card purchase one")
+	first.PostedTime = "14:23:00"
 	first.BalanceAfter = ptr(-2575)
 	second := tx("2026-01-06", 0, 50000, "transfer in")
 	second.BalanceAfter = ptr(47425)
@@ -179,6 +181,62 @@ func TestUploadCommitAndFingerprintParity(t *testing.T) {
 		if !got[r.Fingerprint] {
 			t.Fatalf("Go fingerprint %s does not match the database generated column", r.Fingerprint)
 		}
+	}
+
+	rec, err := store.ImportByID(ctx, p.ImportID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	history, err := store.History(ctx, rec.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	again := upload(t, svc, []byte("statement two"), testStatement("00000000000001", rows))
+	Analyse(again.Rows, history)
+	if again.Rows[0].Duplicate == nil || !again.Rows[0].Duplicate.Exact {
+		t.Fatalf("a timed row is not detected as already imported: %+v", again.Rows[0].Duplicate)
+	}
+}
+
+func TestConcurrentUploadOfTheSameFileResumes(t *testing.T) {
+	store := testStore(t)
+	svc := NewService(store)
+	ctx := context.Background()
+	rows := []statement.Transaction{tx("2026-01-05", 2575, 0, "card purchase one")}
+	stmt := testStatement("00000000000088", rows)
+	svc.parse = func([]byte) (*statement.Statement, error) { return stmt, nil }
+
+	var wg sync.WaitGroup
+	ids := make([]int64, 2)
+	errs := make([]error, 2)
+	for i := range ids {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p, err := svc.Upload(ctx, []byte("same file"))
+			if err != nil {
+				errs[i] = err
+				return
+			}
+			ids[i] = p.ImportID
+		}()
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("upload %d: %v", i, err)
+		}
+	}
+	if ids[0] != ids[1] {
+		t.Fatalf("import ids = %v, want the same import", ids)
+	}
+	var count int
+	if err := store.pool.QueryRow(ctx, `select count(*) from statement_import`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("imports = %d, want 1", count)
 	}
 }
 

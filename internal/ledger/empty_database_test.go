@@ -8,7 +8,6 @@ import (
 
 func TestAccountsReturnsEmptyArrayNotNull(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	accounts, err := store.Accounts(context.Background())
 	if err != nil {
@@ -39,7 +38,6 @@ func TestAccountsReturnsEmptyArrayNotNull(t *testing.T) {
 
 func TestMonthlyReturnsEmptyArrayNotNull(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	months, err := store.Monthly(context.Background(), "2024-01", "2024-12")
 	if err != nil {
@@ -66,7 +64,6 @@ func TestMonthlyReturnsEmptyArrayNotNull(t *testing.T) {
 
 func TestTransactionsReturnsEmptyArrayNotNull(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	result, err := store.Transactions(context.Background(), TransactionFilter{})
 	if err != nil {
@@ -93,7 +90,6 @@ func TestTransactionsReturnsEmptyArrayNotNull(t *testing.T) {
 
 func TestCardCoverageReturnsEmptyMonthsArray(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	result, err := store.CardCoverage(context.Background(), "2024-01", "2024-12")
 	if err != nil {
@@ -120,7 +116,6 @@ func TestCardCoverageReturnsEmptyMonthsArray(t *testing.T) {
 
 func TestRecurringReturnsEmptySeriesArray(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	result, err := store.Recurring(context.Background(), "2024-01", "2024-12")
 	if err != nil {
@@ -147,7 +142,6 @@ func TestRecurringReturnsEmptySeriesArray(t *testing.T) {
 
 func TestBNPLReturnsEmptyMonthsArray(t *testing.T) {
 	store := testStore(t)
-	defer store.Close()
 
 	result, err := store.BNPL(context.Background(), "2024-01", "2024-12")
 	if err != nil {

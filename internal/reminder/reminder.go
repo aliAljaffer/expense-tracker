@@ -102,6 +102,7 @@ func Due(now time.Time, loc *time.Location, lastSent string) bool {
 type Store interface {
 	Setting(ctx context.Context, key string) (string, error)
 	PutSetting(ctx context.Context, key, value string) error
+	ClaimSetting(ctx context.Context, key, value string) (bool, error)
 }
 
 type Reminder struct {
@@ -152,12 +153,21 @@ func (r *Reminder) check(ctx context.Context) {
 	if to == "" {
 		return
 	}
-	if err := r.mail.Send(to); err != nil {
-		r.log.Warn("send monthly reminder failed", "error", err)
+	month := now.In(r.loc).Format(monthLayout)
+	claimed, err := r.store.ClaimSetting(ctx, LastSentKey, month)
+	if err != nil {
+		r.log.Warn("claim reminder failed", "error", err)
 		return
 	}
-	if err := r.store.PutSetting(ctx, LastSentKey, now.In(r.loc).Format(monthLayout)); err != nil {
-		r.log.Warn("record reminder sent failed", "error", err)
+	if !claimed {
+		return
+	}
+	if err := r.mail.Send(to); err != nil {
+		if err := r.store.PutSetting(ctx, LastSentKey, last); err != nil {
+			r.log.Warn("reset reminder state failed", "error", err)
+		}
+		r.log.Warn("send monthly reminder failed", "error", err)
+		return
 	}
 	r.log.Info("monthly reminder sent")
 }

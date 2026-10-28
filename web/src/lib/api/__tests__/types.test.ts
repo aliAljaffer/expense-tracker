@@ -37,6 +37,11 @@ describe("formatSAR", () => {
     expect(typeof result).toBe("string");
     expect(result.split(".")[1]).toBe("75");
   });
+
+  it("keeps the sign and the fils in front of a negative amount", () => {
+    expect(formatSAR(-1250)).toBe("-12.50");
+    expect(formatSAR(-5)).toBe("-0.05");
+  });
 });
 
 describe("displaySAR", () => {
@@ -70,5 +75,15 @@ describe("displaySAR", () => {
   it("includes SAR symbol at the end", () => {
     const result = displaySAR(2575);
     expect(result.endsWith(" SAR")).toBe(true);
+  });
+
+  it("shows a dash when the statement carried no amount", () => {
+    expect(displaySAR(null)).toBe("-");
+    expect(displaySAR(undefined)).toBe("-");
+  });
+
+  it("formats a negative amount with one sign", () => {
+    expect(displaySAR(-1250)).toBe("-12.50 SAR");
+    expect(displaySAR(-123456)).toBe("-1,234.56 SAR");
   });
 });

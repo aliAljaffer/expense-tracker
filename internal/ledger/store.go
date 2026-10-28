@@ -4,15 +4,13 @@ package ledger
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"math"
 	"strings"
 	"time"
 
-	// database/sql driver for the connection in Open.
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrBadFilter = errors.New("invalid filter")
@@ -23,22 +21,11 @@ const (
 )
 
 type Store struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func Open(ctx context.Context, url string) (*Store, error) {
-	db, err := sql.Open("pgx", url)
-	if err != nil {
-		return nil, fmt.Errorf("open database: %w", err)
-	}
-	if err := db.PingContext(ctx); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
-	}
-	return &Store{db: db}, nil
-}
-
-func (s *Store) Close() error { return s.db.Close() }
+// New reads through the pool the caller already opened.
+func New(pool *pgxpool.Pool) *Store { return &Store{db: pool} }
 
 // MaskNumber keeps the last four characters and hides the rest.
 func MaskNumber(number string) string {
@@ -62,7 +49,7 @@ type Account struct {
 // Accounts lists every account with the balance the UI shows: the
 // balance_after of the newest transaction by the statement order.
 func (s *Store) Accounts(ctx context.Context) ([]Account, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select a.id, a.bank, coalesce(a.number, '') as number, a.kind, a.currency,
 		       latest.balance_after, latest.posted_date::text
 		from account a
@@ -154,7 +141,7 @@ func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month
 		return nil, err
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select
 			to_char(posted_date, 'YYYY-MM'),
 			count(*),
@@ -246,7 +233,7 @@ func (s *Store) SpendingByTime(ctx context.Context, fromMonth, toMonth string) (
 		out.Hours[hour].Hour = hour
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select extract(hour from posted_time)::int,
 		       coalesce(sum(debit), 0),
 		       count(*)
@@ -275,7 +262,7 @@ func (s *Store) SpendingByTime(ctx context.Context, fromMonth, toMonth string) (
 		return TimeOfDay{}, err
 	}
 
-	if err := s.db.QueryRowContext(ctx, `
+	if err := s.db.QueryRow(ctx, `
 		select count(*)
 		from transaction
 		where posted_date >= $1 and posted_date <= $2
@@ -431,7 +418,7 @@ func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (Transact
 		where = " where " + strings.Join(conds, " and ")
 	}
 
-	if err := s.db.QueryRowContext(ctx, `
+	if err := s.db.QueryRow(ctx, `
 		select count(*), coalesce(sum(debit), 0), coalesce(sum(credit), 0)
 		from transaction`+where, args...).Scan(&out.TotalCount, &out.TotalDebit,
 		&out.TotalCredit); err != nil {
@@ -439,7 +426,7 @@ func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (Transact
 	}
 
 	args = append(args, f.Limit, f.Offset)
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.db.Query(ctx, `
 		select t.id, t.account_id, t.posted_date::text, t.posted_time::text,
 		       t.description_raw, t.debit, t.credit, t.balance_after, t.kind,
 		       t.counts_as_spending, t.merchant_id,

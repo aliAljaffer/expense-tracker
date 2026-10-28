@@ -18,7 +18,20 @@ type Pool interface {
 	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 }
 
+// migrationLockKey is arbitrary and stable: the first process to take it runs
+// the migrations, the rest wait and then find them applied.
+const migrationLockKey = int64(0x67726f6f737a79)
+
 func Apply(ctx context.Context, pool Pool, migrations fs.FS) error {
+	lock, err := pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("begin migration lock: %w", err)
+	}
+	defer lock.Rollback(ctx)
+	if _, err := lock.Exec(ctx, "select pg_advisory_xact_lock($1)", migrationLockKey); err != nil {
+		return fmt.Errorf("take migration lock: %w", err)
+	}
+
 	schemaMigrationsExists, err := tableExists(ctx, pool, "schema_migrations")
 	if err != nil {
 		return fmt.Errorf("check schema_migrations table: %w", err)
@@ -125,7 +138,7 @@ func adoptOldDatabase(ctx context.Context, pool Pool) (map[string]bool, error) {
 			applied["0002_import_preview"] = true
 		}
 
-		exists0003, err := tableExists(ctx, pool, "merchant")
+		exists0003, err := columnExists(ctx, pool, "merchant", "is_bnpl")
 		if err != nil {
 			return nil, err
 		}
@@ -146,6 +159,17 @@ func adoptOldDatabase(ctx context.Context, pool Pool) (map[string]bool, error) {
 	}
 
 	return applied, nil
+}
+
+func columnExists(ctx context.Context, pool Pool, tableName, columnName string) (bool, error) {
+	var exists bool
+	err := pool.QueryRow(ctx, `
+		select exists(
+			select 1 from information_schema.columns
+			where table_name = $1 and column_name = $2 and table_schema = current_schema()
+		)
+	`, tableName, columnName).Scan(&exists)
+	return exists, err
 }
 
 func createSchemaMigrationsTable(ctx context.Context, pool Pool) error {

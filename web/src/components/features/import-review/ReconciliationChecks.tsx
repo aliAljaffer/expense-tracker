@@ -18,7 +18,8 @@ export function ReconciliationChecks({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const allPassed = reconciliation.checks.every((check) => check.status === "pass");
-  const failedChecks = reconciliation.checks.filter((check) => check.status !== "pass");
+  const failedChecks = reconciliation.checks.filter((check) => check.status === "fail");
+  const skippedChecks = reconciliation.checks.filter((check) => check.status === "skip");
 
   if (allPassed) {
     return (
@@ -87,6 +88,14 @@ export function ReconciliationChecks({
 
   return (
     <div className="stack--snug">
+      {skippedChecks.length > 0 && (
+        <p className="note">
+          {skippedChecks.length === 1 ? "One check" : `${skippedChecks.length} checks`} could not
+          run because the statement does not state{" "}
+          {skippedChecks.map((check) => check.name.replace(/_/g, " ")).join(", ")}. That is not a
+          failure.
+        </p>
+      )}
       {failedChecks.map((check) => (
         <div
           key={check.name}

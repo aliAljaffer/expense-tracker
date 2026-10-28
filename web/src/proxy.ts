@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createDecipheriv, hkdfSync } from "node:crypto";
+import { decryptJson } from "@/lib/auth/crypto";
 
-const ALGORITHM = "aes-256-gcm";
 const COOKIE_NAME_PREFIX = "grooszy_session";
 
 interface SessionPayload {
@@ -9,25 +8,6 @@ interface SessionPayload {
   refreshToken: string;
   expiresAt: number;
   subject: string;
-}
-
-function deriveKey(secret: string): Buffer {
-  const derived = hkdfSync("sha256", secret, "", "", 32);
-  return Buffer.from(derived);
-}
-
-function decryptPayload(encrypted: string, key: Buffer): SessionPayload {
-  const iv = Buffer.from(encrypted.slice(0, 24), "hex");
-  const authTag = Buffer.from(encrypted.slice(24, 56), "hex");
-  const ciphertext = encrypted.slice(56);
-
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-
-  let plaintext = decipher.update(ciphertext, "hex", "utf8");
-  plaintext += decipher.final("utf8");
-
-  return JSON.parse(plaintext);
 }
 
 function reconstructFromCookies(cookieString: string | undefined): string {
@@ -73,8 +53,7 @@ function getSession(request: NextRequest): SessionPayload | null {
       return null;
     }
 
-    const key = deriveKey(secret);
-    const session = decryptPayload(encrypted, key);
+    const session = decryptJson<SessionPayload>(encrypted, secret);
 
     // An expired access token is not fatal: the BFF refreshes it using the
     // stored refresh token. Reject only sessions that cannot be refreshed.
@@ -93,6 +72,7 @@ export function proxy(request: NextRequest) {
 
   const publicPaths = [
     "/signin",
+    "/brand",
     "/api/auth/login",
     "/api/auth/callback",
     "/api/auth/logout",

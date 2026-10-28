@@ -2,7 +2,6 @@ package ledger
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,13 +12,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// testStore builds an isolated schema from the real migrations over
-// database/sql. Without DATABASE_URL the database tests skip; the filter and
-// masking tests still run with an empty store because they fail before any
-// query.
+// testStore builds an isolated schema from the real migrations. Without
+// DATABASE_URL the database tests skip; the filter and masking tests still run
+// with an empty store because they fail before any query.
 func testStore(t *testing.T) *Store {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")
@@ -27,35 +25,31 @@ func testStore(t *testing.T) *Store {
 		t.Skip("DATABASE_URL is not set")
 	}
 	ctx := context.Background()
-	admin, err := sql.Open("pgx", url)
+	admin, err := pgx.Connect(ctx, url)
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	schema := fmt.Sprintf("test_%d_%d", time.Now().UnixNano(), os.Getpid())
-	if _, err := admin.ExecContext(ctx, "create schema "+schema); err != nil {
+	if _, err := admin.Exec(ctx, "create schema "+schema); err != nil {
 		t.Fatalf("create schema: %v", err)
 	}
+
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
-		ctx := context.Background()
-		admin.ExecContext(ctx, "drop schema if exists "+schema+" cascade")
-		admin.Close()
+		pool.Close()
+		admin.Exec(context.Background(), "drop schema if exists "+schema+" cascade")
+		admin.Close(context.Background())
 	})
 
-	cfg, err := pgx.ParseConfig(url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg.RuntimeParams["search_path"] = schema
-	dsn := stdlib.RegisterConnConfig(cfg)
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		db.Close()
-		stdlib.UnregisterConnConfig(dsn)
-	})
-	s := &Store{db: db}
+	s := &Store{db: pool}
 
 	entries, err := os.ReadDir("../../api/migrations")
 	if err != nil {
@@ -73,7 +67,7 @@ func testStore(t *testing.T) *Store {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := db.ExecContext(ctx, string(load)); err != nil {
+		if _, err := pool.Exec(ctx, string(load)); err != nil {
 			t.Fatalf("apply %s: %v", name, err)
 		}
 	}
@@ -91,7 +85,7 @@ type txOpts struct {
 func seedAccount(t *testing.T, s *Store, number string) int64 {
 	t.Helper()
 	var id int64
-	if err := s.db.QueryRow(
+	if err := s.db.QueryRow(context.Background(),
 		`insert into account (bank, number, kind) values ('test', $1, 'current') returning id`,
 		number).Scan(&id); err != nil {
 		t.Fatalf("seed account: %v", err)
@@ -103,7 +97,7 @@ func seedImport(t *testing.T, s *Store, accountID int64) int64 {
 	t.Helper()
 	var id int64
 	sha := fmt.Sprintf("%064x", time.Now().UnixNano())
-	if err := s.db.QueryRow(
+	if err := s.db.QueryRow(context.Background(),
 		`insert into statement_import (account_id, file_sha256, parser, parser_version, reconciled, status)
 		values ($1, $2, 'test', '1', true, 'accepted') returning id`,
 		accountID, sha).Scan(&id); err != nil {
@@ -116,7 +110,7 @@ func seedTransaction(t *testing.T, s *Store, accountID, importID int64,
 	date string, debit, credit int64, kind string, balanceAfter *int64, o txOpts) int64 {
 	t.Helper()
 	var id int64
-	if err := s.db.QueryRow(`
+	if err := s.db.QueryRow(context.Background(), `
 		insert into transaction (
 			account_id, import_id, posted_date, posted_time, description_raw,
 			debit, credit, balance_after, kind, merchant_id, category_id,
@@ -222,7 +216,7 @@ func TestMonthlyCountsConfiguredPayerAsSalary(t *testing.T) {
 	acc := seedAccount(t, s, "00000000000003")
 	imp := seedImport(t, s, acc)
 	id := seedTransaction(t, s, acc, imp, "2026-02-01", 0, 600000, "external_transfer_in", nil, txOpts{})
-	if _, err := s.db.Exec(
+	if _, err := s.db.Exec(context.Background(),
 		`update transaction set merchant_raw = 'SAUDI AZM COMMUNICATION AND IT' where id = $1`,
 		id); err != nil {
 		t.Fatal(err)
@@ -373,7 +367,7 @@ func TestUncategorisedSpendingCountsOnlyMissingCategory(t *testing.T) {
 	acc := seedAccount(t, s, "00000000000004")
 	imp := seedImport(t, s, acc)
 	var catID int64
-	if err := s.db.QueryRow(`insert into category (name) values ('groceries') returning id`).Scan(&catID); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into category (name) values ('groceries') returning id`).Scan(&catID); err != nil {
 		t.Fatal(err)
 	}
 	seedTransaction(t, s, acc, imp, "2026-04-01", 600, 0, "card_purchase", idp(0), txOpts{})
@@ -479,17 +473,17 @@ func TestTransactionFilterByMerchantID(t *testing.T) {
 	acc := seedAccount(t, s, "00000000000008")
 	imp := seedImport(t, s, acc)
 	var cat1, cat2 int64
-	if err := s.db.QueryRow(`insert into category (name) values ('groceries') returning id`).Scan(&cat1); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into category (name) values ('groceries') returning id`).Scan(&cat1); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.db.QueryRow(`insert into category (name) values ('fuel') returning id`).Scan(&cat2); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into category (name) values ('fuel') returning id`).Scan(&cat2); err != nil {
 		t.Fatal(err)
 	}
 	var merch1, merch2 int64
-	if err := s.db.QueryRow(`insert into merchant (canonical_name) values ('Market A') returning id`).Scan(&merch1); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into merchant (canonical_name) values ('Market A') returning id`).Scan(&merch1); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.db.QueryRow(`insert into merchant (canonical_name) values ('Gas Station B') returning id`).Scan(&merch2); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into merchant (canonical_name) values ('Gas Station B') returning id`).Scan(&merch2); err != nil {
 		t.Fatal(err)
 	}
 	seedTransaction(t, s, acc, imp, "2026-07-01", 1000, 0, "card_purchase", idp(0), txOpts{merchantID: &merch1, categoryID: &cat1})

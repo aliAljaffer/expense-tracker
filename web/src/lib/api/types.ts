@@ -4,7 +4,7 @@
 
 export interface ReconciliationCheck {
   name: string;
-  status: "pass" | "fail";
+  status: "pass" | "fail" | "skip";
   parsed: string;
   stated: string;
 }
@@ -35,7 +35,7 @@ export interface ImportRow {
   description_raw: string;
   debit: number;
   credit: number;
-  balance_after: number;
+  balance_after: number | null;
   kind: string;
   merchant_raw?: string;
   card_last4?: string;
@@ -91,9 +91,11 @@ export interface ImportPreview {
  * @returns Formatted string like "25.75"
  */
 export function formatSAR(halalas: number): string {
-  const riyals = Math.floor(halalas / 100);
-  const fils = halalas % 100;
-  return `${riyals.toString()}.${fils.toString().padStart(2, "0")}`;
+  const sign = halalas < 0 ? "-" : "";
+  const magnitude = Math.abs(halalas);
+  const riyals = Math.trunc(magnitude / 100);
+  const fils = magnitude % 100;
+  return `${sign}${riyals.toString()}.${fils.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -103,9 +105,11 @@ export function formatSAR(halalas: number): string {
  * @param halalas - Integer amount in halalas
  * @returns Formatted string with SAR symbol
  */
-export function displaySAR(halalas: number): string {
-  const sar = formatSAR(halalas);
-  const [riyals, fils] = sar.split(".");
+export function displaySAR(halalas: number | null | undefined): string {
+  if (halalas === null || halalas === undefined) {
+    return "-";
+  }
+  const [riyals, fils] = formatSAR(halalas).split(".");
   const formattedRiyals = parseInt(riyals, 10).toLocaleString("en-US");
   return `${formattedRiyals}.${fils} SAR`;
 }
@@ -192,7 +196,7 @@ export interface Transaction {
   description: string;
   debit: number;
   credit: number;
-  balance_after: number;
+  balance_after: number | null;
   kind: string;
   counts_as_spending: boolean;
   merchant_id: number | null;
@@ -287,8 +291,8 @@ export interface BnplMonth {
   month: string;
   bnpl_outflow: number;
   payment_count: number;
-  previous_month: number;
-  three_month_average: number;
+  previous_month: number | null;
+  three_month_average: number | null;
   is_rising: boolean;
   transaction_ids: number[];
 }

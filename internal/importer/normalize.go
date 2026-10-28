@@ -73,12 +73,3 @@ func isWholeWordMatch(text, word string) bool {
 	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
 	return re.MatchString(text)
 }
-
-// GetBNPLProviders returns the set of known BNPL provider names for external use.
-func GetBNPLProviders() map[string]bool {
-	providers := make(map[string]bool)
-	for k, v := range knownBNPLProviders {
-		providers[k] = v
-	}
-	return providers
-}

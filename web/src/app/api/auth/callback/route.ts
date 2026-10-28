@@ -3,30 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseIdToken, exchangeCode, fetchDiscovery } from "@/lib/auth/oidc";
 import { writeSession } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
-import { createDecipheriv, timingSafeEqual } from "node:crypto";
-import { hkdfSync } from "node:crypto";
+import { decryptJson } from "@/lib/auth/crypto";
+import { timingSafeEqual } from "node:crypto";
 
-const PKCE_ALGORITHM = "aes-256-gcm";
 const PKCE_COOKIE_NAME = "grooszy_pkce";
-
-function derivePkceKey(secret: string): Buffer {
-  const derived = hkdfSync("sha256", secret, "", "", 32);
-  return Buffer.from(derived);
-}
-
-function decryptPkceData(encrypted: string, key: Buffer): { verifier: string; nonce: string; state: string } {
-  const iv = Buffer.from(encrypted.slice(0, 24), "hex");
-  const authTag = Buffer.from(encrypted.slice(24, 56), "hex");
-  const ciphertext = encrypted.slice(56);
-
-  const decipher = createDecipheriv(PKCE_ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-
-  let plaintext = decipher.update(ciphertext, "hex", "utf8");
-  plaintext += decipher.final("utf8");
-
-  return JSON.parse(plaintext);
-}
 
 export async function GET(request: NextRequest) {
   const config = getAuthConfig();
@@ -63,8 +43,7 @@ export async function GET(request: NextRequest) {
 
   let pkceData: { verifier: string; nonce: string; state: string };
   try {
-    const key = derivePkceKey(config.sessionSecret);
-    pkceData = decryptPkceData(pkceEncrypted, key);
+    pkceData = decryptJson(pkceEncrypted, config.sessionSecret);
   } catch {
     cookieStore.delete(PKCE_COOKIE_NAME);
     return fail("invalid_pkce");

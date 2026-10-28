@@ -17,7 +17,7 @@ type Category struct {
 }
 
 func (s *Store) Categories(ctx context.Context) ([]Category, error) {
-	rows, err := s.db.QueryContext(ctx, `select id, name from category order by name, id`)
+	rows, err := s.db.Query(ctx, `select id, name from category order by name, id`)
 	if err != nil {
 		return nil, fmt.Errorf("read categories: %w", err)
 	}
@@ -38,7 +38,7 @@ func (s *Store) Categories(ctx context.Context) ([]Category, error) {
 func (s *Store) SetCategory(ctx context.Context, transactionID int64, categoryID *int64, applyToMerchant bool) error {
 	if categoryID != nil {
 		var exists bool
-		if err := s.db.QueryRowContext(ctx,
+		if err := s.db.QueryRow(ctx,
 			`select exists(select 1 from category where id = $1)`, *categoryID).Scan(&exists); err != nil {
 			return fmt.Errorf("check category: %w", err)
 		}
@@ -46,7 +46,7 @@ func (s *Store) SetCategory(ctx context.Context, transactionID int64, categoryID
 			return ErrBadCategory
 		}
 	}
-	tag, err := s.db.ExecContext(ctx, `
+	tag, err := s.db.Exec(ctx, `
 		with target as (select merchant_id from transaction where id = $2)
 		update transaction t
 		set category_id = $1
@@ -57,11 +57,7 @@ func (s *Store) SetCategory(ctx context.Context, transactionID int64, categoryID
 	if err != nil {
 		return fmt.Errorf("update category: %w", err)
 	}
-	n, err := tag.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("update category: %w", err)
-	}
-	if n == 0 {
+	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
 	return nil
@@ -70,16 +66,12 @@ func (s *Store) SetCategory(ctx context.Context, transactionID int64, categoryID
 // SetMerchantAlias stores the display name shown for a merchant. A null alias
 // falls back to the canonical name.
 func (s *Store) SetMerchantAlias(ctx context.Context, merchantID int64, alias *string) error {
-	tag, err := s.db.ExecContext(ctx,
+	tag, err := s.db.Exec(ctx,
 		`update merchant set display_name = $1 where id = $2`, alias, merchantID)
 	if err != nil {
 		return fmt.Errorf("update merchant alias: %w", err)
 	}
-	n, err := tag.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("update merchant alias: %w", err)
-	}
-	if n == 0 {
+	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
 	return nil

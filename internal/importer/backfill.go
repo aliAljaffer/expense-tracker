@@ -2,10 +2,8 @@ package importer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -62,7 +60,7 @@ func BackfillMerchants(ctx context.Context, pool *pgxpool.Pool) error {
 				return fmt.Errorf("scan row: %w", err)
 			}
 
-			merchantID, err := resolveMerchantInTx(ctx, tx, merchantRaw, billerCode, billerAccount)
+			merchantID, err := findOrCreateMerchant(ctx, tx, merchantRaw, billerCode, billerAccount)
 			if err != nil {
 				rows.Close()
 				tx.Rollback(ctx)
@@ -95,57 +93,4 @@ func BackfillMerchants(ctx context.Context, pool *pgxpool.Pool) error {
 			return nil
 		}
 	}
-}
-
-// resolveMerchantInTx finds or creates a merchant within a transaction.
-// It mirrors the logic in Store.findOrCreateMerchant but works with any pgx.Tx.
-func resolveMerchantInTx(ctx context.Context, tx pgx.Tx, merchantRaw, billerCode, billerAccount string) (int64, error) {
-	if billerCode != "" && billerAccount != "" {
-		var id int64
-		err := tx.QueryRow(ctx, `
-			select id from merchant
-			where biller_code = $1 and biller_account = $2`,
-			billerCode, billerAccount).Scan(&id)
-		if err == nil {
-			return id, nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("find merchant by biller: %w", err)
-		}
-	}
-
-	canonical := NormalizeMerchant(merchantRaw)
-	var id int64
-	err := tx.QueryRow(ctx, `
-		select id from merchant where canonical_name = $1`,
-		canonical).Scan(&id)
-	if err == nil {
-		return id, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return 0, fmt.Errorf("find merchant by name: %w", err)
-	}
-
-	isBNPL := IsBNPLMerchant(canonical)
-	err = tx.QueryRow(ctx, `
-		insert into merchant (canonical_name, biller_code, biller_account, is_bnpl)
-		values ($1, nullif($2, ''), nullif($3, ''), $4)
-		returning id`,
-		canonical, billerCode, billerAccount, isBNPL).Scan(&id)
-	if err != nil {
-		return 0, fmt.Errorf("create merchant: %w", err)
-	}
-
-	if merchantRaw != canonical {
-		_, err := tx.Exec(ctx, `
-			insert into merchant_alias (merchant_id, raw)
-			values ($1, $2)
-			on conflict (raw) do nothing`,
-			id, merchantRaw)
-		if err != nil {
-			return 0, fmt.Errorf("create alias: %w", err)
-		}
-	}
-
-	return id, nil
 }

@@ -62,9 +62,6 @@ export async function commitImport(
       body: JSON.stringify({ rows: validatedRows }),
     });
 
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set("cache-control", "no-store");
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: "Unknown error" }));
       return { error: error.error || `HTTP ${response.status}` };
@@ -96,9 +93,6 @@ export async function cancelImport(importId: unknown): Promise<{ success: boolea
         Authorization: `Bearer ${session.accessToken}`,
       },
     });
-
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set("cache-control", "no-store");
 
     if (!response.ok) {
       return { error: `HTTP ${response.status}` };

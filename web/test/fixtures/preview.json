@@ -261,7 +261,7 @@
         "balance_after": 75000,
         "kind": "card_purchase",
         "merchant_raw": "COFFEE PLACE CITY CENTER, SA",
-        "fingerprint": "63e508988d018273cef9422562a14535",
+        "fingerprint": "b9a22f030dc0d8f3456b6e0029dd44b2",
         "duplicate": {
           "score": 9,
           "exact": false,
@@ -351,7 +351,7 @@
         "balance_after": 97425,
         "kind": "card_purchase",
         "merchant_raw": "SAMPLE STORE TRADING",
-        "fingerprint": "c439cd49d21bd8aa3c8f722030bd799f",
+        "fingerprint": "7a8f44d5c3a2f0b1a77ed956f2729e09",
         "default_selected": true
       },
       {
@@ -363,7 +363,7 @@
         "balance_after": 96425,
         "kind": "online_purchase",
         "merchant_raw": "SAMPLE ONLINE",
-        "fingerprint": "f412ac5a854bc81781fa0eeae5a9d902",
+        "fingerprint": "550c491c781f44a65e41f25bf518a0b1",
         "default_selected": true
       },
       {
@@ -376,7 +376,7 @@
         "kind": "bill_payment",
         "biller_code": "153",
         "biller_account": "10000000001",
-        "fingerprint": "0f7cd31540360c67e32c7eac80a0e8d2",
+        "fingerprint": "64d7e6f1859d7ee5fe2af326e04c338b",
         "default_selected": true
       },
       {
@@ -387,7 +387,7 @@
         "credit": 0,
         "balance_after": 46367,
         "kind": "fee",
-        "fingerprint": "3c9f5bb8576b5cb3f7691cf09fbaa88f",
+        "fingerprint": "d4b650c543e5f3d67247b013be675275",
         "default_selected": true
       },
       {
@@ -398,7 +398,7 @@
         "credit": 100000,
         "balance_after": 146367,
         "kind": "salary",
-        "fingerprint": "c59209bd4bde1889b37b961ec72dc144",
+        "fingerprint": "705253eeb5b6ecc6212210d481b872db",
         "default_selected": true
       },
       {
@@ -409,7 +409,7 @@
         "credit": 0,
         "balance_after": 145867,
         "kind": "unknown",
-        "fingerprint": "bf42c34ae97efcaf6bd281595827046c",
+        "fingerprint": "2aa2a627eb65e2e19ee00194c47ba1df",
         "default_selected": true
       },
       {
@@ -421,7 +421,7 @@
         "balance_after": 44567,
         "kind": "card_payment",
         "card_last4": "0000",
-        "fingerprint": "c860df98c29b9a427b51aa8192d90634",
+        "fingerprint": "e28dcdfb245b531c48daf03701113181",
         "default_selected": true
       }
     ],
@@ -506,14 +506,7 @@
     "parser_version": "2",
     "period_start": "2026-01-01",
     "period_end": "2026-01-31",
-    "header": {
-      "opening_balance": 100000,
-      "closing_balance": 118600,
-      "stated_debit_total": 62500,
-      "stated_credit_total": 81000,
-      "stated_debit_count": 1,
-      "stated_credit_count": 1
-    },
+    "header": {},
     "reconciliation": {
       "ok": false,
       "checks": [
@@ -553,33 +546,12 @@
       "parsed_debit_count": 1,
       "parsed_credit_count": 1
     },
-    "rows": [
-      {
-        "posted_date": "2026-01-05",
-        "description_raw": "SAR 25.75 purchase",
-        "debit": 2575,
-        "credit": 0,
-        "balance_after": 97425,
-        "kind": "unknown",
-        "fingerprint": "ff85f93ddeb486a0ef3c2d2318351556",
-        "default_selected": true
-      },
-      {
-        "posted_date": "2026-01-07",
-        "description_raw": "SAR 10.00 refund",
-        "debit": 0,
-        "credit": 1000,
-        "balance_after": 98425,
-        "kind": "unknown",
-        "fingerprint": "a83cfb4835c4653ae503d3415e66d9bd",
-        "default_selected": true
-      }
-    ],
+    "rows": [],
     "summary": {
       "rows": 2,
       "exact_duplicates": 0,
       "needs_review": 0,
-      "default_rows": 2,
+      "default_rows": 0,
       "history_rows": 0,
       "anomaly_ready": false
     }

@@ -10,6 +10,22 @@ import (
 	"github.com/aliAljaffer/grooszy/internal/ledger"
 )
 
+// monthWindow reads from and to, defaulting to the last 12 months.
+func monthWindow(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	q := r.URL.Query()
+	from, to := q.Get("from"), q.Get("to")
+	if (from == "") != (to == "") {
+		writeError(w, http.StatusBadRequest, "set from and to together")
+		return "", "", false
+	}
+	if from == "" {
+		now := time.Now()
+		from = now.AddDate(0, -11, 0).Format("2006-01")
+		to = now.Format("2006-01")
+	}
+	return from, to, true
+}
+
 func (s *Server) readStore(w http.ResponseWriter) *ledger.Store {
 	if s.ledger == nil {
 		writeError(w, http.StatusServiceUnavailable, "database unavailable")
@@ -37,16 +53,9 @@ func (s *Server) monthly(w http.ResponseWriter, r *http.Request, id auth.Identit
 	if store == nil {
 		return
 	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
+	from, to, ok := monthWindow(w, r)
+	if !ok {
 		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
 	}
 	months, err := store.Monthly(r.Context(), from, to)
 	switch {
@@ -65,16 +74,9 @@ func (s *Server) spendingByTime(w http.ResponseWriter, r *http.Request, id auth.
 	if store == nil {
 		return
 	}
-	q := r.URL.Query()
-	from, to := q.Get("from"), q.Get("to")
-	if (from == "") != (to == "") {
-		writeError(w, http.StatusBadRequest, "set from and to together")
+	from, to, ok := monthWindow(w, r)
+	if !ok {
 		return
-	}
-	if from == "" {
-		now := time.Now()
-		from = now.AddDate(0, -11, 0).Format("2006-01")
-		to = now.Format("2006-01")
 	}
 	result, err := store.SpendingByTime(r.Context(), from, to)
 	switch {

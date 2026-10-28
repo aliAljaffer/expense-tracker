@@ -95,16 +95,3 @@ export function generatePageList(options: PageListOptions): (number | string)[] 
 
   return pages;
 }
-
-export function validatePerPage(value: number, options: number[] = PER_PAGE_OPTIONS): number {
-  if (options.includes(value)) {
-    return value;
-  }
-  return DEFAULT_PER_PAGE;
-}
-
-export function clampPage(page: number, total: number, perPage: number): number {
-  if (total === 0) return 1;
-  const pageCount = Math.ceil(total / perPage);
-  return Math.max(1, Math.min(page, pageCount));
-}

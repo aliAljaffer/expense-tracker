@@ -50,11 +50,35 @@ backup:
     online: true
 ```
 
-That block configures how a backup runs. It does not schedule one. No
-`ScheduledBackup` object is in this repository, so nothing here takes a
-scheduled backup.
+That block configures how a backup runs. It does not schedule one. Nothing in
+this repository creates a `ScheduledBackup`, so nothing here takes a scheduled
+backup on its own.
 
-Production manifests are not in this repository. A draft `ScheduledBackup` for
-production lives on the unmerged homelab branch, together with the rest of the
-production manifests. Check the namespace for a `ScheduledBackup` before you
-rely on one.
+Apply this object in the namespace that holds the cluster. It keeps seven daily
+backups, which covers the case of a database lost or corrupted days ago:
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: grooszy-daily
+spec:
+  schedule: "0 15 3 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: grooszy-db
+  immediate: true
+```
+
+`cluster.name` must match the `Cluster` metadata name in
+`deploy/dev/02-cnpg-cluster.yaml`. Retention is set on the cluster, not here.
+
+Without Kubernetes, one command is enough. It writes a plain SQL dump to the
+current directory. Run it from a shell that already has `DATABASE_URL`:
+
+```sh
+pg_dump --no-owner --format=custom "$DATABASE_URL" > "grooszy-$(date +%F).dump"
+```
+
+Production manifests are not in this repository. Check the namespace for a
+`ScheduledBackup` before you rely on one.

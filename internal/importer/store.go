@@ -164,7 +164,8 @@ func (s *Store) CreateImport(ctx context.Context, in ImportInput) (int64, error)
 		) values (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
 			$13, $14, $15, $16, $17, $18, $19, $20
-		) returning id`,
+		) on conflict (file_sha256) do nothing
+		returning id`,
 		in.AccountID, in.FileSHA256, in.Parser, in.ParserVersion,
 		nullIfEmpty(in.PeriodStart), nullIfEmpty(in.PeriodEnd),
 		st.OpeningBalance, st.ClosingBalance, st.StatedDebitTotal, st.StatedCreditTotal,
@@ -173,6 +174,15 @@ func (s *Store) CreateImport(ctx context.Context, in ImportInput) (int64, error)
 		in.Reconciliation.DebitCount, in.Reconciliation.CreditCount,
 		in.RowCount, in.Accepted, recon, status,
 	).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Another request stored the same file first. Reuse its import.
+		if err := s.pool.QueryRow(ctx,
+			`select id from statement_import where file_sha256 = $1`,
+			in.FileSHA256).Scan(&id); err != nil {
+			return 0, fmt.Errorf("read concurrent import: %w", err)
+		}
+		return id, nil
+	}
 	if err != nil {
 		return 0, fmt.Errorf("create import: %w", err)
 	}
@@ -193,6 +203,18 @@ func (s *Store) SavePreview(ctx context.Context, importID int64, preview *Previe
 		return fmt.Errorf("save preview: %w", err)
 	}
 	return nil
+}
+
+// HasPreview reports whether a preview row exists, expired or not.
+func (s *Store) HasPreview(ctx context.Context, importID int64) (bool, error) {
+	var exists bool
+	err := s.pool.QueryRow(ctx,
+		`select exists(select 1 from import_preview where import_id = $1)`,
+		importID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check preview: %w", err)
+	}
+	return exists, nil
 }
 
 func (s *Store) LoadPreview(ctx context.Context, importID int64) (*Preview, error) {
@@ -261,6 +283,7 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 	}
 
 	batch := &pgx.Batch{}
+	resolved := map[[3]string]int64{}
 	for _, i := range selected {
 		if i < 0 || i >= len(preview.Rows) {
 			return CommitResult{}, fmt.Errorf("row %d is out of range", i)
@@ -269,9 +292,15 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 
 		var merchantID *int64
 		if t.MerchantRaw != "" {
-			mid, err := s.findOrCreateMerchant(ctx, tx, t.MerchantRaw, t.BillerCode, t.BillerAccount)
-			if err != nil {
-				return CommitResult{}, err
+			key := [3]string{t.MerchantRaw, t.BillerCode, t.BillerAccount}
+			mid, ok := resolved[key]
+			if !ok {
+				var err error
+				mid, err = findOrCreateMerchant(ctx, tx, t.MerchantRaw, t.BillerCode, t.BillerAccount)
+				if err != nil {
+					return CommitResult{}, err
+				}
+				resolved[key] = mid
 			}
 			merchantID = &mid
 		}
@@ -329,7 +358,7 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 // It first tries to find by biller_code and biller_account if both are present.
 // Otherwise, it normalizes merchant_raw to get canonical_name and finds or creates by that.
 // If created, it sets is_bnpl and records an alias for the raw string when it differs.
-func (s *Store) findOrCreateMerchant(ctx context.Context, tx pgx.Tx, merchantRaw, billerCode, billerAccount string) (int64, error) {
+func findOrCreateMerchant(ctx context.Context, tx pgx.Tx, merchantRaw, billerCode, billerAccount string) (int64, error) {
 	if billerCode != "" && billerAccount != "" {
 		var id int64
 		err := tx.QueryRow(ctx, `

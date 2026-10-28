@@ -10,9 +10,9 @@ import (
 	"github.com/aliAljaffer/grooszy/parsers/statement"
 )
 
-// Parsers do not expose a posting time, so every row hashes at midnight. The
-// database column defaults to the same value.
-const postedTime = "00:00:00"
+// Rows without a stated posting time hash as midnight, matching the
+// transaction.posted_time default.
+const midnightTime = "00:00:00"
 
 var fingerprintEpoch = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -26,6 +26,10 @@ func Fingerprint(accountID int64, t statement.Transaction) (string, error) {
 	balance := ""
 	if t.BalanceAfter != nil {
 		balance = strconv.FormatInt(*t.BalanceAfter, 10)
+	}
+	postedTime := t.PostedTime
+	if postedTime == "" {
+		postedTime = midnightTime
 	}
 	raw := fmt.Sprintf("%d|%d|%s|%s|%d|%d|%s|%s",
 		accountID,

@@ -349,7 +349,7 @@ func TestFormatHalalas(t *testing.T) {
 func seedMerchant(t *testing.T, s *Store, name string) int64 {
 	t.Helper()
 	var id int64
-	if err := s.db.QueryRow(
+	if err := s.db.QueryRow(context.Background(),
 		`insert into merchant (canonical_name) values ($1) returning id`,
 		name).Scan(&id); err != nil {
 		t.Fatalf("seed merchant: %v", err)
@@ -360,7 +360,7 @@ func seedMerchant(t *testing.T, s *Store, name string) int64 {
 func seedBNPLMerchant(t *testing.T, s *Store, name string) int64 {
 	t.Helper()
 	var id int64
-	if err := s.db.QueryRow(
+	if err := s.db.QueryRow(context.Background(),
 		`insert into merchant (canonical_name, is_bnpl) values ($1, true) returning id`,
 		name).Scan(&id); err != nil {
 		t.Fatalf("seed bnpl merchant: %v", err)
@@ -469,7 +469,7 @@ func TestSalaryTrendCountsConfiguredPayer(t *testing.T) {
 	for month := 1; month <= 3; month++ {
 		id := seedTransaction(t, s, acc, imp, dateString(2026, month, 5), 0, 600000,
 			"external_transfer_in", nil, txOpts{})
-		if _, err := s.db.Exec(
+		if _, err := s.db.Exec(context.Background(),
 			`update transaction set merchant_raw = 'SAUDI AZM COMMUNICATION AND IT' where id = $1`,
 			id); err != nil {
 			t.Fatal(err)
@@ -561,10 +561,10 @@ func TestTransferMatchesSkipsAlreadyMatched(t *testing.T) {
 	inImp := seedImport(t, s, inAcc)
 	debitID := seedTransaction(t, s, outAcc, outImp, "2026-02-10", 50000, 0, "internal_transfer", nil, txOpts{})
 	creditID := seedTransaction(t, s, inAcc, inImp, "2026-02-11", 0, 50000, "external_transfer_in", nil, txOpts{})
-	if _, err := s.db.Exec(`update transaction set transfer_pair_id = $1 where id = $2`, creditID, debitID); err != nil {
+	if _, err := s.db.Exec(context.Background(), `update transaction set transfer_pair_id = $1 where id = $2`, creditID, debitID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec(`update transaction set transfer_pair_id = $1 where id = $2`, debitID, creditID); err != nil {
+	if _, err := s.db.Exec(context.Background(), `update transaction set transfer_pair_id = $1 where id = $2`, debitID, creditID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -623,7 +623,7 @@ func TestSuggestionDecisionStoredAndCleared(t *testing.T) {
 		t.Fatal(err)
 	}
 	var count int
-	if err := s.db.QueryRow(`select count(*) from user_decision where kind = $1`, SuggestionSalaryTrend).Scan(&count); err != nil {
+	if err := s.db.QueryRow(context.Background(), `select count(*) from user_decision where kind = $1`, SuggestionSalaryTrend).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 1 {

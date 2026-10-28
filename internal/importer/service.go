@@ -67,8 +67,17 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 				p.SetDefaultSelection()
 				return p, nil
 			}
-			if err := s.store.Cancel(ctx, rec.ID); err != nil {
+			// No live preview: an expired one is dropped, and a missing one
+			// means another request is still preparing it. That request is
+			// joined through CreateImport instead of racing it.
+			hasPreview, err := s.store.HasPreview(ctx, rec.ID)
+			if err != nil {
 				return nil, err
+			}
+			if hasPreview {
+				if err := s.store.Cancel(ctx, rec.ID); err != nil {
+					return nil, err
+				}
 			}
 		case "rejected":
 			if err := s.store.DiscardRejected(ctx, rec.ID); err != nil {
@@ -125,6 +134,13 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if rec, err := s.store.ImportByID(ctx, importID); err != nil {
+		return nil, err
+	} else if rec.Status != "pending" {
+		p := newPreview(rec)
+		p.AlreadyImported = rec.Status == "accepted"
+		return p, nil
 	}
 
 	p := &Preview{

@@ -9,7 +9,7 @@ import (
 func seedCategory(t *testing.T, s *Store, name string) int64 {
 	t.Helper()
 	var id int64
-	if err := s.db.QueryRow(`insert into category (name) values ($1) returning id`, name).Scan(&id); err != nil {
+	if err := s.db.QueryRow(context.Background(), `insert into category (name) values ($1) returning id`, name).Scan(&id); err != nil {
 		t.Fatalf("seed category: %v", err)
 	}
 	return id
@@ -18,7 +18,7 @@ func seedCategory(t *testing.T, s *Store, name string) int64 {
 func categoryOf(t *testing.T, s *Store, transactionID int64) *int64 {
 	t.Helper()
 	var id *int64
-	if err := s.db.QueryRow(`select category_id from transaction where id = $1`, transactionID).Scan(&id); err != nil {
+	if err := s.db.QueryRow(context.Background(), `select category_id from transaction where id = $1`, transactionID).Scan(&id); err != nil {
 		t.Fatalf("read category: %v", err)
 	}
 	return id
@@ -26,7 +26,6 @@ func categoryOf(t *testing.T, s *Store, transactionID int64) *int64 {
 
 func TestSetCategoryAppliesToEveryRowOfTheMerchant(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	ctx := context.Background()
 
 	account := seedAccount(t, s, "0001")
@@ -57,7 +56,6 @@ func TestSetCategoryAppliesToEveryRowOfTheMerchant(t *testing.T) {
 
 func TestSetCategoryWithoutApplyLeavesSiblings(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	ctx := context.Background()
 
 	account := seedAccount(t, s, "0002")
@@ -81,7 +79,6 @@ func TestSetCategoryWithoutApplyLeavesSiblings(t *testing.T) {
 
 func TestSetCategoryClearsWithNull(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	ctx := context.Background()
 
 	account := seedAccount(t, s, "0003")
@@ -99,7 +96,6 @@ func TestSetCategoryClearsWithNull(t *testing.T) {
 
 func TestSetCategoryRejectsUnknownTransactionAndCategory(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	ctx := context.Background()
 
 	account := seedAccount(t, s, "0004")
@@ -117,7 +113,6 @@ func TestSetCategoryRejectsUnknownTransactionAndCategory(t *testing.T) {
 
 func TestCategoriesAreListedByName(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 
 	seedCategory(t, s, "Utilities")
 	seedCategory(t, s, "Dining")
@@ -133,7 +128,6 @@ func TestCategoriesAreListedByName(t *testing.T) {
 
 func TestMerchantAliasReplacesTheDisplayedName(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	ctx := context.Background()
 
 	account := seedAccount(t, s, "0005")
@@ -167,7 +161,6 @@ func TestMerchantAliasReplacesTheDisplayedName(t *testing.T) {
 
 func TestSetMerchantAliasRejectsUnknownMerchant(t *testing.T) {
 	s := testStore(t)
-	defer s.Close()
 	alias := "Rent Agency"
 	if err := s.SetMerchantAlias(context.Background(), 999999, &alias); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("error = %v, want ErrNotFound", err)

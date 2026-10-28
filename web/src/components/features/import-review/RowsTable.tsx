@@ -41,17 +41,6 @@ export function initialSelectedIds(rows: ImportRow[]): Set<number> {
   return selected;
 }
 
-/**
- * Marker for held rows (duplicates or high anomaly scores).
- */
-export function HeldRowMarker() {
-  return (
-    <span className="import-row-marker">
-      Held for review
-    </span>
-  );
-}
-
 export function RowsTable({
   rows,
   selectedIds,
