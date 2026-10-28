@@ -63,6 +63,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
       # GHCR and docker reject uppercase in image names, and this repo has one
@@ -75,6 +77,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: .
           file: Dockerfile.api
@@ -85,3 +88,52 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+
+  update-manifests:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [image]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Create a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.HOMELAB_APP_ID }}
+          private-key: ${{ secrets.HOMELAB_APP_PRIVATE_KEY }}
+          owner: aliAljaffer
+          repositories: homelab
+
+      - name: Check out the homelab manifests
+        uses: actions/checkout@v4
+        with:
+          repository: aliAljaffer/homelab
+          token: ${{ steps.app-token.outputs.token }}
+          path: homelab
+
+      - name: Pin the grooszy API image digest
+        working-directory: homelab
+        env:
+          API_DIGEST: ${{ needs.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          test -n "$API_DIGEST"
+          sed -i -E "s|ghcr.io/alialjaffer/grooszy-api@sha256:[0-9a-f]{64}|ghcr.io/alialjaffer/grooszy-api@${API_DIGEST}|" kubernetes/apps/grooszy/api-deployment.yaml
+          grep -q "ghcr.io/alialjaffer/grooszy-api@${API_DIGEST}" kubernetes/apps/grooszy/api-deployment.yaml
+          if git diff --quiet; then
+            echo "The grooszy API image is already pinned."
+            exit 0
+          fi
+          git config user.name "grooszy-manifest-bot"
+          git config user.email "grooszy-manifest-bot@users.noreply.github.com"
+          git add kubernetes/apps/grooszy/api-deployment.yaml
+          git commit -m "grooszy: pin api image for ${GITHUB_SHA:0:7}"
+          for _ in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            git pull --rebase
+          done
+          exit 1
