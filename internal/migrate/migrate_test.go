@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -47,6 +48,23 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+func embeddedVersions(t *testing.T) []string {
+	t.Helper()
+	entries, err := migrations.FS.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read migrations: %v", err)
+	}
+	var versions []string
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".up.sql") {
+			continue
+		}
+		versions = append(versions, strings.TrimSuffix(name, ".up.sql"))
+	}
+	return versions
+}
+
 func TestApplyEmpty(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()
@@ -60,8 +78,8 @@ func TestApplyEmpty(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 4 {
-		t.Errorf("expected 4 migrations applied, got %d", count)
+	if want := len(embeddedVersions(t)); count != want {
+		t.Errorf("expected %d migrations applied, got %d", want, count)
 	}
 
 	var tableExists bool
@@ -91,7 +109,7 @@ func TestApplyIdempotent(t *testing.T) {
 	}
 
 	if count != 4 {
-		t.Errorf("expected 4 migrations, got %d (should not apply duplicates)", count)
+		t.Errorf("expected %d migrations, got %d (should not apply duplicates)", len(embeddedVersions(t)), count)
 	}
 }
 
@@ -134,7 +152,8 @@ func TestMigrationVersions(t *testing.T) {
 		t.Fatalf("rows error: %v", err)
 	}
 
-	expected := []string{"0001_init", "0002_import_preview", "0003_bnpl_detection", "0004_settings"}
+	expected := embeddedVersions(t)
+	sort.Strings(expected)
 	if strings.Join(versions, ",") != strings.Join(expected, ",") {
 		t.Errorf("expected versions %v, got %v", expected, versions)
 	}
@@ -162,7 +181,7 @@ func TestAdoptOldDatabase(t *testing.T) {
 	}
 
 	if count != 4 {
-		t.Errorf("expected 4 migrations recorded, got %d", count)
+		t.Errorf("expected %d migrations recorded, got %d", len(embeddedVersions(t)), count)
 	}
 
 	rows, err := pool.Query(ctx, "select version from schema_migrations order by version")
@@ -180,7 +199,8 @@ func TestAdoptOldDatabase(t *testing.T) {
 		versions = append(versions, v)
 	}
 
-	expected := []string{"0001_init", "0002_import_preview", "0003_bnpl_detection", "0004_settings"}
+	expected := embeddedVersions(t)
+	sort.Strings(expected)
 	if strings.Join(versions, ",") != strings.Join(expected, ",") {
 		t.Errorf("expected versions %v, got %v", expected, versions)
 	}
@@ -229,7 +249,7 @@ func TestAdoptEmptyDatabase(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 4 {
-		t.Errorf("expected 4 migrations applied, got %d", count)
+	if want := len(embeddedVersions(t)); count != want {
+		t.Errorf("expected %d migrations applied, got %d", want, count)
 	}
 }
