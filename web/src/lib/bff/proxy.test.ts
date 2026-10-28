@@ -7,12 +7,7 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/lib/auth/oidc", () => ({
-  fetchDiscovery: vi.fn(async () => ({
-    issuer: "https://example.com/realms/test",
-    authorization_endpoint: "https://example.com/realms/test/protocol/openid-connect/auth",
-    token_endpoint: "https://example.com/realms/test/protocol/openid-connect/token",
-    jwks_uri: "https://example.com/realms/test/protocol/openid-connect/certs",
-  })),
+  refreshToken: vi.fn(),
 }));
 
 interface Address {

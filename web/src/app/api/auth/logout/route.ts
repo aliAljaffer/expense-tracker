@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const discovery = await fetchDiscovery(config.oidcIssuer);
     if (discovery.end_session_endpoint) {
-      const postLogoutRedirectUri = new URL("/signin", config.appOrigin).toString();
+      const postLogoutRedirectUri = new URL("/", config.appOrigin).toString();
       endSessionUrl = new URL(discovery.end_session_endpoint);
       endSessionUrl.searchParams.set("post_logout_redirect_uri", postLogoutRedirectUri);
     }
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (endSessionUrl) {
-    return NextResponse.redirect(endSessionUrl);
+    return NextResponse.redirect(endSessionUrl, 303);
   }
 
-  return NextResponse.redirect(new URL("/signin", config.appOrigin));
+  return NextResponse.redirect(new URL("/", config.appOrigin), 303);
 }

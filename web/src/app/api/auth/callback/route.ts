@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       {
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token,
-        expiresAt: (idTokenClaims.exp * 1000),
+        expiresAt: Date.now() + tokenResponse.expires_in * 1000,
         subject: idTokenClaims.sub,
       },
       config.sessionSecret

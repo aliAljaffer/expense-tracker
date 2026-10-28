@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getCookieChunks, type SessionPayload, refreshIfExpiring } from "./session";
+import {
+  getCookieChunks,
+  readSession,
+  refreshIfExpiring,
+  writeSession,
+  type SessionPayload,
+} from "./session";
 import { createCipheriv, hkdfSync, randomBytes } from "node:crypto";
 
 vi.mock("next/headers", () => ({
@@ -281,6 +287,53 @@ describe("session", () => {
 
       expect(result).toBeNull();
       expect(refreshFn).not.toHaveBeenCalled();
+    });
+
+    it("persists a rotated refresh token", async () => {
+      const store = new Map<string, string>();
+      const { cookies } = await import("next/headers");
+      vi.mocked(cookies).mockResolvedValue({
+        get: (name: string) => (store.has(name) ? { value: store.get(name) } : undefined),
+        set: (name: string, value: string) => {
+          store.set(name, value);
+        },
+        delete: (name: string) => {
+          store.delete(name);
+        },
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      await writeSession({ ...testPayload, expiresAt: Date.now() + 30_000 }, testSecret);
+
+      const result = await refreshIfExpiring(testSecret, async () => ({
+        accessToken: "new-access-token",
+        expiresAt: Date.now() + 3600 * 1000,
+        refreshToken: "rotated-refresh-token",
+      }));
+
+      expect(result?.refreshToken).toBe("rotated-refresh-token");
+      expect((await readSession(testSecret))?.refreshToken).toBe("rotated-refresh-token");
+    });
+
+    it("deletes chunks left over from a larger payload", async () => {
+      const store = new Map<string, string>([["grooszy_session.1", "stale-chunk"]]);
+      const deleted: string[] = [];
+      const { cookies } = await import("next/headers");
+      vi.mocked(cookies).mockResolvedValue({
+        get: (name: string) => (store.has(name) ? { value: store.get(name) } : undefined),
+        set: (name: string, value: string) => {
+          store.set(name, value);
+        },
+        delete: (name: string) => {
+          deleted.push(name);
+          store.delete(name);
+        },
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      await writeSession(testPayload, testSecret);
+
+      expect(deleted).toEqual(["grooszy_session.1"]);
+      expect(store.has("grooszy_session.1")).toBe(false);
+      expect((await readSession(testSecret))?.accessToken).toBe(testPayload.accessToken);
     });
   });
 

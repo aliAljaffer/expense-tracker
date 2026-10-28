@@ -1,19 +1,9 @@
-"use client";
-
 export function SignOutButton() {
-  async function handleSignOut() {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-  }
-
   return (
-    <button
-      type="button"
-      onClick={handleSignOut}
-      className="button button--secondary"
-    >
-      Sign out
-    </button>
+    <form action="/api/auth/logout" method="post">
+      <button type="submit" className="button button--secondary">
+        Sign out
+      </button>
+    </form>
   );
 }

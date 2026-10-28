@@ -55,6 +55,9 @@ describe("logout route", () => {
     const response = await POST(mockRequest);
 
     expect(vi.mocked(clearSession)).toHaveBeenCalled();
-    expect(response.status).toBe(307);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain(
+      `post_logout_redirect_uri=${encodeURIComponent("https://app.example.com/")}`
+    );
   });
 });

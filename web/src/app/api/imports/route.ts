@@ -1,45 +1,23 @@
 import { NextRequest } from "next/server";
 import { refreshIfExpiring } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
-import { fetchDiscovery } from "@/lib/auth/oidc";
+import { refreshToken } from "@/lib/auth/oidc";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const authConfig = getAuthConfig();
 
-  let discovery;
-  try {
-    discovery = await fetchDiscovery(authConfig.oidcIssuer);
-  } catch {
-    return new Response(JSON.stringify({ error: "Failed to fetch OIDC configuration" }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
+  const session = await refreshIfExpiring(authConfig.sessionSecret, async (token) => {
+    const data = await refreshToken({
+      issuer: authConfig.oidcIssuer,
+      clientId: authConfig.oidcClientId,
+      clientSecret: authConfig.oidcClientSecret,
+      refreshToken: token,
     });
-  }
-
-  const session = await refreshIfExpiring(authConfig.sessionSecret, async (refreshToken) => {
-    const response = await fetch(discovery.token_endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: authConfig.oidcClientId,
-        client_secret: authConfig.oidcClientSecret || "",
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }).toString(),
-    });
-
-    if (!response.ok) {
-      throw new Error("Token refresh failed");
-    }
-
-    const data = await response.json() as {
-      access_token: string;
-      expires_in: number;
-    };
 
     return {
       accessToken: data.access_token,
       expiresAt: Date.now() + data.expires_in * 1000,
+      refreshToken: data.refresh_token,
     };
   });
 

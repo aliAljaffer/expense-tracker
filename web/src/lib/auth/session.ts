@@ -14,12 +14,15 @@ export interface SessionPayload {
 const ALGORITHM = "aes-256-gcm";
 const COOKIE_NAME_PREFIX = "grooszy_session";
 const COOKIE_MAX_SIZE = 3800;
+const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+
 function cookieOptions() {
   return {
     httpOnly: true,
     secure: cookieSecure(process.env.APP_ORIGIN),
     sameSite: "lax" as const,
     path: "/",
+    maxAge: COOKIE_MAX_AGE_SECONDS,
   };
 }
 
@@ -131,6 +134,12 @@ export async function writeSession(
   for (const chunk of chunks) {
     cookieStore.set(chunk.name, chunk.value, cookieOptions());
   }
+
+  let index = chunks.length;
+  while (cookieStore.get(`${COOKIE_NAME_PREFIX}.${index}`)) {
+    cookieStore.delete(`${COOKIE_NAME_PREFIX}.${index}`);
+    index++;
+  }
 }
 
 export async function clearSession(): Promise<void> {
@@ -153,6 +162,7 @@ export async function refreshIfExpiring(
   refreshFn: (refreshToken: string) => Promise<{
     accessToken: string;
     expiresAt: number;
+    refreshToken?: string;
   }>
 ): Promise<SessionPayload | null> {
   const session = await readSession(secret);
@@ -172,6 +182,7 @@ export async function refreshIfExpiring(
         ...session,
         accessToken: refreshed.accessToken,
         expiresAt: refreshed.expiresAt,
+        refreshToken: refreshed.refreshToken ?? session.refreshToken,
       };
 
       await writeSession(updatedSession, secret);

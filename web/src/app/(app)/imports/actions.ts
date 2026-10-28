@@ -3,7 +3,25 @@
 import { redirect } from "next/navigation";
 import { refreshIfExpiring } from "@/lib/auth/session";
 import { getAuthConfig } from "@/lib/auth/config";
-import { fetchDiscovery } from "@/lib/auth/oidc";
+import { refreshToken } from "@/lib/auth/oidc";
+
+async function refreshSession() {
+  const authConfig = getAuthConfig();
+  return refreshIfExpiring(authConfig.sessionSecret, async (token) => {
+    const data = await refreshToken({
+      issuer: authConfig.oidcIssuer,
+      clientId: authConfig.oidcClientId,
+      clientSecret: authConfig.oidcClientSecret,
+      refreshToken: token,
+    });
+
+    return {
+      accessToken: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+      refreshToken: data.refresh_token,
+    };
+  });
+}
 
 function validatePositiveInt(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
@@ -23,40 +41,7 @@ export async function commitImport(
   selectedRowIds: unknown
 ): Promise<{ inserted: number } | { error: string }> {
   const authConfig = getAuthConfig();
-
-  let discovery;
-  try {
-    discovery = await fetchDiscovery(authConfig.oidcIssuer);
-  } catch {
-    return { error: "Failed to fetch OIDC configuration" };
-  }
-
-  const session = await refreshIfExpiring(authConfig.sessionSecret, async (refreshToken) => {
-    const response = await fetch(discovery.token_endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: authConfig.oidcClientId,
-        client_secret: authConfig.oidcClientSecret || "",
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }).toString(),
-    });
-
-    if (!response.ok) {
-      throw new Error("Token refresh failed");
-    }
-
-    const data = await response.json() as {
-      access_token: string;
-      expires_in: number;
-    };
-
-    return {
-      accessToken: data.access_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-  });
+  const session = await refreshSession();
 
   if (!session) {
     redirect("/signin");
@@ -95,40 +80,7 @@ export async function commitImport(
 
 export async function cancelImport(importId: unknown): Promise<{ success: boolean } | { error: string }> {
   const authConfig = getAuthConfig();
-
-  let discovery;
-  try {
-    discovery = await fetchDiscovery(authConfig.oidcIssuer);
-  } catch {
-    return { error: "Failed to fetch OIDC configuration" };
-  }
-
-  const session = await refreshIfExpiring(authConfig.sessionSecret, async (refreshToken) => {
-    const response = await fetch(discovery.token_endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: authConfig.oidcClientId,
-        client_secret: authConfig.oidcClientSecret || "",
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }).toString(),
-    });
-
-    if (!response.ok) {
-      throw new Error("Token refresh failed");
-    }
-
-    const data = await response.json() as {
-      access_token: string;
-      expires_in: number;
-    };
-
-    return {
-      accessToken: data.access_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-  });
+  const session = await refreshSession();
 
   if (!session) {
     redirect("/signin");

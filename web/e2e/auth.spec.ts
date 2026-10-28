@@ -206,7 +206,7 @@ test("(f) logout clears session and redirects to /signin", async ({ page }) => {
   });
 
   // Should get a redirect to the issuer's end_session endpoint
-  expect([302, 307]).toContain(response.status());
+  expect([302, 303, 307]).toContain(response.status());
   const location = response.headers()["location"];
   expect(location).toBeTruthy();
 
