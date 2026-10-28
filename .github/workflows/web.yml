@@ -27,7 +27,7 @@ concurrency:
 jobs:
   lint:
     timeout-minutes: 15
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,7 +45,7 @@ jobs:
 
   typecheck:
     timeout-minutes: 15
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,7 +63,7 @@ jobs:
 
   unit:
     timeout-minutes: 15
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,7 +81,7 @@ jobs:
 
   build:
     timeout-minutes: 15
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -99,7 +99,7 @@ jobs:
 
   design:
     timeout-minutes: 15
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -112,9 +112,6 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - name: Install python3
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3
-
       - run: python3 .claude/scripts/validate_tokens.py web/design/tokens.json
       - run: python3 .claude/scripts/validate_contrast.py web/design/tokens.json
       - run: node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
@@ -127,7 +124,7 @@ jobs:
 
   e2e:
     timeout-minutes: 30
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,7 +151,7 @@ jobs:
 
   render-gates:
     timeout-minutes: 30
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -189,9 +186,6 @@ jobs:
           count=$(find web/test/snapshots -name '*.html' | wc -l)
           echo "snapshot files: $count"
           test "$count" -gt 0
-      - name: Install python3
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3
-
       - name: Render gates
         env:
           DS_REQUIRE_BROWSER: "1"
@@ -225,7 +219,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, typecheck, unit, build, design, e2e, render-gates]
     timeout-minutes: 30
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -261,7 +255,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [image]
     timeout-minutes: 10
-    runs-on: arc-runner-grooszy
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -288,10 +282,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          latest=$(curl -fsSL \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r .sha)
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
           if [ "$latest" != "$GITHUB_SHA" ]; then
             echo "Skipping: main moved to $latest."
             exit 0
