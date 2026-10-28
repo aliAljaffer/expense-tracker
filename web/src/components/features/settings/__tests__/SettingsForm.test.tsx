@@ -14,6 +14,7 @@ describe("SettingsForm", () => {
   it("loads the saved reminder email", async () => {
     vi.mocked(settingsApi.getSettings).mockResolvedValue({
       reminder_email: "owner@example.com",
+      salary_payers: "",
     });
 
     render(<SettingsForm />);
@@ -23,7 +24,7 @@ describe("SettingsForm", () => {
   });
 
   it("keeps test email disabled until an address is saved", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "" });
+    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "", salary_payers: "" });
 
     render(<SettingsForm />);
 
@@ -31,9 +32,10 @@ describe("SettingsForm", () => {
   });
 
   it("saves a valid address and shows a success message", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "" });
+    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "", salary_payers: "" });
     vi.mocked(settingsApi.saveReminderEmail).mockResolvedValue({
       reminder_email: "owner@example.com",
+      salary_payers: "",
     });
 
     render(<SettingsForm />);
@@ -48,7 +50,7 @@ describe("SettingsForm", () => {
   });
 
   it("rejects an empty address without calling the API", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "" });
+    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "", salary_payers: "" });
 
     render(<SettingsForm />);
     const user = userEvent.setup();
@@ -62,7 +64,7 @@ describe("SettingsForm", () => {
   });
 
   it("surfaces the server error for an invalid address", async () => {
-    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "" });
+    vi.mocked(settingsApi.getSettings).mockResolvedValue({ reminder_email: "", salary_payers: "" });
     vi.mocked(settingsApi.saveReminderEmail).mockRejectedValue(
       new Error("invalid email address")
     );
@@ -80,6 +82,7 @@ describe("SettingsForm", () => {
   it("sends a test email and shows a success message", async () => {
     vi.mocked(settingsApi.getSettings).mockResolvedValue({
       reminder_email: "owner@example.com",
+      salary_payers: "",
     });
     vi.mocked(settingsApi.sendTestReminder).mockResolvedValue({ sent: true });
 
@@ -97,6 +100,7 @@ describe("SettingsForm", () => {
   it("shows the server error when the test email fails", async () => {
     vi.mocked(settingsApi.getSettings).mockResolvedValue({
       reminder_email: "owner@example.com",
+      salary_payers: "",
     });
     vi.mocked(settingsApi.sendTestReminder).mockRejectedValue(
       new Error("smtp unavailable")
@@ -108,5 +112,28 @@ describe("SettingsForm", () => {
     await user.click(await screen.findByRole("button", { name: "Send test email" }));
 
     expect(await screen.findByText("smtp unavailable")).toBeInTheDocument();
+  });
+
+  it("loads and saves salary payers", async () => {
+    vi.mocked(settingsApi.getSettings).mockResolvedValue({
+      reminder_email: "owner@example.com",
+      salary_payers: "Saudi Azm",
+    });
+    vi.mocked(settingsApi.saveSalaryPayers).mockResolvedValue({
+      reminder_email: "owner@example.com",
+      salary_payers: "Saudi Azm, ACME",
+    });
+
+    render(<SettingsForm />);
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText("Salary payers");
+
+    expect(input).toHaveValue("Saudi Azm");
+
+    await user.type(input, ", ACME");
+    await user.click(screen.getByRole("button", { name: "Save payers" }));
+
+    expect(settingsApi.saveSalaryPayers).toHaveBeenCalledWith("Saudi Azm, ACME");
+    expect(await screen.findByText("Salary payers saved.")).toBeInTheDocument();
   });
 });

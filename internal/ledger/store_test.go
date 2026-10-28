@@ -216,6 +216,41 @@ func TestMonthlySeparatesSpendingFromTransfersAndCardPayments(t *testing.T) {
 	}
 }
 
+func TestMonthlyCountsConfiguredPayerAsSalary(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000003")
+	imp := seedImport(t, s, acc)
+	id := seedTransaction(t, s, acc, imp, "2026-02-01", 0, 600000, "external_transfer_in", nil, txOpts{})
+	if _, err := s.db.Exec(
+		`update transaction set merchant_raw = 'SAUDI AZM COMMUNICATION AND IT' where id = $1`,
+		id); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PutSetting(ctx, SalaryPayersKey, "AZM"); err != nil {
+		t.Fatal(err)
+	}
+
+	months, err := s.Monthly(ctx, "2026-02", "2026-02")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := months[0]
+	if m.Income.Salary != 600000 || m.Income.TransfersIn != 0 || m.Income.Other != 0 {
+		t.Fatalf("income = %+v", m.Income)
+	}
+
+	hits, err := s.Transactions(ctx, TransactionFilter{
+		From: "2026-02-01", To: "2026-02-28", Bucket: "all", Kind: "salary",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits.TotalCount != 1 {
+		t.Fatalf("salary drill-down rows = %d, want 1", hits.TotalCount)
+	}
+}
+
 func TestExtraTransfersLeaveSpendingTotalUnchanged(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()

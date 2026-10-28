@@ -1,5 +1,6 @@
 export interface SettingsResponse {
   reminder_email: string;
+  salary_payers: string;
 }
 
 export interface TestReminderResponse {
@@ -30,14 +31,25 @@ export async function getSettings(): Promise<SettingsResponse> {
 }
 
 export async function saveReminderEmail(email: string): Promise<SettingsResponse> {
+  return putSettings({ reminder_email: email }, "Failed to save reminder email");
+}
+
+export async function saveSalaryPayers(payers: string): Promise<SettingsResponse> {
+  return putSettings({ salary_payers: payers }, "Failed to save salary payers");
+}
+
+async function putSettings(
+  patch: { reminder_email?: string; salary_payers?: string },
+  fallback: string
+): Promise<SettingsResponse> {
   const response = await fetch("/api/bff/settings", {
     method: "PUT",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ reminder_email: email }),
+    body: JSON.stringify(patch),
   });
 
   if (!response.ok) {
-    throw new Error(await errorMessage(response, "Failed to save reminder email"));
+    throw new Error(await errorMessage(response, fallback));
   }
 
   return response.json();

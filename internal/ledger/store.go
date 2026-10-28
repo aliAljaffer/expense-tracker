@@ -149,14 +149,20 @@ func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month
 		return nil, err
 	}
 
+	payers, err := s.SalaryPayers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := s.db.QueryContext(ctx, `
 		select
 			to_char(posted_date, 'YYYY-MM'),
 			count(*),
 			coalesce(sum(debit), 0),
 			coalesce(sum(credit), 0),
-			coalesce(sum(credit) filter (where kind = 'salary'), 0),
-			coalesce(sum(credit) filter (where kind = 'external_transfer_in'), 0),
+			coalesce(sum(credit) filter (where `+salaryCreditSQL("3")+`), 0),
+			coalesce(sum(credit) filter (where kind = 'external_transfer_in'
+				and not `+salaryPayerSQL("3")+`), 0),
 			coalesce(sum(credit) filter (where kind = 'refund'), 0),
 			coalesce(sum(debit) filter (where counts_as_spending and debit > 0), 0),
 			coalesce(sum(debit) filter (where counts_as_spending and debit > 0 and kind = 'card_purchase'), 0),
@@ -174,7 +180,7 @@ func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month
 		from transaction
 		where posted_date >= $1 and posted_date <= $2
 		group by 1
-		order by 1`, first, last)
+		order by 1`, first, last, payers)
 	if err != nil {
 		return nil, fmt.Errorf("read monthly overview: %w", err)
 	}
@@ -407,7 +413,15 @@ func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (Transact
 		add(f.MerchantID, "merchant_id = $%d")
 	}
 	if f.Kind != "" {
-		add(f.Kind, "kind = $%d")
+		if f.Kind == "salary" {
+			payers, err := s.SalaryPayers(ctx)
+			if err != nil {
+				return out, err
+			}
+			add(payers, salaryCreditSQL("%d"))
+		} else {
+			add(f.Kind, "kind = $%d")
+		}
 	}
 	if filter := bucketFilter[f.Bucket]; filter != "" {
 		conds = append(conds, "("+filter+")")

@@ -628,13 +628,18 @@ func (s *Store) SalaryTrend(ctx context.Context, fromMonth, toMonth string) (Sal
 		return out, err
 	}
 
+	payers, err := s.SalaryPayers(ctx)
+	if err != nil {
+		return out, err
+	}
+
 	rows, err := s.db.QueryContext(ctx, `
 		select to_char(posted_date, 'YYYY-MM'), sum(credit), count(*)
 		from transaction
-		where kind = 'salary' and credit > 0
+		where `+salaryCreditSQL("3")+`
 		  and posted_date >= $1::date and posted_date <= $2::date
 		group by 1
-		order by 1`, first, last)
+		order by 1`, first, last, payers)
 	if err != nil {
 		return out, fmt.Errorf("read salary trend: %w", err)
 	}
@@ -655,7 +660,7 @@ func (s *Store) SalaryTrend(ctx context.Context, fromMonth, toMonth string) (Sal
 		out.Status = "insufficient_data"
 		out.Summary = "Fewer than 3 months have a salary deposit."
 		out.Limits = "Requires at least 3 months with a transaction recorded as salary income."
-		out.NextStep = "Import more statements so salary months can be compared."
+		out.NextStep = "Import more statements, or add your employer name in Settings, so salary months can be compared."
 		return out, nil
 	}
 
@@ -686,7 +691,7 @@ func (s *Store) SalaryTrend(ctx context.Context, fromMonth, toMonth string) (Sal
 		out.Summary = fmt.Sprintf("Salary income is steady around %s a month across %d months (%d%% change).",
 			FormatHalalas(average), len(out.Evidence.Months), change)
 	}
-	out.Limits = "Salary detection relies on the statement row being recorded as salary. Months without a salary row are omitted."
+	out.Limits = "Salary detection relies on the statement label or a payer name set in Settings. Months without a salary row are omitted."
 	out.NextStep = "Compare the salary trend with the spending trend before changing a budget."
 	return out, nil
 }

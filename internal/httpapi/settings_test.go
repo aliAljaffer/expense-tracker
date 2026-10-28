@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/ledger"
 	"github.com/aliAljaffer/grooszy/internal/reminder"
 )
 
@@ -78,6 +79,35 @@ func TestGetSettingsStored(t *testing.T) {
 	}
 	if got := decodeSettings(t, rec)["reminder_email"]; got != "owner@example.com" {
 		t.Fatalf("reminder_email = %q", got)
+	}
+}
+
+func TestPutSettingsStoresSalaryPayersAlone(t *testing.T) {
+	store := memSettings{}
+	h := newSettingsServer(store, nil)
+	rec := settingsCall(t, h, "PUT", "/api/settings", `{"salary_payers":" Saudi Azm "}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	if got := decodeSettings(t, rec)["salary_payers"]; got != "Saudi Azm" {
+		t.Fatalf("salary_payers = %q", got)
+	}
+	if store[ledger.SalaryPayersKey] != "Saudi Azm" {
+		t.Fatalf("stored = %q", store[ledger.SalaryPayersKey])
+	}
+	if store[reminder.EmailKey] != "" {
+		t.Fatalf("email touched: %q", store[reminder.EmailKey])
+	}
+}
+
+func TestGetSettingsReturnsSalaryPayers(t *testing.T) {
+	h := newSettingsServer(memSettings{ledger.SalaryPayersKey: "AZM, ACME"}, nil)
+	rec := settingsCall(t, h, "GET", "/api/settings", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if got := decodeSettings(t, rec)["salary_payers"]; got != "AZM, ACME" {
+		t.Fatalf("salary_payers = %q", got)
 	}
 }
 

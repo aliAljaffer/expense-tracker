@@ -709,22 +709,30 @@ All settings routes require the bearer token and return 503
 ### GET /api/settings
 
 ```json
-{"reminder_email": "owner@example.com"}
+{"reminder_email": "owner@example.com", "salary_payers": "Saudi Azm"}
 ```
 
 `reminder_email` is an empty string when the owner has not set an address.
+`salary_payers` is a comma-separated list of employer names, empty by default.
 
 ### PUT /api/settings
 
-Body:
+Body carries either field, or both:
 
 ```json
-{"reminder_email": "owner@example.com"}
+{"reminder_email": "owner@example.com", "salary_payers": "Saudi Azm"}
 ```
 
 The address is validated with `net/mail.ParseAddress`. An empty or invalid
-address returns 422 with `{"error":"..."}` and stores nothing. On success the
-stored address is returned in the same shape as `GET /api/settings`.
+address returns 422 with `{"error":"..."}` and stores nothing. `salary_payers`
+is stored trimmed; an empty string clears the list. A body with neither field
+returns 422. On success the stored values are returned in the same shape as
+`GET /api/settings`.
+
+A credit transfer counts as salary when the statement labels it salary, or when
+its payer or description contains one of the names in `salary_payers`. Matching
+is case-insensitive and ignores refunds. The monthly income, the salary trend,
+and the salary drill-down all use the same rule, so their totals agree.
 
 ### POST /api/settings/reminder/test
 

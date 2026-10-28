@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, saveReminderEmail, sendTestReminder } from "@/lib/api/settings";
+import {
+  getSettings,
+  saveReminderEmail,
+  saveSalaryPayers,
+  sendTestReminder,
+} from "@/lib/api/settings";
 
 type Pending = "save" | "test" | null;
 
@@ -13,10 +18,13 @@ interface Feedback {
 export function SettingsForm() {
   const [email, setEmail] = useState("");
   const [savedEmail, setSavedEmail] = useState("");
+  const [payers, setPayers] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending>(null);
+  const [payersPending, setPayersPending] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [payersFeedback, setPayersFeedback] = useState<Feedback | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +35,7 @@ export function SettingsForm() {
         if (cancelled) return;
         setEmail(data.reminder_email);
         setSavedEmail(data.reminder_email);
+        setPayers(data.salary_payers);
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof Error ? err.message : "Failed to load settings");
@@ -66,6 +75,25 @@ export function SettingsForm() {
       });
     } finally {
       setPending(null);
+    }
+  }
+
+  async function handlePayersSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPayersFeedback(null);
+    setPayersPending(true);
+
+    try {
+      const data = await saveSalaryPayers(payers.trim());
+      setPayers(data.salary_payers);
+      setPayersFeedback({ kind: "success", message: "Salary payers saved." });
+    } catch (err) {
+      setPayersFeedback({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Failed to save salary payers",
+      });
+    } finally {
+      setPayersPending(false);
     }
   }
 
@@ -109,12 +137,13 @@ export function SettingsForm() {
   const isPending = pending !== null;
 
   return (
-    <form
-      className="card settings-form stack stack--normal"
-      onSubmit={handleSubmit}
-      noValidate
-      aria-busy={isPending}
-    >
+    <>
+      <form
+        className="card settings-form stack stack--normal"
+        onSubmit={handleSubmit}
+        noValidate
+        aria-busy={isPending}
+      >
       <div className="field">
         <label htmlFor="reminder-email" className="field__label">
           Reminder email
@@ -165,7 +194,58 @@ export function SettingsForm() {
           </div>
         </div>
       )}
-    </form>
+      </form>
+
+      <form
+        className="card settings-form stack stack--normal"
+        onSubmit={handlePayersSubmit}
+        noValidate
+        aria-busy={payersPending}
+      >
+        <div className="field">
+          <label htmlFor="salary-payers" className="field__label">
+            Salary payers
+          </label>
+          <input
+            id="salary-payers"
+            type="text"
+            className="field__input"
+            value={payers}
+            onChange={(event) => setPayers(event.target.value)}
+            disabled={payersPending}
+            aria-invalid={payersFeedback?.kind === "error" ? true : undefined}
+            aria-describedby={
+              payersFeedback?.kind === "error"
+                ? "salary-payers-hint salary-payers-feedback"
+                : "salary-payers-hint"
+            }
+          />
+          <p id="salary-payers-hint" className="field__hint">
+            Employer names, separated by commas. A credit transfer from a name
+            here counts as salary.
+          </p>
+        </div>
+
+        <div className="cluster cluster--snug settings-form__actions">
+          <button type="submit" className="btn btn--primary" disabled={payersPending}>
+            {payersPending ? "Saving..." : "Save payers"}
+          </button>
+        </div>
+
+        {payersFeedback && (
+          <div
+            id="salary-payers-feedback"
+            className={`banner banner--${payersFeedback.kind}`}
+            role={payersFeedback.kind === "error" ? "alert" : "status"}
+          >
+            <FeedbackIcon kind={payersFeedback.kind} />
+            <div className="banner__content">
+              <p className="banner__text">{payersFeedback.message}</p>
+            </div>
+          </div>
+        )}
+      </form>
+    </>
   );
 }
 

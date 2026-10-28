@@ -10,7 +10,7 @@ export default function SettingsPage() {
       <div className="overview-section">
         <h1 className="overview-page__title">Settings</h1>
         <p className="overview-page__lede">
-          The statement reminder goes out on the 1st of every month.
+          Reminder delivery, and which transfers count as salary.
         </p>
       </div>
 

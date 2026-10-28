@@ -461,6 +461,43 @@ func TestSalaryTrendInsufficientMonths(t *testing.T) {
 	}
 }
 
+func TestSalaryTrendCountsConfiguredPayer(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000034")
+	imp := seedImport(t, s, acc)
+	for month := 1; month <= 3; month++ {
+		id := seedTransaction(t, s, acc, imp, dateString(2026, month, 5), 0, 600000,
+			"external_transfer_in", nil, txOpts{})
+		if _, err := s.db.Exec(
+			`update transaction set merchant_raw = 'SAUDI AZM COMMUNICATION AND IT' where id = $1`,
+			id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.PutSetting(ctx, SalaryPayersKey, "Saudi Azm"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := s.SalaryTrend(ctx, "2026-01", "2026-03")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "ok" {
+		t.Fatalf("status = %q, want ok", result.Status)
+	}
+	if len(result.Evidence.Months) != 3 || result.Evidence.Months[0].SalaryTotal != 600000 {
+		t.Fatalf("months = %+v", result.Evidence.Months)
+	}
+}
+
+func TestSplitSalaryPayers(t *testing.T) {
+	got := SplitSalaryPayers(" Saudi Azm , ,ACME ")
+	if len(got) != 2 || got[0] != "saudi azm" || got[1] != "acme" {
+		t.Fatalf("payers = %q", got)
+	}
+}
+
 func TestTransferMatchesPair(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()

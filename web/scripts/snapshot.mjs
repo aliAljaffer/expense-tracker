@@ -23,7 +23,7 @@ async function uploadAlinma(page) {
 
 async function saveReminder(page) {
   await page.getByLabel("Reminder email").fill(reminderEmail);
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByText("Reminder email saved.").waitFor();
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForFunction(

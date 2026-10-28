@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aliAljaffer/grooszy/internal/auth"
+	"github.com/aliAljaffer/grooszy/internal/ledger"
 	"github.com/aliAljaffer/grooszy/internal/reminder"
 )
 
@@ -36,7 +37,16 @@ func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, id auth.Ide
 		writeError(w, http.StatusInternalServerError, "could not read settings")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"reminder_email": email})
+	payers, err := store.Setting(r.Context(), ledger.SalaryPayersKey)
+	if err != nil {
+		s.log.Error("read settings failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not read settings")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"reminder_email": email,
+		"salary_payers":  payers,
+	})
 }
 
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request, id auth.Identity) {
@@ -45,28 +55,46 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request, id auth.Ide
 		return
 	}
 	var body struct {
-		ReminderEmail string `json:"reminder_email"`
+		ReminderEmail *string `json:"reminder_email"`
+		SalaryPayers  *string `json:"salary_payers"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "body must be JSON with reminder_email")
+		writeError(w, http.StatusBadRequest, "body must be JSON with reminder_email or salary_payers")
 		return
 	}
-	email := strings.TrimSpace(body.ReminderEmail)
-	if email == "" {
-		writeError(w, http.StatusUnprocessableEntity, "reminder email is required")
+	if body.ReminderEmail == nil && body.SalaryPayers == nil {
+		writeError(w, http.StatusUnprocessableEntity, "set reminder_email or salary_payers")
 		return
 	}
-	addr, err := mail.ParseAddress(email)
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "reminder email is not valid")
-		return
+	out := map[string]string{}
+	if body.ReminderEmail != nil {
+		email := strings.TrimSpace(*body.ReminderEmail)
+		if email == "" {
+			writeError(w, http.StatusUnprocessableEntity, "reminder email is required")
+			return
+		}
+		addr, err := mail.ParseAddress(email)
+		if err != nil {
+			writeError(w, http.StatusUnprocessableEntity, "reminder email is not valid")
+			return
+		}
+		if err := store.PutSetting(r.Context(), reminder.EmailKey, addr.Address); err != nil {
+			s.log.Error("write settings failed", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not store settings")
+			return
+		}
+		out["reminder_email"] = addr.Address
 	}
-	if err := store.PutSetting(r.Context(), reminder.EmailKey, addr.Address); err != nil {
-		s.log.Error("write settings failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "could not store settings")
-		return
+	if body.SalaryPayers != nil {
+		payers := strings.TrimSpace(*body.SalaryPayers)
+		if err := store.PutSetting(r.Context(), ledger.SalaryPayersKey, payers); err != nil {
+			s.log.Error("write settings failed", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not store settings")
+			return
+		}
+		out["salary_payers"] = payers
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"reminder_email": addr.Address})
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) testReminder(w http.ResponseWriter, r *http.Request, id auth.Identity) {
