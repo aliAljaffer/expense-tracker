@@ -59,6 +59,20 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 	sum := sha256.Sum256(data)
 	hash := hex.EncodeToString(sum[:])
 
+	var preview *Preview
+	err := s.store.WithFileLock(ctx, hash, func(ctx context.Context) error {
+		var err error
+		preview, err = s.upload(ctx, hash, data)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return preview, nil
+}
+
+// upload is the database half of Upload. It runs under the file lock.
+func (s *Service) upload(ctx context.Context, hash string, data []byte) (*Preview, error) {
 	if rec, err := s.store.ImportByHash(ctx, hash); err == nil {
 		switch rec.Status {
 		case "pending":
@@ -75,7 +89,8 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 				return nil, err
 			}
 			if hasPreview {
-				if err := s.store.Cancel(ctx, rec.ID); err != nil {
+				// Cleanup may have removed the stale row already.
+				if err := s.store.Cancel(ctx, rec.ID); err != nil && !errors.Is(err, ErrNotFound) {
 					return nil, err
 				}
 			}

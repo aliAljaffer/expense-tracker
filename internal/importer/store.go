@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -187,6 +188,39 @@ func (s *Store) CreateImport(ctx context.Context, in ImportInput) (int64, error)
 		return 0, fmt.Errorf("create import: %w", err)
 	}
 	return id, nil
+}
+
+// WithFileLock serializes uploads of one file across processes, so two
+// requests cannot both decide the stored import is stale and delete it. The
+// work holds one pooled connection, so the pool needs at least two.
+func (s *Store) WithFileLock(ctx context.Context, hash string, fn func(context.Context) error) error {
+	key, err := lockKey(hash)
+	if err != nil {
+		return err
+	}
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire lock connection: %w", err)
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, "select pg_advisory_lock($1)", key); err != nil {
+		return fmt.Errorf("lock file: %w", err)
+	}
+	defer func() {
+		_, _ = conn.Exec(context.WithoutCancel(ctx), "select pg_advisory_unlock($1)", key)
+	}()
+	return fn(ctx)
+}
+
+func lockKey(hash string) (int64, error) {
+	if len(hash) < 16 {
+		return 0, fmt.Errorf("file hash %q is too short", hash)
+	}
+	key, err := strconv.ParseUint(hash[:16], 16, 64)
+	if err != nil {
+		return 0, fmt.Errorf("file hash %q: %w", hash, err)
+	}
+	return int64(key), nil
 }
 
 func (s *Store) SavePreview(ctx context.Context, importID int64, preview *Preview, expiresAt time.Time) error {
