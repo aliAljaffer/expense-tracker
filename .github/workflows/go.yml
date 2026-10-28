@@ -24,6 +24,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     timeout-minutes: 15
@@ -117,8 +121,14 @@ jobs:
         working-directory: homelab
         env:
           API_DIGEST: ${{ needs.image.outputs.digest }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "Skipping: main moved to $latest."
+            exit 0
+          fi
           test -n "$API_DIGEST"
           sed -i -E "s|ghcr.io/alialjaffer/grooszy-api@sha256:[0-9a-f]{64}|ghcr.io/alialjaffer/grooszy-api@${API_DIGEST}|" kubernetes/apps/grooszy/api-deployment.yaml
           grep -q "ghcr.io/alialjaffer/grooszy-api@${API_DIGEST}" kubernetes/apps/grooszy/api-deployment.yaml
