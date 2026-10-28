@@ -108,8 +108,8 @@ func TestApplyIdempotent(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 4 {
-		t.Errorf("expected %d migrations, got %d (should not apply duplicates)", len(embeddedVersions(t)), count)
+	if want := len(embeddedVersions(t)); count != want {
+		t.Errorf("expected %d migrations, got %d (should not apply duplicates)", want, count)
 	}
 }
 
@@ -180,8 +180,8 @@ func TestAdoptOldDatabase(t *testing.T) {
 		t.Fatalf("query schema_migrations: %v", err)
 	}
 
-	if count != 4 {
-		t.Errorf("expected %d migrations recorded, got %d", len(embeddedVersions(t)), count)
+	if want := len(embeddedVersions(t)); count != want {
+		t.Errorf("expected %d migrations recorded, got %d", want, count)
 	}
 
 	rows, err := pool.Query(ctx, "select version from schema_migrations order by version")
