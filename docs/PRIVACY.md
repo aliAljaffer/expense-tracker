@@ -48,8 +48,8 @@ The web app has one explicit log line, `auth callback rejected`, which records
 a reason and whether a PKCE cookie was present
 (`web/src/app/api/auth/callback/route.ts`). It carries no token or account data.
 
-`SMTP_PASS` and `GROOSZY_EXPLAIN_API_KEY` are never returned by the API and
-never logged (`docs/API.md`).
+`SMTP_PASS`, `GROOSZY_EXPLAIN_API_KEY`, and `GROOSZY_CHAT_API_KEY` are never
+returned by the API and never logged (`docs/API.md`).
 
 ## What leaves the process
 
@@ -80,11 +80,17 @@ IBAN. The response is returned to the caller and never stored
 
 ### Chat
 
-`POST /api/chat` uses the same explainer settings. Each request sends the last
-six months of monthly totals and the three suggestion summaries, already
-formatted as amounts. It sends no transaction row, merchant name, account
-number, IBAN, balance, or file content. An empty database answers without a
-provider call. See `docs/CHAT.md`.
+`POST /api/chat` sends the last six months of monthly totals and the three
+suggestion summaries, already formatted as amounts. It sends no transaction row,
+merchant name, account number, IBAN, balance, or file content. An empty database
+answers without a provider call.
+
+With `GROOSZY_CHAT_URL` and `GROOSZY_CHAT_API_KEY` set, the packet goes to the
+shared chat service on the homelab instead of the local explainer. The central
+service sends the same packet to its model provider and does not keep it in its
+own database. The short-lived OpenCode session is deleted after the prompt and
+lives on an ephemeral directory. With both unset, the request uses the local
+explainer settings. See `docs/CHAT.md`.
 
 ### Authentication traffic
 

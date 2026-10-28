@@ -2,11 +2,29 @@
 
 `POST /api/chat` lets the owner ask Gersz about their money in plain language.
 The model answers from aggregates the app already computed and never from
-statement rows. The endpoint is optional, read-only, and off unless the
-explainer is configured.
+statement rows. The endpoint is optional, read-only, and off unless a backend is
+configured.
 
 The model cannot change a balance, an import, a score, or a stored record. It
 writes text and nothing else.
+
+## Local or central
+
+The endpoint has two backends:
+
+- **Central service.** Set `GROOSZY_CHAT_URL` to the shared chat API and
+  `GROOSZY_CHAT_API_KEY` to the key created for grooszy on that service. The
+  handler keeps its packet and sends it as the `context` field. The central
+  service owns the system prompt, so the profile for grooszy must carry the Gersz
+  instruction from `kubernetes/apps/chat/README.md`.
+- **Local explainer.** With both central variables unset, the handler calls the
+  provider configured by `GROOSZY_EXPLAIN_*` directly.
+
+The central service is preferred when both variables are set. The local
+explainers still use `GROOSZY_EXPLAIN_*` for prose, so both can run together.
+
+`GROOSZY_CHAT_TIMEOUT` sets the whole seconds for the central call. The default is
+60.
 
 ## Contract
 
@@ -46,12 +64,13 @@ Failures:
 | Status | Body | Cause |
 |---|---|---|
 | 422 | `{"error": "..."}` | The message shape breaks any rule above |
-| 503 | `{"error":"chat is not configured"}` | `GROOSZY_EXPLAIN_BASE_URL`, `GROOSZY_EXPLAIN_MODEL`, or `GROOSZY_EXPLAIN_API_KEY` is empty |
+| 503 | `{"error":"chat is not configured"}` | Neither backend is configured: the central URL and key are unset and `GROOSZY_EXPLAIN_BASE_URL`, `GROOSZY_EXPLAIN_MODEL`, or `GROOSZY_EXPLAIN_API_KEY` is empty |
 | 503 | `{"error":"database unavailable"}` | The ledger is not reachable |
 | 502 | `{"error":"the model did not answer"}` | The provider failed or returned no text |
 
-The call uses `GROOSZY_EXPLAIN_TIMEOUT` and the configured maximum output
-tokens. Consecutive turns are sent as one provider call, so the conversation is
+The local call uses `GROOSZY_EXPLAIN_TIMEOUT` and the configured maximum output
+tokens. The central call uses `GROOSZY_CHAT_TIMEOUT` and the central service's
+limits. Consecutive turns are sent as one call either way, so the conversation is
 never replayed request by request.
 
 ## The context packet
@@ -108,9 +127,17 @@ curl -s -X POST http://localhost:8080/api/chat \
 
 ## Settings
 
-The chat uses the explainer settings and adds none. See `docs/EXPLAINERS.md` for
-the variables and how to point them at a local model.
+In central mode the chat uses `GROOSZY_CHAT_URL`, `GROOSZY_CHAT_API_KEY`, and
+`GROOSZY_CHAT_TIMEOUT`. In local mode it uses the explainer settings and adds
+none. See `docs/EXPLAINERS.md` for the explainer variables and how to point them
+at a local model.
 
-The API key is sent only in the provider's auth header. It is never returned by
-the API and never logged. Logs carry only success or failure and a duration,
-never a prompt, a reply, or an amount.
+The central service does not keep a `/v1/chat` request or reply in its own
+database. It creates a short-lived OpenCode session, prompts it once, and deletes
+it. OpenCode keeps that session on an ephemeral directory, not on the persistent
+volume. The app profile and the UI conversations live in the service's SQLite
+database.
+
+The key is sent only in the provider or central service auth header. It is never
+returned by the API and never logged. Logs carry only success or failure and a
+duration, never a prompt, a reply, or an amount.

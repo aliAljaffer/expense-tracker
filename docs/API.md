@@ -20,6 +20,9 @@ owner's access token.
 | `GROOSZY_EXPLAIN_MODEL` | no | Model name the provider expects. No value is built in |
 | `GROOSZY_EXPLAIN_API_KEY` | no | Provider key. Never returned by the API and never logged |
 | `GROOSZY_EXPLAIN_TIMEOUT` | no | Whole seconds. Default 30 |
+| `GROOSZY_CHAT_URL` | no | Shared chat API root, for example `https://chat-api.alialjaffer.com`. Set with the key to use central chat |
+| `GROOSZY_CHAT_API_KEY` | no | App key from the central chat service. Never returned and never logged |
+| `GROOSZY_CHAT_TIMEOUT` | no | Whole seconds for the central call. Default 60 |
 | `SMTP_ADDR` | no | SMTP `host:port`. Empty disables the monthly reminder |
 | `SMTP_USER` | no | SMTP username. Empty sends without authentication |
 | `SMTP_PASS` | no | SMTP password. Never returned by the API and never logged |
@@ -414,8 +417,8 @@ The text is returned to the caller and never written to the database.
 
 An owner-only conversation with Gersz about the last six months. The handler
 reads monthly totals and the three suggestion summaries from the ledger on each
-request and sends them with the conversation as one provider call. Nothing is
-streamed and no conversation is stored.
+request and sends them with the conversation in one call to the local provider
+or the shared chat service. Nothing is streamed and no conversation is stored.
 
 ```json
 {
@@ -452,6 +455,11 @@ transaction description, merchant name, account number, IBAN, per-account
 balance, or file content. The recurring summary is rebuilt without the merchant
 name for this reason. With no transactions stored, the endpoint answers with a
 fixed sentence and calls no provider. See `docs/CHAT.md`.
+
+When `GROOSZY_CHAT_URL` and `GROOSZY_CHAT_API_KEY` are set, the handler sends the
+packet to the shared chat service as `context` instead of calling the local
+provider. The central service owns the prompt and does not keep `/v1/chat`
+messages in its database.
 
 ## Suggestion endpoints
 

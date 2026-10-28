@@ -3,6 +3,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -22,6 +23,11 @@ type Authenticator interface {
 	Authenticate(*http.Request) (auth.Identity, error)
 }
 
+type chatAnswerer interface {
+	Enabled() bool
+	Answer(context.Context, explain.ChatSummary, []explain.ChatMessage) (string, error)
+}
+
 type Server struct {
 	svc       *importer.Service
 	ledger    *ledger.Store
@@ -30,7 +36,10 @@ type Server struct {
 	log       *slog.Logger
 	// explain is optional. A nil explainer reports disabled and refuses
 	// explanations, so the feature can never go live by accident.
-	explain  *explain.Explainer
+	explain *explain.Explainer
+	// chat answers the chat endpoint. It is the central service when
+	// configured, otherwise the local explainer.
+	answerer chatAnswerer
 	settings settingsStore
 	// edits serves category and merchant alias writes. Nil returns 503.
 	edits editStore
@@ -44,7 +53,11 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	if maxUpload <= 0 {
 		maxUpload = 16 << 20
 	}
-	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, mail: mail, log: log}
+	var answerer chatAnswerer = ex
+	if central := explain.CentralFromEnv(); central != nil {
+		answerer = central
+	}
+	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, answerer: answerer, mail: mail, log: log}
 	if led != nil {
 		s.settings = led
 		s.chatLedger = led

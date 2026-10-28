@@ -9,7 +9,7 @@ export const MAX_CHAT_MESSAGE_LENGTH = 2000;
 export class ChatUnavailableError extends Error {
   constructor() {
     super(
-      "Gersz is not configured on this server yet. Add the explainer provider, model and key on the server, then reload."
+      "Gersz is not configured on this server yet. Set the central chat URL and key, or add the explainer provider, model and key, then reload."
     );
     this.name = "ChatUnavailableError";
   }

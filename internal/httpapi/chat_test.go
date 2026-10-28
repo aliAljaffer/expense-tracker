@@ -55,6 +55,7 @@ func chatServer(t *testing.T, ex *explain.Explainer, store chatReader) http.Hand
 	s := &Server{
 		auth:       stubAuth{id: auth.Identity{Subject: "owner"}},
 		explain:    ex,
+		answerer:   ex,
 		chatLedger: store,
 		log:        slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
@@ -196,7 +197,54 @@ func TestChatRequiresTheOwner(t *testing.T) {
 	}
 }
 
+func TestChatUsesCentralService(t *testing.T) {
+	var got struct {
+		Messages []explain.ChatMessage `json:"messages"`
+		Context  string                `json:"context"`
+	}
+	central := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer central-key" {
+			t.Errorf("authorization = %q", r.Header.Get("Authorization"))
+		}
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Errorf("decode: %v", err)
+		}
+		io.WriteString(w, `{"reply":"You spent 3,500.00 SAR in May."}`)
+	}))
+	defer central.Close()
+	t.Setenv("GROOSZY_CHAT_URL", central.URL)
+	t.Setenv("GROOSZY_CHAT_API_KEY", "central-key")
+
+	s := &Server{
+		auth:       stubAuth{id: auth.Identity{Subject: "owner"}},
+		answerer:   explain.CentralFromEnv(),
+		chatLedger: fakeChatReader{months: chatMonths()},
+		log:        slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	rec := postChat(s.routes(), `{"messages":[{"role":"user","content":"How much did I spend in May?"}]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "You spent 3,500.00 SAR in May.") {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+	if len(got.Messages) != 1 || got.Messages[0].Content != "How much did I spend in May?" {
+		t.Fatalf("messages = %#v", got.Messages)
+	}
+	if !strings.Contains(got.Context, "2026-05") || !strings.Contains(got.Context, "3,500.00 SAR") {
+		t.Fatalf("context = %s", got.Context)
+	}
+	if strings.Contains(got.Context, "Rent Agency") {
+		t.Fatalf("context leaked a merchant: %s", got.Context)
+	}
+}
+
 func TestChatHandlerIsRegistered(t *testing.T) {
+	t.Setenv("GROOSZY_CHAT_URL", "")
+	t.Setenv("GROOSZY_CHAT_API_KEY", "")
 	h := newTestServer(stubAuth{id: auth.Identity{Subject: "owner"}})
 	rec := postChat(h, `{"messages":[{"role":"user","content":"hi"}]}`)
 	if rec.Code == http.StatusNotFound || rec.Code == http.StatusMethodNotAllowed {

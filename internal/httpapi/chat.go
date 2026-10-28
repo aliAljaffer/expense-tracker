@@ -39,7 +39,7 @@ type chatRequest struct {
 }
 
 func (s *Server) chat(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
-	if !s.explain.Enabled() {
+	if s.answerer == nil || !s.answerer.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "chat is not configured")
 		return
 	}
@@ -93,7 +93,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
 	}
 
 	started := time.Now()
-	reply, err := s.explain.Answer(r.Context(), explain.NewChatSummary(months, card, recurring, bnpl), messages)
+	reply, err := s.answerer.Answer(r.Context(), explain.NewChatSummary(months, card, recurring, bnpl), messages)
 	if err != nil || strings.TrimSpace(reply) == "" {
 		s.log.Warn("chat answer failed", "duration_ms", time.Since(started).Milliseconds())
 		writeError(w, http.StatusBadGateway, "the model did not answer")
