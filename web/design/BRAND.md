@@ -71,6 +71,14 @@ Served from `/brand/`.
 | `icon-192.png`, `icon-512.png` | Web app manifest |
 | `site.webmanifest` | Install metadata |
 
+## README header
+
+`docs/assets/header-light.svg` and `header-dark.svg` are the banner at the top of
+`README.md`, swapped by `prefers-color-scheme`. `scripts/build-header.py` draws
+them from the mark and `tokens.json`, with every glyph outlined, so the files
+carry no font and no hardcoded colour. Each keeps its own page colour behind it,
+so the text stays legible if a viewer's scheme and GitHub's theme disagree.
+
 ## Misuse
 
 No gradient, shadow, outline, or glow on the tile or the mark. Do not stretch

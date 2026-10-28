@@ -1,8 +1,16 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/header-dark.svg">
+  <img src="docs/assets/header-light.svg" alt="grooszy: private, self-hosted analysis of Saudi bank statements">
+</picture>
+
 # grooszy
 
-Self-hosted, private analysis of Saudi bank statements. Imports Alinma XLSX and
-Al Rajhi PDF exports, refuses any statement that does not reconcile against its
-own header, blocks duplicate imports, and explains spending in plain language.
+[![go](https://img.shields.io/github/actions/workflow/status/aliAljaffer/grooszy/go.yml?branch=main&label=go&labelColor=14140f&color=a3e635)](https://github.com/aliAljaffer/grooszy/actions/workflows/go.yml)
+[![web](https://img.shields.io/github/actions/workflow/status/aliAljaffer/grooszy/web.yml?branch=main&label=web&labelColor=14140f&color=a3e635)](https://github.com/aliAljaffer/grooszy/actions/workflows/web.yml)
+
+Imports Alinma XLSX and Al Rajhi PDF exports, refuses any statement that does not
+reconcile against its own header, blocks duplicate imports, and explains spending
+in plain language.
 
 Go for parsing, storage, and suggestions. Next.js for the interface.
 PostgreSQL for storage. No statement data leaves the deployment.
