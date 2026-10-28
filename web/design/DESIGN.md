@@ -52,6 +52,24 @@ requirement, so it was not adopted. Its surrounding rules were adopted instead.
 Charts never use action colours. Series must also differ by shape or direct
 label, because hue alone fails for colour-blind readers.
 
+## Brand
+
+The logo is the lowercase g of Bricolage Grotesque on a lime tile.
+`web/public/brand/` holds every file and `web/design/BRAND.md` holds the rules.
+The interface does not invent a second palette: the accent in the tokens is the
+tile, and the type in the tokens is the face the mark is cut from.
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `brand.tile` | `#a3e635` | same | Tile behind the g |
+| `brand.tile-ink` | `#14140f` | same | The g on the tile |
+| `brand.mark` | `#14140f` | `#a3e635` | Mark on the page |
+| `brand.mark-inverse` | `#a3e635` | same | Reversed mark |
+
+Lime is a surface, never text: ink on lime is 12.25:1, lime on the light page is
+1.44:1. The header uses a 24px tile, a 12px gap, and the wordmark at 18px
+weight 600. The favicon, app icon and web manifest all come from the same tile.
+
 ## Tokens beyond colour
 
 Colour is the semantic tier: `action`, `feedback`, `text`, `surface`, `border`,
@@ -59,7 +77,7 @@ Colour is the semantic tier: `action`, `feedback`, `text`, `surface`, `border`,
 
 | Group | Emits | Notes |
 |---|---|---|
-| `font` | `--font-*`, `--text-*`, `--weight-*`, `--leading-*`, `--tracking-*` | Body 16px, display 48px, so the 2.5x display rule holds |
+| `font` | `--font-*`, `--text-*`, `--weight-*`, `--leading-*`, `--tracking-*` | Body 16px, display 48px, so the 2.5x display rule holds. Sans is Bricolage Grotesque, self-hosted by `next/font` |
 | `space` | `--space-1` to `--space-24` | 4px base unit, key is the multiplier |
 | `size` | `--size-control-*`, `--size-icon-*`, `--size-container-*`, `--size-measure-*` | Default control is 44px, the project floor |
 | `radius` | `--radius-sm` to `--radius-full` | |
@@ -75,11 +93,11 @@ Colour is the semantic tier: `action`, `feedback`, `text`, `surface`, `border`,
 all required pairs in both modes. Lowest required ratio is the control border at
 3.35:1 light and 3.42:1 dark.
 
-`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 229
+`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 233
 valid tokens.
 
 `node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check`
-reports every alias resolved and no token dropped. The theme holds 138 light
+reports every alias resolved and no token dropped. The theme holds 145 light
 variables, 68 dark overrides.
 
 Not yet run: any render gate. There is no page to render until the web app

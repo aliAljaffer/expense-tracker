@@ -81,21 +81,26 @@ p {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-height: var(--size-control-md);
   color: var(--color-text-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-tight);
   text-decoration: none;
-  text-transform: uppercase;
 }
 
 .wordmark__mark {
-  width: var(--size-icon-sm);
-  height: var(--size-icon-sm);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-action-primary);
+  width: var(--size-icon-lg);
+  height: var(--size-icon-lg);
+}
+
+.wordmark__tile {
+  fill: var(--color-brand-tile);
+}
+
+.wordmark__glyph {
+  fill: var(--color-brand-tile-ink);
 }
 
 .icon-button {

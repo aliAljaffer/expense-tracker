@@ -1,9 +1,25 @@
 import type { Metadata } from "next";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
+
+const sans = Bricolage_Grotesque({
+  subsets: ["latin"],
+  axes: ["opsz"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { template: "%s | grooszy", default: "grooszy" },
   description: "Private analysis of Alinma and Al Rajhi statements.",
+  icons: {
+    icon: [
+      { url: "/brand/favicon.ico", sizes: "48x48" },
+      { url: "/brand/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/brand/apple-touch-icon.png",
+  },
+  manifest: "/brand/site.webmanifest",
 };
 
 const themeScript = `
@@ -18,7 +34,7 @@ const themeScript = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={sans.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

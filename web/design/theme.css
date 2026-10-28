@@ -50,7 +50,11 @@
   --color-interactive-selected-bg: #f1fbdd;
   --color-interactive-selected-border: #84cc16;
   --color-interactive-focus-ring: #5e9b10;
-  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-brand-tile: #a3e635;
+  --color-brand-tile-ink: #14140f;
+  --color-brand-mark: #14140f;
+  --color-brand-mark-inverse: #a3e635;
+  --font-sans: var(--font-bricolage), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --text-xs: 12px;
   --text-sm: 14px;

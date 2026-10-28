@@ -1,0 +1,13 @@
+{
+  "name": "grooszy",
+  "short_name": "grooszy",
+  "description": "Private analysis of Alinma and Al Rajhi statements.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#a3e635",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
