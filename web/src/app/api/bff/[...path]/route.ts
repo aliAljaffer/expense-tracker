@@ -5,6 +5,7 @@ const ALLOWED_ROUTES: Record<string, readonly string[]> = {
   accounts: ["GET"],
   categories: ["GET"],
   "overview/monthly": ["GET"],
+  "overview/time": ["GET"],
   transactions: ["GET"],
   "suggestions/card-coverage": ["GET"],
   "suggestions/recurring": ["GET"],

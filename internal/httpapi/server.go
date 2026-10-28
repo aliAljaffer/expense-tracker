@@ -73,6 +73,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /api/me", s.protect(s.me))
 	mux.Handle("GET /api/accounts", s.protect(s.accounts))
 	mux.Handle("GET /api/overview/monthly", s.protect(s.monthly))
+	mux.Handle("GET /api/overview/time", s.protect(s.spendingByTime))
 	mux.Handle("GET /api/transactions", s.protect(s.transactions))
 	mux.Handle("PATCH /api/transactions/{id}", s.protect(s.patchTransaction))
 	mux.Handle("GET /api/categories", s.protect(s.categories))

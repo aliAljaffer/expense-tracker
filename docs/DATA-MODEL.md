@@ -33,7 +33,7 @@ Minimum schema to support the Tier 1 and Tier 2 features.
 |---|---|
 | `id` | |
 | `account_id`, `import_id` | |
-| `posted_date`, `value_date` | They differ. Keep both |
+| `posted_date`, `posted_time`, `value_date` | They differ. Keep both dates. `posted_time` is `00:00` when the statement states no time |
 | `description_raw` | Never discard |
 | `debit`, `credit`, `balance_after` | |
 | `kind` | See below |

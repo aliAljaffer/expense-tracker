@@ -172,6 +172,18 @@ export interface MonthlyResponse {
   months: MonthlyOverview[];
 }
 
+export interface TimeBucket {
+  hour: number;
+  debit: number;
+  count: number;
+}
+
+export interface SpendingByTimeResponse {
+  hours: TimeBucket[];
+  timed_count: number;
+  untimed_count: number;
+}
+
 export interface Transaction {
   id: number;
   account_id: number;

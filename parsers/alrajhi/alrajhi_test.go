@@ -87,26 +87,27 @@ func TestParseLines(t *testing.T) {
 
 	want := []struct {
 		date     string
+		time     string
 		kind     statement.Kind
 		merchant string
 		debit    int64
 		credit   int64
 	}{
-		{"2026-01-05", statement.CardPurchase, "SAMPLE STORE TRADING", 2575, 0},
-		{"2026-01-06", statement.OnlinePurchase, "SAMPLE ONLINE", 1000, 0},
-		{"2026-01-07", statement.BillPayment, "", 50000, 0},
-		{"2026-01-08", statement.Fee, "", 58, 0},
-		{"2026-01-09", statement.Salary, "", 0, 100000},
-		{"2026-01-10", statement.Unknown, "", 500, 0},
-		{"2026-01-11", statement.CardPayment, "", 1300, 0},
+		{"2026-01-05", "10:00:00", statement.CardPurchase, "SAMPLE STORE TRADING", 2575, 0},
+		{"2026-01-06", "10:00:00", statement.OnlinePurchase, "SAMPLE ONLINE", 1000, 0},
+		{"2026-01-07", "09:02:51", statement.BillPayment, "", 50000, 0},
+		{"2026-01-08", "09:03:48", statement.Fee, "", 58, 0},
+		{"2026-01-09", "09:03:48", statement.Salary, "", 0, 100000},
+		{"2026-01-10", "09:03:48", statement.Unknown, "", 500, 0},
+		{"2026-01-11", "21:31:39", statement.CardPayment, "", 1300, 0},
 	}
 	for i, w := range want {
 		got := s.Transactions[i]
-		if got.PostedDate != w.date || got.Kind != w.kind || got.MerchantRaw != w.merchant ||
-			got.Debit != w.debit || got.Credit != w.credit {
-			t.Errorf("row %d = %s %s %q debit=%d credit=%d; want %s %s %q debit=%d credit=%d",
-				i, got.PostedDate, got.Kind, got.MerchantRaw, got.Debit, got.Credit,
-				w.date, w.kind, w.merchant, w.debit, w.credit)
+		if got.PostedDate != w.date || got.PostedTime != w.time || got.Kind != w.kind ||
+			got.MerchantRaw != w.merchant || got.Debit != w.debit || got.Credit != w.credit {
+			t.Errorf("row %d = %s %s %s %q debit=%d credit=%d; want %s %s %s %q debit=%d credit=%d",
+				i, got.PostedDate, got.PostedTime, got.Kind, got.MerchantRaw, got.Debit, got.Credit,
+				w.date, w.time, w.kind, w.merchant, w.debit, w.credit)
 		}
 	}
 

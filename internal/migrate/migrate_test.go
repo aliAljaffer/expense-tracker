@@ -159,6 +159,51 @@ func TestMigrationVersions(t *testing.T) {
 	}
 }
 
+func TestBackfillPostedTimeMigration(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	if err := Apply(ctx, pool, migrations.FS); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	var accountID, importID int64
+	if err := pool.QueryRow(ctx,
+		`insert into account (bank, number, kind) values ('test', '0001', 'current') returning id`).
+		Scan(&accountID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx,
+		`insert into statement_import (account_id, file_sha256, parser, parser_version, reconciled, status)
+		 values ($1, $2, 'alrajhi', '2', true, 'accepted') returning id`,
+		accountID, strings.Repeat("a", 64)).Scan(&importID); err != nil {
+		t.Fatal(err)
+	}
+	var txID int64
+	if err := pool.QueryRow(ctx,
+		`insert into transaction (account_id, import_id, posted_date, description_raw, debit, kind)
+		 values ($1, $2, '2026-01-05', '2026/01/05 Time:10:00:00, Notes:SAMPLE STORE', 100, 'card_purchase')
+		 returning id`, accountID, importID).Scan(&txID); err != nil {
+		t.Fatal(err)
+	}
+
+	sql, err := os.ReadFile("../../api/migrations/0007_backfill_posted_time.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, string(sql)); err != nil {
+		t.Fatalf("backfill: %v", err)
+	}
+
+	var got string
+	if err := pool.QueryRow(ctx, `select posted_time::text from transaction where id = $1`, txID).
+		Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != "10:00:00" {
+		t.Fatalf("posted_time = %q; want 10:00:00", got)
+	}
+}
+
 func TestAdoptOldDatabase(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()

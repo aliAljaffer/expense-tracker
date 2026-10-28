@@ -1,4 +1,9 @@
-import { AccountsResponse, MonthlyResponse, TransactionsResponse } from "./types";
+import {
+  AccountsResponse,
+  MonthlyResponse,
+  SpendingByTimeResponse,
+  TransactionsResponse,
+} from "./types";
 
 export async function getAccounts(): Promise<AccountsResponse> {
   const response = await fetch("/api/bff/accounts");
@@ -27,6 +32,23 @@ export async function getMonthlyOverview(
 
   if (!response.ok) {
     throw new Error("Failed to fetch monthly overview");
+  }
+
+  return response.json();
+}
+
+export async function getSpendingByTime(
+  params?: GetMonthlyParams
+): Promise<SpendingByTimeResponse> {
+  const url = new URL("/api/bff/overview/time", window.location.origin);
+
+  if (params?.from) url.searchParams.set("from", params.from);
+  if (params?.to) url.searchParams.set("to", params.to);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch spending by time");
   }
 
   return response.json();

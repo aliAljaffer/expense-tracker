@@ -278,14 +278,15 @@ func (s *Store) Commit(ctx context.Context, importID int64, preview *Preview, se
 
 		batch.Queue(`
 			insert into transaction (
-				account_id, import_id, posted_date, description_raw, debit, credit,
+				account_id, import_id, posted_date, posted_time, description_raw, debit, credit,
 				balance_after, kind, merchant_raw, merchant_id, biller_code, biller_account,
 				card_last4, fx_currency, fx_amount, fx_rate, fx_fee
 			) values (
-				$1, $2, $3, $4, $5, $6, $7, $8, nullif($9, ''), $17, nullif($10, ''),
-				nullif($11, ''), nullif($12, ''), nullif($13, ''), $14, $15, $16
+				$1, $2, $3, coalesce(nullif($4, '')::time, '00:00'), $5, $6, $7, $8,
+				nullif($9, ''), nullif($10, ''), $18, nullif($11, ''), nullif($12, ''),
+				nullif($13, ''), $14, $15, $16, $17
 			) on conflict (fingerprint) do nothing`,
-			accountID, importID, t.PostedDate, t.DescriptionRaw, t.Debit, t.Credit,
+			accountID, importID, t.PostedDate, t.PostedTime, t.DescriptionRaw, t.Debit, t.Credit,
 			t.BalanceAfter, string(t.Kind), t.MerchantRaw, t.BillerCode, t.BillerAccount,
 			t.CardLast4, t.FxCurrency, t.FxAmount, nullIfEmpty(t.FxRate), t.FxFee, merchantID)
 	}

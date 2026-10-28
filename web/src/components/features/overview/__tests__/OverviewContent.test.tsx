@@ -11,6 +11,11 @@ vi.mock("next/navigation", () => ({
 describe("OverviewContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(overviewApi.getSpendingByTime).mockResolvedValue({
+      hours: [],
+      timed_count: 0,
+      untimed_count: 0,
+    });
   });
 
   it("renders loading state", async () => {
@@ -89,6 +94,7 @@ describe("OverviewContent", () => {
     expect(screen.getByText("Money in and out")).toBeInTheDocument();
     expect(screen.getByText("Money in")).toBeInTheDocument();
     expect(screen.getByText("Money out")).toBeInTheDocument();
+    expect(screen.getByText("Spending by time")).toBeInTheDocument();
   });
 
   it("renders the chart empty state when there are no months", async () => {

@@ -32,7 +32,8 @@ transactions. Columns are date, description, credit, debit, balance.
 
 ### Dates are Excel serials
 
-Epoch is 1899-12-30. Serial `45966` is 2025-11-05.
+Epoch is 1899-12-30. Serial `45966` is 2025-11-05. A fractional serial carries
+a time, which the parser keeps; the observed export uses whole-day serials.
 
 A trailing row carries the closing balance in the date column (`25.00`). Reject
 any serial below roughly 40000.
@@ -125,7 +126,8 @@ Parse in this order:
 2. Walk back up to 8 lines for a date in `YYYY/MM/DD`.
 3. Walk back up to 4 more lines for a known transaction type string.
 4. Read the merchant from the date line plus up to 2 following lines.
-5. Deduplicate on date, debit, credit and balance.
+5. Read the posting time from `Time:HH:MM:SS` on the date line.
+6. Deduplicate on date, time, debit, credit and balance.
 
 ### Transaction type strings
 

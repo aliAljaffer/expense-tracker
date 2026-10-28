@@ -6,11 +6,11 @@ import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const links = [
-  { href: "/health", label: "Health" },
-  { href: "/imports", label: "Import" },
   { href: "/overview", label: "Overview" },
+  { href: "/imports", label: "Import" },
   { href: "/suggestions", label: "Suggestions" },
   { href: "/chat", label: "Chat" },
+  { href: "/health", label: "Health" },
   { href: "/settings", label: "Settings" },
 ];
 

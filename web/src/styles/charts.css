@@ -165,7 +165,8 @@
   cursor: pointer;
 }
 
-.spending-chart__plot {
+.spending-chart__plot,
+.spending-time-chart__plot {
   height: 100%;
 }
 

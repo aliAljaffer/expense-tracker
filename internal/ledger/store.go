@@ -144,20 +144,10 @@ type Month struct {
 // field matches the transaction rows the corresponding bucket in Transactions
 // selects, so drill-down sums always equal the stored total.
 func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month, error) {
-	from, err := time.Parse("2006-01", fromMonth)
+	first, last, err := monthBounds(fromMonth, toMonth)
 	if err != nil {
-		return nil, fmt.Errorf("%w: from must be YYYY-MM", ErrBadFilter)
+		return nil, err
 	}
-	to, err := time.Parse("2006-01", toMonth)
-	if err != nil {
-		return nil, fmt.Errorf("%w: to must be YYYY-MM", ErrBadFilter)
-	}
-	if from.After(to) {
-		return nil, fmt.Errorf("%w: from month is after to month", ErrBadFilter)
-	}
-	first := from.Format("2006-01-02")
-	last := time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.UTC).
-		AddDate(0, 1, 0).AddDate(0, 0, -1).Format("2006-01-02")
 
 	rows, err := s.db.QueryContext(ctx, `
 		select
@@ -219,6 +209,75 @@ func (s *Store) Monthly(ctx context.Context, fromMonth, toMonth string) ([]Month
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// TimeBucket is the spending recorded in one hour of the day.
+type TimeBucket struct {
+	Hour  int   `json:"hour"`
+	Debit int64 `json:"debit"`
+	Count int64 `json:"count"`
+}
+
+// TimeOfDay is spending grouped by hour. UntimedCount covers spending rows
+// whose statement carried no time, which are stored as midnight.
+type TimeOfDay struct {
+	Hours        []TimeBucket `json:"hours"`
+	TimedCount   int64        `json:"timed_count"`
+	UntimedCount int64        `json:"untimed_count"`
+}
+
+// SpendingByTime groups spending by hour of day over the months fromMonth to
+// toMonth inclusive. Midnight is treated as untimed because the Alinma export
+// states only a date and the column defaults to 00:00.
+func (s *Store) SpendingByTime(ctx context.Context, fromMonth, toMonth string) (TimeOfDay, error) {
+	first, last, err := monthBounds(fromMonth, toMonth)
+	if err != nil {
+		return TimeOfDay{}, err
+	}
+
+	out := TimeOfDay{Hours: make([]TimeBucket, 24)}
+	for hour := range out.Hours {
+		out.Hours[hour].Hour = hour
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		select extract(hour from posted_time)::int,
+		       coalesce(sum(debit), 0),
+		       count(*)
+		from transaction
+		where posted_date >= $1 and posted_date <= $2
+		  and counts_as_spending and debit > 0
+		  and posted_time <> '00:00'
+		group by 1
+		order by 1`, first, last)
+	if err != nil {
+		return TimeOfDay{}, fmt.Errorf("read spending by time: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var bucket TimeBucket
+		if err := rows.Scan(&bucket.Hour, &bucket.Debit, &bucket.Count); err != nil {
+			return TimeOfDay{}, fmt.Errorf("read spending by time row: %w", err)
+		}
+		if bucket.Hour < 0 || bucket.Hour > 23 {
+			continue
+		}
+		out.Hours[bucket.Hour] = bucket
+		out.TimedCount += bucket.Count
+	}
+	if err := rows.Err(); err != nil {
+		return TimeOfDay{}, err
+	}
+
+	if err := s.db.QueryRowContext(ctx, `
+		select count(*)
+		from transaction
+		where posted_date >= $1 and posted_date <= $2
+		  and counts_as_spending and debit > 0
+		  and posted_time = '00:00'`, first, last).Scan(&out.UntimedCount); err != nil {
+		return TimeOfDay{}, fmt.Errorf("read untimed spending: %w", err)
+	}
+	return out, nil
 }
 
 type TransactionRow struct {

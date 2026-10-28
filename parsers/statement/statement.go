@@ -40,6 +40,7 @@ func (k Kind) CountsAsSpending() bool {
 // the statement did not state that value.
 type Transaction struct {
 	PostedDate     string `json:"posted_date"`
+	PostedTime     string `json:"posted_time,omitempty"`
 	ValueDate      string `json:"value_date,omitempty"`
 	DescriptionRaw string `json:"description_raw"`
 	Debit          int64  `json:"debit"`

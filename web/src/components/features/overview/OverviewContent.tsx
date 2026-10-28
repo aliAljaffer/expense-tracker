@@ -2,16 +2,23 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getAccounts, getMonthlyOverview } from "@/lib/api/overview";
-import { type AccountsResponse, type MonthlyResponse } from "@/lib/api/types";
+import { getAccounts, getMonthlyOverview, getSpendingByTime } from "@/lib/api/overview";
+import {
+  type AccountsResponse,
+  type MonthlyResponse,
+  type SpendingByTimeResponse,
+} from "@/lib/api/types";
 import { AccountsTable } from "./AccountsTable";
 import { MonthlyMoneyChart } from "./MonthlyMoneyChart";
 import { MonthlyTable } from "./MonthlyTable";
 import { OverviewSummary } from "./OverviewSummary";
+import { SpendingByTimeChart } from "./SpendingByTimeChart";
 
 export function OverviewContent() {
   const [accounts, setAccounts] = useState<AccountsResponse | null>(null);
   const [monthly, setMonthly] = useState<MonthlyResponse | null>(null);
+  const [spendingByTime, setSpendingByTime] = useState<SpendingByTimeResponse | null>(null);
+  const [timeUnavailable, setTimeUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,13 +28,18 @@ export function OverviewContent() {
         setIsLoading(true);
         setError(null);
 
-        const [accountsData, monthlyData] = await Promise.all([
+        const [accountsData, monthlyData, timeData] = await Promise.all([
           getAccounts(),
           getMonthlyOverview(),
+          Promise.resolve()
+            .then(() => getSpendingByTime())
+            .catch(() => null),
         ]);
 
         setAccounts(accountsData);
         setMonthly(monthlyData);
+        setSpendingByTime(timeData);
+        setTimeUnavailable(timeData === null);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load overview";
         setError(message);
@@ -85,6 +97,7 @@ export function OverviewContent() {
     <div className="overview-sections">
       <OverviewSummary months={monthly.months} />
       <MonthlyMoneyChart months={monthly.months} />
+      <SpendingByTimeChart data={spendingByTime} unavailable={timeUnavailable} />
       <AccountsTable accounts={accounts.accounts} />
       <MonthlyTable months={monthly.months} />
     </div>

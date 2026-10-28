@@ -36,7 +36,7 @@ func TestHealthIsPublic(t *testing.T) {
 func TestProtectedRoutesRejectMissingToken(t *testing.T) {
 	h := newTestServer(stubAuth{err: auth.ErrUnauthenticated})
 	for _, path := range []string{"/api/me", "/api/imports/1", "/api/accounts",
-		"/api/overview/monthly", "/api/transactions", "/api/explainers/status"} {
+		"/api/overview/monthly", "/api/overview/time", "/api/transactions", "/api/explainers/status"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != http.StatusUnauthorized {
@@ -66,8 +66,9 @@ func TestWrongOwnerIsForbidden(t *testing.T) {
 
 func TestReadRoutesWithoutStoreReturn503(t *testing.T) {
 	h := newTestServer(stubAuth{id: auth.Identity{Subject: "owner"}})
-	for _, path := range []string{"/api/accounts", "/api/overview/monthly", "/api/transactions",
-		"/api/suggestions/card-coverage", "/api/suggestions/recurring", "/api/suggestions/bnpl"} {
+	for _, path := range []string{"/api/accounts", "/api/overview/monthly", "/api/overview/time",
+		"/api/transactions", "/api/suggestions/card-coverage", "/api/suggestions/recurring",
+		"/api/suggestions/bnpl"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != http.StatusServiceUnavailable {

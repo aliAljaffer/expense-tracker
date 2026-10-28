@@ -314,3 +314,26 @@ func TestParseWithoutMerchant(t *testing.T) {
 		t.Errorf("row after = %s %s %q debit=%d", next.PostedDate, next.Kind, next.MerchantRaw, next.Debit)
 	}
 }
+
+func TestParseSerialWithTime(t *testing.T) {
+	rows := [][]string{
+		{"Account Statement"},
+		{"From[01/01/2026] To[31/03/2026]"},
+		{"التاريخ", "الوصف", "إيداع", "سحب", "الرصيد"},
+		{"46027.5", "SAR 5.00 purchase", "", "-5.00", "995.00"},
+		{"46028.125", "SAR 6.00 purchase", "", "-6.00", "989.00"},
+	}
+	s, err := Parse(buildXLSX(t, rows, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Transactions) != 2 {
+		t.Fatalf("got %d transactions; want 2", len(s.Transactions))
+	}
+	if got := s.Transactions[0]; got.PostedDate != "2026-01-05" || got.PostedTime != "12:00:00" {
+		t.Errorf("row 0 = %s %s; want date and noon", got.PostedDate, got.PostedTime)
+	}
+	if got := s.Transactions[1]; got.PostedDate != "2026-01-06" || got.PostedTime != "03:00:00" {
+		t.Errorf("row 1 = %s %s; want date and 03:00", got.PostedDate, got.PostedTime)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ import (
 )
 
 // Version changes whenever parsed output changes. Imports store it.
-const Version = "1"
+const Version = "2"
 
 // The trailing row repeats the closing balance in the date column, so any
 // serial below this is not a transaction date.
@@ -400,9 +401,11 @@ func Parse(data []byte) (*statement.Statement, error) {
 
 		credit, _ := statement.ParseAmount(row[2])
 		debit, _ := statement.ParseAmount(row[3])
+		postedDate, postedTime := excelDateTime(serial)
 		t := statement.Transaction{
 			Kind:           statement.Unknown,
-			PostedDate:     excelEpoch.AddDate(0, 0, int(serial)).Format("2006-01-02"),
+			PostedDate:     postedDate,
+			PostedTime:     postedTime,
 			DescriptionRaw: clean(row[1]),
 			Debit:          abs(debit),
 			Credit:         abs(credit),
@@ -453,6 +456,21 @@ func recoverTruncated(s *statement.Statement) {
 			}
 		}
 	}
+}
+
+// excelDateTime splits an Excel serial into a date and an optional time. The
+// export writes whole-day serials, but a cell can carry a fraction.
+func excelDateTime(serial float64) (string, string) {
+	days := math.Floor(serial)
+	date := excelEpoch.AddDate(0, 0, int(days))
+	seconds := int(math.Round((serial - days) * 86400))
+	if seconds <= 0 {
+		return date.Format("2006-01-02"), ""
+	}
+	if seconds >= 86400 {
+		return date.AddDate(0, 0, 1).Format("2006-01-02"), ""
+	}
+	return date.Format("2006-01-02"), time.Date(0, 1, 1, 0, 0, seconds, 0, time.UTC).Format("15:04:05")
 }
 
 func abs(v int64) int64 {

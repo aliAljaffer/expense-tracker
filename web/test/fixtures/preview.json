@@ -7,7 +7,7 @@
     "bank": "Alinma",
     "account_number": "****0002",
     "parser": "alinma",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-03-01",
     "period_end": "2026-03-31",
     "header": {
@@ -92,7 +92,7 @@
     "bank": "Alinma",
     "account_number": "****0001",
     "parser": "alinma",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-01-01",
     "period_end": "2026-01-31",
     "header": {
@@ -201,7 +201,7 @@
     "account_number": "****0002",
     "iban": "SA0080000021234567890123",
     "parser": "alrajhi",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-02-05",
     "period_end": "2026-02-28",
     "header": {
@@ -254,6 +254,7 @@
     "rows": [
       {
         "posted_date": "2026-02-05",
+        "posted_time": "11:30:00",
         "description_raw": "2026/02/05 Time:11:30:00, Notes:(9876543210123456-987654321098) COFFEE PLACE CITY CENTER, SA",
         "debit": 0,
         "credit": 25000,
@@ -290,7 +291,7 @@
     "account_number": "****0001",
     "iban": "SA0080000001234567890123",
     "parser": "alrajhi",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-01-01",
     "period_end": "2026-03-31",
     "header": {
@@ -343,6 +344,7 @@
     "rows": [
       {
         "posted_date": "2026-01-05",
+        "posted_time": "10:00:00",
         "description_raw": "2026/01/05 Time:10:00:00, Notes:(1234567890123456-123456789012) SAMPLE STORE TRADING, ANY CITY, SA",
         "debit": 2575,
         "credit": 0,
@@ -354,6 +356,7 @@
       },
       {
         "posted_date": "2026-01-06",
+        "posted_time": "10:00:00",
         "description_raw": "2026/01/06 Time:10:00:00, Notes:Online Purchase from SAMPLE ONLINE",
         "debit": 1000,
         "credit": 0,
@@ -365,6 +368,7 @@
       },
       {
         "posted_date": "2026-01-07",
+        "posted_time": "09:02:51",
         "description_raw": "2026/01/07 Time:09:02:51, Notes:W#153-4000000001 -10000000001",
         "debit": 50000,
         "credit": 0,
@@ -377,6 +381,7 @@
       },
       {
         "posted_date": "2026-01-08",
+        "posted_time": "09:03:48",
         "description_raw": "2026/01/08 Time:09:03:48, Notes:9000000000000001/SAMPLE CUSTOMER",
         "debit": 58,
         "credit": 0,
@@ -387,6 +392,7 @@
       },
       {
         "posted_date": "2026-01-09",
+        "posted_time": "09:03:48",
         "description_raw": "2026/01/09 Time:09:03:48, Notes:SAMPLE EMPLOYER Some New Type",
         "debit": 0,
         "credit": 100000,
@@ -397,6 +403,7 @@
       },
       {
         "posted_date": "2026-01-10",
+        "posted_time": "09:03:48",
         "description_raw": "2026/01/10 Time:09:03:48, Notes:SOMETHING",
         "debit": 500,
         "credit": 0,
@@ -407,6 +414,7 @@
       },
       {
         "posted_date": "2026-01-11",
+        "posted_time": "21:31:39",
         "description_raw": "2026/01/11 Time:21:31:39, Notes:W - Advance payment for Card ending - 0000",
         "debit": 1300,
         "credit": 0,
@@ -434,7 +442,7 @@
     "bank": "Alinma",
     "account_number": "****0001",
     "parser": "alinma",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-01-01",
     "period_end": "2026-01-31",
     "header": {},
@@ -495,7 +503,7 @@
     "bank": "Alinma",
     "account_number": "****0003",
     "parser": "alinma",
-    "parser_version": "1",
+    "parser_version": "2",
     "period_start": "2026-01-01",
     "period_end": "2026-01-31",
     "header": {

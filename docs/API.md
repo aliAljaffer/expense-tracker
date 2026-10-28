@@ -231,6 +231,31 @@ halalas. Only `uncovered_share` is a ratio.
 }
 ```
 
+### GET /api/overview/time
+
+Spending grouped by hour of day.
+
+| Parameter | Required | Meaning |
+|---|---|---|
+| `from` | no | First month, `YYYY-MM`. Default: 11 months before the current month |
+| `to` | no | Last month, `YYYY-MM`. Default: the current month |
+
+Set both or neither. The response always has 24 entries, `hour` 0 to 23.
+`timed_count` is the number of spending rows with a time. `untimed_count` is the
+number without one, stored as `00:00`, so the midnight bucket is not plotted.
+Example, abbreviated:
+
+```json
+{
+  "hours": [
+    {"hour": 0, "debit": 0, "count": 0},
+    {"hour": 9, "debit": 1500, "count": 2}
+  ],
+  "timed_count": 3,
+  "untimed_count": 2
+}
+```
+
 ### GET /api/transactions
 
 | Parameter | Required | Meaning |

@@ -14,7 +14,7 @@ import (
 )
 
 // Version changes whenever parsed output changes. Imports store it.
-const Version = "1"
+const Version = "2"
 
 // kindOf maps the transaction type printed above each row. A type missing from
 // this table stays unknown and keeps its amounts, so the statement still
@@ -61,6 +61,7 @@ var (
 	transferRE = regexp.MustCompile(`\d+/([^/]+?)(?:\s+[\d,]+\.\d{2} SAR|$)`)
 
 	notesPrefix = regexp.MustCompile(`^.*?Notes:`)
+	timeRE      = regexp.MustCompile(`Time:(\d{2}:\d{2}:\d{2})`)
 	timePrefix  = regexp.MustCompile(`^Time:\d{2}:\d{2}:\d{2},\s*`)
 	terminalRef = regexp.MustCompile(`^\(\d+-\d+\)\s*`)
 	onlineFrom  = regexp.MustCompile(`^Online Purchase from `)
@@ -147,7 +148,12 @@ func parseLines(lines []string) *statement.Statement {
 		body := amountsRE.ReplaceAllString(lines[dateIdx], "")
 		desc := strings.Join(strings.Fields(body+" "+tail), " ")
 
-		key := date + "|" + m[1] + "|" + m[2] + "|" + m[3]
+		postedTime := ""
+		if tm := timeRE.FindStringSubmatch(lines[dateIdx]); tm != nil {
+			postedTime = tm[1]
+		}
+
+		key := date + "|" + postedTime + "|" + m[1] + "|" + m[2] + "|" + m[3]
 		if seen[key] {
 			continue
 		}
@@ -156,6 +162,7 @@ func parseLines(lines []string) *statement.Statement {
 		t := statement.Transaction{
 			Kind:           statement.Unknown,
 			PostedDate:     strings.ReplaceAll(date, "/", "-"),
+			PostedTime:     postedTime,
 			DescriptionRaw: desc,
 			Debit:          debit,
 			Credit:         credit,

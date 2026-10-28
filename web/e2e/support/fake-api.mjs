@@ -524,6 +524,27 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // Spending by time endpoint
+  if (pathname === "/api/overview/time") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const hours = Array.from({ length: 24 }, (_, hour) => ({ hour, debit: 0, count: 0 }));
+    hours[8] = { hour: 8, debit: 25000, count: 1 };
+    hours[9] = { hour: 9, debit: 350000, count: 1 };
+    hours[10] = { hour: 10, debit: 11475, count: 2 };
+    hours[14] = { hour: 14, debit: 1500, count: 1 };
+    hours[16] = { hour: 16, debit: 1750, count: 1 };
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ hours, timed_count: 6, untimed_count: 2 }));
+    return;
+  }
+
   // Transactions endpoint
   if (pathname === "/api/transactions") {
     const authHeader = req.headers.authorization;

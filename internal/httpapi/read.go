@@ -60,6 +60,34 @@ func (s *Server) monthly(w http.ResponseWriter, r *http.Request, id auth.Identit
 	}
 }
 
+func (s *Server) spendingByTime(w http.ResponseWriter, r *http.Request, id auth.Identity) {
+	store := s.readStore(w)
+	if store == nil {
+		return
+	}
+	q := r.URL.Query()
+	from, to := q.Get("from"), q.Get("to")
+	if (from == "") != (to == "") {
+		writeError(w, http.StatusBadRequest, "set from and to together")
+		return
+	}
+	if from == "" {
+		now := time.Now()
+		from = now.AddDate(0, -11, 0).Format("2006-01")
+		to = now.Format("2006-01")
+	}
+	result, err := store.SpendingByTime(r.Context(), from, to)
+	switch {
+	case errors.Is(err, ledger.ErrBadFilter):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		s.log.Error("read spending by time failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not read spending by time")
+	default:
+		writeJSON(w, http.StatusOK, result)
+	}
+}
+
 func (s *Server) transactions(w http.ResponseWriter, r *http.Request, id auth.Identity) {
 	store := s.readStore(w)
 	if store == nil {

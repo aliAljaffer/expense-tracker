@@ -302,6 +302,36 @@ func TestSpendingBucketSumsEqualMonthlyTotals(t *testing.T) {
 	}
 }
 
+func TestSpendingByTimeGroupsHoursAndSeparatesUntimed(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000005")
+	imp := seedImport(t, s, acc)
+	seedTransaction(t, s, acc, imp, "2026-06-01", 1000, 0, "card_purchase", idp(0), txOpts{time: "09:15:00"})
+	seedTransaction(t, s, acc, imp, "2026-06-02", 500, 0, "card_purchase", idp(0), txOpts{time: "09:45:00"})
+	seedTransaction(t, s, acc, imp, "2026-06-03", 2000, 0, "bill_payment", idp(0), txOpts{time: "21:30:00"})
+	seedTransaction(t, s, acc, imp, "2026-06-04", 700, 0, "card_purchase", idp(0), txOpts{})
+	seedTransaction(t, s, acc, imp, "2026-06-05", 999, 0, "internal_transfer", idp(0), txOpts{time: "12:00:00"})
+	seedTransaction(t, s, acc, imp, "2026-06-06", 20, 0, "fee", idp(0), txOpts{time: "00:00:00"})
+
+	result, err := s.SpendingByTime(ctx, "2026-06", "2026-06")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Hours) != 24 {
+		t.Fatalf("hours = %d, want 24", len(result.Hours))
+	}
+	if got := result.Hours[9]; got.Debit != 1500 || got.Count != 2 {
+		t.Fatalf("09:00 bucket = %+v", got)
+	}
+	if got := result.Hours[21]; got.Debit != 2000 || got.Count != 1 {
+		t.Fatalf("21:00 bucket = %+v", got)
+	}
+	if result.TimedCount != 3 || result.UntimedCount != 2 {
+		t.Fatalf("timed = %d, untimed = %d", result.TimedCount, result.UntimedCount)
+	}
+}
+
 func TestUncategorisedSpendingCountsOnlyMissingCategory(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
