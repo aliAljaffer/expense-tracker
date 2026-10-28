@@ -270,6 +270,45 @@ No request bodies, statement contents, account numbers, or amounts are logged
 (`internal/httpapi/server.go`). The migration failure log redacts the
 credentials in `DATABASE_URL` (`cmd/api/main.go`).
 
+## Run the e2e suite against the cluster
+
+The deployed stack uses real Keycloak. Create a test user in the `homelab` realm
+and store its credentials in a Secret, never in Git:
+
+```
+kubectl -n grooszy-dev get secret grooszy-e2e -o jsonpath='{.data.username}' | base64 -d
+kubectl -n grooszy-dev get secret grooszy-e2e -o jsonpath='{.data.password}' | base64 -d
+```
+
+Point the API at that user's subject for the run, because the API is owner-only:
+
+```
+kubectl -n grooszy-dev set env deploy/grooszy-api OIDC_OWNER_SUBJECT=<subject>
+kubectl -n grooszy-dev rollout status deploy/grooszy-api
+```
+
+Then run the cluster spec against the public host:
+
+```
+E2E_KEYCLOAK_USER=... E2E_KEYCLOAK_PASSWORD=... \
+E2E_BASE_URL=https://grooszy-dev.alialjaffer.com CLUSTER=1 \
+npx playwright test web/e2e/cluster.spec.ts --workers=1
+```
+
+The spec uploads a synthetic fixture, checks the parsed preview, then cancels,
+so it writes no rows. It skips when `E2E_KEYCLOAK_USER` is unset.
+
+To prove the commit path, point a temporary copy of the API at a scratch
+database, run an upload and commit, then restore the Secret reference and drop
+the database. The database must be owned by the app role:
+
+```
+kubectl -n grooszy-dev exec grooszy-db-1 -c postgres -- psql -U postgres -d postgres \
+  -c "create database grooszy_e2e owner grooszy;"
+```
+
+Restore `OIDC_OWNER_SUBJECT` to the owner's subject after the run.
+
 ## Not in this repository
 
 - Production manifests and the unmerged homelab branch.

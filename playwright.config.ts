@@ -29,7 +29,7 @@ const webServerConfig = CLUSTER
 export default defineConfig({
   testDir: "./web/e2e",
   use: {
-    baseURL: APP_ORIGIN,
+    baseURL: process.env.E2E_BASE_URL || APP_ORIGIN,
     ...(CLUSTER && {
       launchOptions: {
         args: [
