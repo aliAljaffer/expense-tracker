@@ -17,9 +17,67 @@ PostgreSQL for storage. No statement data leaves the deployment.
 
 ## Status
 
-Early. Both statement parsers are Go packages in `parsers/`, with a CLI in
-`cmd/statement/` for local checks. The Go API imports a statement, reconciles
-it, scores duplicates, and stores approved rows. The web app is next.
+Working single-owner deployment. The Go parsers, the import and read API, and
+the web interface are built and tested. The interface covers overview,
+transactions, imports, suggestions, chat, and settings.
+
+## Requirements
+
+Go 1.25, Node 22, PostgreSQL 17, Docker (for the database), and an OIDC issuer
+such as Keycloak. The API refuses to start without an issuer and an owner
+subject.
+
+## Quick start
+
+1. Start PostgreSQL:
+
+```bash
+docker run -d --name expense-db -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test -p 5432:5432 postgres:17
+export DATABASE_URL='postgres://postgres:test@localhost:5432/test?sslmode=disable'
+```
+
+2. Run the API. It applies the migrations on start and listens on `:8080`:
+
+```bash
+export OIDC_ISSUER=https://kc.example.com/realms/homelab
+export OIDC_AUDIENCE=grooszy
+export OIDC_OWNER_SUBJECT=<keycloak subject of the only allowed user>
+go run ./cmd/api
+```
+
+3. Run the web app:
+
+```bash
+cd web
+npm ci
+OIDC_ISSUER=https://kc.example.com/realms/homelab \
+OIDC_CLIENT_ID=grooszy \
+SESSION_SECRET=at-least-32-characters-of-local-secret \
+APP_ORIGIN=http://127.0.0.1:3000 \
+API_BASE_URL=http://127.0.0.1:8080 \
+npm run dev
+```
+
+`docs/OPERATIONS.md` covers the rest: a local test issuer, Kubernetes, health
+checks, and logs. `docs/API.md` lists every environment variable.
+
+## Tests
+
+```bash
+DATABASE_URL="$DATABASE_URL" go test -race ./...
+
+cd web
+npm ci
+npm test
+npm run build
+
+cd ..
+npm ci
+npm run test:e2e
+```
+
+Without `DATABASE_URL` the database tests skip. They build and drop their own
+schema.
 
 ## Layout
 
@@ -27,28 +85,13 @@ it, scores duplicates, and stores approved rows. The web app is next.
 |---|---|
 | `parsers/` | Statement parsers, one Go package per bank |
 | `cmd/statement/` | CLI: parse one export, report reconciliation, optional JSON |
-| `cmd/api/` | Owner-only import API |
+| `cmd/api/` | Owner-only import and read API |
 | `internal/` | API authentication, import workflow, database access |
 | `api/migrations/` | Versioned PostgreSQL schema |
+| `web/` | Next.js interface, tests, and brand assets |
+| `web/design/` | App colour tokens, generated theme, brand rules |
 | `docs/` | Design and operating notes |
-| `web/design/` | App colour tokens, generated theme, and design decisions |
-| `.claude/` | Submodule: [ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), the shared design doctrine and gates |
-
-## Documents
-
-`docs/README.md` indexes every document in `docs/`.
-
-| File | Contents |
-|---|---|
-| `docs/FEATURES.md` | Prioritized feature list with rationale |
-| `docs/PARSING-NOTES.md` | Format gotchas per bank |
-| `docs/DATA-MODEL.md` | Schema |
-| `docs/API.md` | Endpoints, configuration, scoring rules |
-
-All examples in these documents are synthetic. Real statements stay out of Git.
-
-Operating notes: `docs/OPERATIONS.md`, `docs/REMINDERS.md`, `docs/BACKUPS.md`,
-`docs/PRIVACY.md`.
+| `scripts/` | Commit hooks and the statement leak check |
 
 ## Scope
 
@@ -60,26 +103,22 @@ behind the same normalization layer.
 
 ## Design
 
-The interface follows `.claude/`, a submodule holding two design kits and the
-rules for choosing between them. The doctrine loads from `.claude/AGENTS.md`.
-Where the kits disagree, UI/UX Pro Max wins; `web/design/DESIGN.md` lists the
-resolved disagreements.
+The app palette is `web/design/tokens.json`, and every colour in a component
+comes from a semantic token in the generated `web/design/theme.css`. The brand
+rules are in `web/design/BRAND.md`, and `web/design/DESIGN.md` records the
+resolved design decisions and the checks that were run.
 
-The app palette is `web/design/tokens.json`. One vibrant accent, lime, on warm
-neutrals in light mode and green-tinted near-black in dark mode. Charts use the
-data-viz ramp from the same file, never the action colours.
+The design kit that generates and validates the palette is not vendored, so
+token and contrast checks run in the maintainer's environment, not in CI. Do
+not edit `theme.css` by hand.
 
-Rebuild the CSS variables after a palette change:
+## Privacy
 
-```
-node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
-```
+Real statements live in `statements/`, which Git ignores. Every example in
+`docs/` is synthetic. `scripts/check-leaks.py` refuses a commit that carries a
+real identifier, and the hook runs it before every commit. `docs/PRIVACY.md`
+lists exactly what is stored, logged, and sent out of the process.
 
-Check contrast in both modes:
+## Licence
 
-```
-python3 .claude/scripts/validate_contrast.py web/design/tokens.json
-```
-
-Both currently pass. Every pairing used by a component needs its own check when
-the component is built.
+MIT. See `LICENSE`.

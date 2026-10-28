@@ -1,16 +1,13 @@
 # Interface design
 
-Two vendored kits govern the interface. This page records which one wins and
-why the palette is what it is.
+Two design kits governed the interface during the build. Neither is vendored in
+this repository: the first was consulted for its rules, the second supplied the
+doctrine, tokens, and objective gates.
 
-| Source | Location | Role |
-|---|---|---|
-| UI/UX Pro Max (nextlevelbuilder) | `.claude/skills/ui-ux-pro-max/` | Searchable design database and numbered rules |
-| UX/UI agent kit (plugin87) | `.claude/AGENTS.md`, `.claude/tokens/`, `.claude/taste/`, `.claude/scripts/` | Doctrine, DTCG tokens, objective gates |
-
-Both live in the `.claude/` submodule of
-[ui-ux-conventions](https://github.com/aliAljaffer/ui-ux-conventions), with the
-precedence rules and resolved disagreements in its `README.md`.
+| Source | Role |
+|---|---|
+| UI/UX Pro Max (nextlevelbuilder) | Searchable design database and numbered rules |
+| UX/UI agent kit | Doctrine, DTCG tokens, objective gates |
 
 Precedence: where the two disagree on a specific rule, UI/UX Pro Max wins.
 
@@ -87,18 +84,13 @@ Colour is the semantic tier: `action`, `feedback`, `text`, `surface`, `border`,
 | `breakpoints` | `--bp-*` | Mobile-first `min-width` values |
 | `z` | `--z-*` | |
 
-## Checks run
+## Checks
 
-`python3 .claude/scripts/validate_contrast.py web/design/tokens.json` passes
-all required pairs in both modes. Lowest required ratio is the control border at
-3.35:1 light and 3.42:1 dark.
+The token, contrast, and theme-build checks last passed on 2026-10-28. Every
+alias resolved, the palette held 233 valid tokens, the theme emitted 145 light
+variables and 68 dark overrides, and every required contrast pair passed in both
+modes. The lowest required ratio is the control border at 3.35:1 light and
+3.42:1 dark.
 
-`python3 .claude/scripts/validate_tokens.py web/design/tokens.json` reports 233
-valid tokens.
-
-`node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check`
-reports every alias resolved and no token dropped. The theme holds 145 light
-variables, 68 dark overrides.
-
-Not yet run: any render gate. There is no page to render until the web app
-exists.
+Those checks need the private design kit and no longer run in CI. Render gates
+ran in CI during development and were dropped with the kit.

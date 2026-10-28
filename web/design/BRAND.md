@@ -57,7 +57,8 @@ figures (`tnum`), which the money columns rely on.
 
 ## Files
 
-Served from `/brand/`.
+Served from `/brand/`. `BricolageGrotesque-OFL.txt` in this folder carries the
+SIL Open Font License that travels with the self-hosted font files.
 
 | File | Use |
 |---|---|

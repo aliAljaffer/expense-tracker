@@ -6,14 +6,12 @@ on:
     paths:
       - web/**
       - cmd/e2e-fixturegen/**
-      - .claude
       - playwright.config.ts
       - .github/workflows/web.yml
   pull_request:
     paths:
       - web/**
       - cmd/e2e-fixturegen/**
-      - .claude
       - playwright.config.ts
       - .github/workflows/web.yml
 
@@ -29,11 +27,8 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/package.json
           cache: npm
@@ -47,11 +42,8 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/package.json
           cache: npm
@@ -65,11 +57,8 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/package.json
           cache: npm
@@ -83,11 +72,8 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/package.json
           cache: npm
@@ -97,47 +83,19 @@ jobs:
       - run: npm run build
         working-directory: web
 
-  design:
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: web/package.json
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-        working-directory: web
-      - run: python3 .claude/scripts/validate_tokens.py web/design/tokens.json
-      - run: python3 .claude/scripts/validate_contrast.py web/design/tokens.json
-      - run: node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
-      - run: git diff --exit-code web/design/theme.css
-      - run: python3 .claude/scripts/lint_hardcodes.py web/src
-      - run: python3 .claude/scripts/check_no_emoji.py web/src
-      - run: python3 .claude/scripts/lint_native_select.py web/src
-      - run: node .claude/scripts/lint_intent.mjs web/src
-      - run: python3 .claude/scripts/validate_theme_refs.py --theme web/design/theme.css --theme web/src/app/globals.css web/src
-
   e2e:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/package.json
           cache: npm
           cache-dependency-path: |
             package-lock.json
             web/package-lock.json
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - run: npm ci
@@ -149,75 +107,9 @@ jobs:
       - run: go run ./cmd/e2e-fixturegen
       - run: npx playwright test
 
-  render-gates:
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: web/package.json
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            web/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: web
-      - run: npx playwright install --with-deps chrome
-      - run: npm run build
-        working-directory: web
-      - name: Snapshot the pages against the fake API
-        run: |
-          node web/e2e/support/start-servers.mjs &
-          SERVER_PID=$!
-          for _ in $(seq 1 60); do
-            curl -sf http://127.0.0.1:3000/signin > /dev/null &&
-              curl -sf http://127.0.0.1:8901/healthz > /dev/null && break
-            sleep 1
-          done
-          npm run snapshot --prefix web
-          kill "$SERVER_PID"
-      - name: Assert the snapshots exist
-        run: |
-          count=$(find web/test/snapshots -name '*.html' | wc -l)
-          echo "snapshot files: $count"
-          test "$count" -gt 0
-      - name: Render gates
-        env:
-          DS_REQUIRE_BROWSER: "1"
-        run: |
-          for f in web/test/snapshots/*-light.html; do
-            node .claude/scripts/verify_states.mjs "$f"
-            node .claude/scripts/axe_audit.mjs "$f"
-          done
-          for f in web/test/snapshots/*-dark.html; do
-            node .claude/scripts/verify_states.mjs "$f" --dark
-            node .claude/scripts/axe_audit.mjs "$f" --dark
-          done
-          node .claude/scripts/verify_overflow.mjs web/test/snapshots
-          node .claude/scripts/slop_tells.mjs --strict web/test/snapshots/*.html
-          node .claude/scripts/verify_target_size.mjs web/test/snapshots
-          node .claude/scripts/verify_mobile_first.mjs web/test/snapshots
-          node .claude/scripts/verify_responsive.mjs web/test/snapshots
-          node .claude/scripts/lint_intent.mjs web/test/snapshots
-          python3 .claude/scripts/lint_hardcodes.py web/src
-          python3 .claude/scripts/check_no_emoji.py web/src
-          python3 .claude/scripts/lint_native_select.py web/src
-      - name: Upload the gate snapshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gate-snapshots
-          path: web/test/snapshots
-          retention-days: 7
-
   image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, typecheck, unit, build, design, e2e, render-gates]
+    needs: [lint, typecheck, unit, build, e2e]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -226,19 +118,16 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Spell the image name in lowercase
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-web" >> "$GITHUB_ENV"
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         id: build
         with:
           context: .
@@ -261,7 +150,7 @@ jobs:
     steps:
       - name: Create a GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ secrets.HOMELAB_APP_ID }}
           private-key: ${{ secrets.HOMELAB_APP_PRIVATE_KEY }}
@@ -269,7 +158,7 @@ jobs:
           repositories: homelab
 
       - name: Check out the homelab manifests
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: aliAljaffer/homelab
           token: ${{ steps.app-token.outputs.token }}

@@ -1,4 +1,5 @@
 statements/
+.claude/
 
 .DS_Store
 .env

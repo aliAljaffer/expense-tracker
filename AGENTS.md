@@ -20,18 +20,10 @@ restate the code, one-line commit messages.
 
 ## Design
 
-Read `.claude/AGENTS.md` before any interface work. It is a submodule holding
-two kits. Where they disagree, UI/UX Pro Max wins; the resolved disagreements
-are in `.claude/README.md`.
-
 The app palette is `web/design/tokens.json`. Every colour in a component comes
-from a semantic token. `web/design/theme.css` is generated, never edited by hand.
-
-```
-node .claude/scripts/build_tokens.mjs --in web/design/tokens.json --out web/design/theme.css --check
-python3 .claude/scripts/validate_contrast.py web/design/tokens.json
-python3 .claude/scripts/validate_tokens.py web/design/tokens.json
-```
+from a semantic token. `web/design/theme.css` is generated from the tokens and
+is never edited by hand. The design kit that generates and checks it is not
+vendored, so run those checks locally before changing a colour.
 
 ## Parsers
 
@@ -67,7 +59,7 @@ These rules are enforced, not requested. A commit that breaks them is rejected.
 - Write one-line commit messages of at most two sentences.
 - Add no Co-Authored-By line and no tool attribution to a commit message.
 - Write no em-dashes in code, comments, docs, or commit messages.
-- Commit with explicit paths. Never commit `deploy/`, `test-results/`, or the `.claude` submodule.
+- Commit with explicit paths. Never commit `deploy/`, `test-results/`, or a local `.claude/` checkout.
 - Follow the UI stack in the plan: plain CSS on the design tokens plus Headless UI. Add no UI library.
 - Report only results you saw. If you could not run a check, say so.
 

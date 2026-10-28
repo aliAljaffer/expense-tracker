@@ -5,6 +5,7 @@ useDefault = true
 description = "local artifacts and private data that never reach git"
 paths = [
     '''(^|/)statements/''',
+    '''(^|/)\.claude/''',
     '''(^|/)node_modules/''',
     '''(^|/)\.next/''',
     '''^web/design/theme\.css''',

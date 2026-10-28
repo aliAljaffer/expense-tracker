@@ -10,15 +10,13 @@ RUN npm ci
 
 # Copy application files
 COPY web/src ./src
+COPY web/public ./public
 COPY web/design ./design
 COPY web/tsconfig.json .
 COPY web/eslint.config.mjs .
 COPY web/next.config.ts .
 COPY web/vitest.setup.ts web/vitest.config.ts ./
 COPY web/test ./test
-
-# Create public directory
-RUN mkdir -p public
 
 # Build application
 RUN npm run build

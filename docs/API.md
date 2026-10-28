@@ -38,6 +38,10 @@ Every `/api/*` route requires `Authorization: Bearer <access token>`. The token
 must be signed by the issuer, carry the audience, and be unexpired. A valid
 token for any other subject returns 403.
 
+`POST /api/explanations` and `POST /api/chat` also allow ten calls a minute per
+owner subject. Beyond that they return 429 with `Retry-After`. Both endpoints
+spend money at a provider, so the limit is a cost guard, not a security control.
+
 `/healthz` is public and touches nothing. `/readyz` is public and checks the
 database; it returns 503 when the database is unavailable.
 

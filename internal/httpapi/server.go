@@ -45,6 +45,8 @@ type Server struct {
 	edits editStore
 	// chatLedger feeds the chat endpoint. Nil returns 503.
 	chatLedger chatReader
+	// spend caps the endpoints that call a paid provider.
+	spend *limiter
 	// mail is optional. A nil or disabled mailer refuses test sends.
 	mail *reminder.Mailer
 }
@@ -57,7 +59,8 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	if central := explain.CentralFromEnv(); central != nil {
 		answerer = central
 	}
-	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, answerer: answerer, mail: mail, log: log}
+	s := &Server{svc: svc, ledger: led, auth: a, maxUpload: maxUpload, explain: ex, answerer: answerer, mail: mail, log: log,
+		spend: newLimiter(providerCallsPerMinute, time.Minute)}
 	if led != nil {
 		s.settings = led
 		s.chatLedger = led
@@ -83,8 +86,8 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /api/imports/{id}/commit", s.protect(s.commit))
 	mux.Handle("DELETE /api/imports/{id}", s.protect(s.cancel))
 	mux.Handle("GET /api/explainers/status", s.protect(s.explainStatus))
-	mux.Handle("POST /api/explanations", s.protect(s.explanation))
-	mux.Handle("POST /api/chat", s.protect(s.chat))
+	mux.Handle("POST /api/explanations", s.protectSpend(s.explanation))
+	mux.Handle("POST /api/chat", s.protectSpend(s.chat))
 	mux.Handle("GET /api/suggestions/card-coverage", s.protect(s.cardCoverage))
 	mux.Handle("GET /api/suggestions/recurring", s.protect(s.recurring))
 	mux.Handle("GET /api/suggestions/bnpl", s.protect(s.bnpl))
@@ -99,6 +102,10 @@ func (s *Server) routes() http.Handler {
 }
 
 func (s *Server) protect(h func(http.ResponseWriter, *http.Request, auth.Identity)) http.Handler {
+	return s.guard(nil, h)
+}
+
+func (s *Server) guard(l *limiter, h func(http.ResponseWriter, *http.Request, auth.Identity)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := s.auth.Authenticate(r)
 		if err != nil {
@@ -107,6 +114,11 @@ func (s *Server) protect(h func(http.ResponseWriter, *http.Request, auth.Identit
 				return
 			}
 			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		if l != nil && !l.allow(id.Subject) {
+			w.Header().Set("Retry-After", "60")
+			writeError(w, http.StatusTooManyRequests, "too many requests")
 			return
 		}
 		h(w, r, id)
