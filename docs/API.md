@@ -130,6 +130,10 @@ when the owner commits without providing explicit row choices. Rows with exact
 duplicate fingerprints or held for review (duplicate or anomaly score 8 or higher)
 are not default selected.
 
+A row whose merchant has a stored alias also carries `merchant_display`, the
+name to show instead of `merchant_raw`. The alias is display only and never
+enters the fingerprint.
+
 Commit accepts an optional row selection:
 
 ```json
@@ -279,6 +283,52 @@ not the page. Rows are newest first.
   "total_credit": 0
 }
 ```
+
+## Category and merchant edits
+
+These routes change stored rows. They require the bearer token and return 503
+`{"error":"database unavailable"}` when the database is not reachable.
+
+### GET /api/categories
+
+Lists every category by name:
+
+```json
+{"categories": [{"id": 1, "name": "Housing"}]}
+```
+
+### PATCH /api/transactions/{id}
+
+```json
+{"category_id": 3, "apply_to_merchant": false}
+```
+
+`category_id` is required. A positive integer sets that row's category, `null`
+clears it. When `apply_to_merchant` is true and the row has a merchant, every
+row of that merchant gets the same category. One statement does both. Returns
+204.
+
+| Status | Meaning |
+|---|---|
+| 404 | No transaction with that id |
+| 422 | Body is not the shape above, `category_id` is missing, or the category does not exist |
+
+### PUT /api/merchants/{id}
+
+```json
+{"alias": "Rent Agency"}
+```
+
+Stores the display name for a merchant. `null` clears it, so the canonical name
+returns. The alias is trimmed and must be 1 to 120 characters. It is display
+only: an alias never changes a fingerprint, a stored `merchant_raw`, or the
+canonical name. The transaction list and later import previews show the alias.
+Returns 204.
+
+| Status | Meaning |
+|---|---|
+| 404 | No merchant with that id |
+| 422 | Body is not the shape above, `alias` is missing, not a string, blank, or longer than 120 characters |
 
 ## Duplicate scores
 

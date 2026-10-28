@@ -72,6 +72,37 @@ describe("BFF route handler", () => {
     expect(response.status).toBe(405);
   });
 
+  it("allows the category read and row edit routes", async () => {
+    const route = await import("./[...path]/route");
+    proxyToApi.mockClear();
+
+    const request = (method: string, path = "categories") =>
+      ({
+        method,
+        headers: new Headers(),
+        body: null,
+        nextUrl: new URL(`https://app.example.com/api/bff/${path}`),
+      } as unknown as NextRequest);
+
+    const categories = await route.GET(request("GET"), {
+      params: Promise.resolve({ path: ["categories"] }),
+    });
+    expect(categories.status).toBe(200);
+    expect(proxyToApi).toHaveBeenLastCalledWith(expect.anything(), "/api/categories");
+
+    const patch = await route.PATCH(request("PATCH", "transactions/34"), {
+      params: Promise.resolve({ path: ["transactions", "34"] }),
+    });
+    expect(patch.status).toBe(200);
+    expect(proxyToApi).toHaveBeenLastCalledWith(expect.anything(), "/api/transactions/34");
+
+    const put = await route.PUT(request("PUT", "merchants/7"), {
+      params: Promise.resolve({ path: ["merchants", "7"] }),
+    });
+    expect(put.status).toBe(200);
+    expect(proxyToApi).toHaveBeenLastCalledWith(expect.anything(), "/api/merchants/7");
+  });
+
   it("passes the incoming query string to the proxy", async () => {
     const { GET } = await import("./[...path]/route");
     proxyToApi.mockClear();

@@ -198,6 +198,15 @@ export interface TransactionsResponse {
   total_credit: number;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface CategoriesResponse {
+  categories: Category[];
+}
+
 export interface SuggestionPeriod {
   from: string;
   to: string;

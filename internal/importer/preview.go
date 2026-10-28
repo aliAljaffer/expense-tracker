@@ -11,6 +11,7 @@ import (
 type Row struct {
 	statement.Transaction
 	Fingerprint     string     `json:"fingerprint"`
+	MerchantDisplay string     `json:"merchant_display,omitempty"`
 	Duplicate       *Duplicate `json:"duplicate,omitempty"`
 	Anomaly         *Anomaly   `json:"anomaly,omitempty"`
 	DefaultSelected bool       `json:"default_selected"`

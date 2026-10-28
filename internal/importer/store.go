@@ -379,6 +379,48 @@ func (s *Store) findOrCreateMerchant(ctx context.Context, tx pgx.Tx, merchantRaw
 	return id, nil
 }
 
+// applyMerchantAliases fills Row.MerchantDisplay from the stored display alias,
+// resolving the same way findOrCreateMerchant does: biller identity first, then
+// the normalized raw name. The alias is display only, never part of a fingerprint.
+func (s *Store) applyMerchantAliases(ctx context.Context, rows []Row) error {
+	names := map[string]string{}
+	billers := map[string]string{}
+	result, err := s.pool.Query(ctx, `
+		select canonical_name, coalesce(biller_code, ''), coalesce(biller_account, ''),
+		       display_name
+		from merchant where display_name is not null`)
+	if err != nil {
+		return fmt.Errorf("read merchant aliases: %w", err)
+	}
+	defer result.Close()
+	for result.Next() {
+		var canonical, code, account, display string
+		if err := result.Scan(&canonical, &code, &account, &display); err != nil {
+			return fmt.Errorf("read merchant alias row: %w", err)
+		}
+		names[canonical] = display
+		if code != "" && account != "" {
+			billers[code+"|"+account] = display
+		}
+	}
+	if err := result.Err(); err != nil {
+		return fmt.Errorf("read merchant aliases: %w", err)
+	}
+	for i := range rows {
+		if rows[i].MerchantRaw == "" {
+			continue
+		}
+		if code, account := rows[i].BillerCode, rows[i].BillerAccount; code != "" && account != "" {
+			if display, ok := billers[code+"|"+account]; ok {
+				rows[i].MerchantDisplay = display
+				continue
+			}
+		}
+		rows[i].MerchantDisplay = names[NormalizeMerchant(rows[i].MerchantRaw)]
+	}
+	return nil
+}
+
 func (s *Store) Cancel(ctx context.Context, importID int64) error {
 	tag, err := s.pool.Exec(ctx,
 		`delete from statement_import where id = $1 and status = 'pending'`, importID)

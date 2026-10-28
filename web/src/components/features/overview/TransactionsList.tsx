@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { displaySAR } from "@/lib/api/types";
 import { getMonthlyOverview, getTransactions } from "@/lib/api/overview";
-import type { TransactionsResponse, Transaction } from "@/lib/api/types";
+import { getCategories } from "@/lib/api/categories";
+import type { Category, TransactionsResponse, Transaction } from "@/lib/api/types";
 import type { GetTransactionsParams } from "@/lib/api/overview";
 import { Pagination } from "@/components/ui/pagination";
 import { calculatePagination, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from "@/lib/pagination";
 import { SpendingChart, CHART_ROW_LIMIT } from "./SpendingChart";
 import { TransactionFilters } from "./TransactionFilters";
+import { CategoryCell } from "./CategoryCell";
 
 interface ChartRows {
   rows: Transaction[];
@@ -39,6 +41,7 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
   const [chart, setChart] = useState<ChartRows | null>(null);
   const [chartUnavailable, setChartUnavailable] = useState(false);
   const [months, setMonths] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const router = useRouter();
   const currentSearchParams = useSearchParams();
 
@@ -55,6 +58,14 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
       })
       .catch(() => {
         // The month picker falls back to the month already in the URL.
+      });
+
+    getCategories()
+      .then((result) => {
+        if (!cancelled) setCategories(result.categories);
+      })
+      .catch(() => {
+        // The category cell keeps showing the stored name without the list.
       });
 
     return () => {
@@ -253,7 +264,7 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
                   {transaction.merchant_name || transaction.description}
                 </td>
                 <td>
-                  {transaction.category_name || "-"}
+                  <CategoryCell transaction={transaction} categories={categories} />
                 </td>
                 <td className="table-cell--tabular">
                   {transaction.debit > 0 ? displaySAR(transaction.debit) : "-"}

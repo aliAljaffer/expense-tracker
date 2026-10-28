@@ -369,7 +369,8 @@ func (s *Store) Transactions(ctx context.Context, f TransactionFilter) (Transact
 	rows, err := s.db.QueryContext(ctx, `
 		select t.id, t.account_id, t.posted_date::text, t.posted_time::text,
 		       t.description_raw, t.debit, t.credit, t.balance_after, t.kind,
-		       t.counts_as_spending, t.merchant_id, m.canonical_name,
+		       t.counts_as_spending, t.merchant_id,
+		       coalesce(m.display_name, m.canonical_name),
 		       t.category_id, c.name, t.fx_currency, t.fx_amount
 		from transaction t
 		left join merchant m on m.id = t.merchant_id

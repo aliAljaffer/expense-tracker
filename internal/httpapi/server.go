@@ -32,6 +32,8 @@ type Server struct {
 	// explanations, so the feature can never go live by accident.
 	explain  *explain.Explainer
 	settings settingsStore
+	// edits serves category and merchant alias writes. Nil returns 503.
+	edits editStore
 	// chatLedger feeds the chat endpoint. Nil returns 503.
 	chatLedger chatReader
 	// mail is optional. A nil or disabled mailer refuses test sends.
@@ -46,6 +48,7 @@ func New(svc *importer.Service, led *ledger.Store, a Authenticator, maxUpload in
 	if led != nil {
 		s.settings = led
 		s.chatLedger = led
+		s.edits = led
 	}
 	return s.routes()
 }
@@ -58,6 +61,9 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /api/accounts", s.protect(s.accounts))
 	mux.Handle("GET /api/overview/monthly", s.protect(s.monthly))
 	mux.Handle("GET /api/transactions", s.protect(s.transactions))
+	mux.Handle("PATCH /api/transactions/{id}", s.protect(s.patchTransaction))
+	mux.Handle("GET /api/categories", s.protect(s.categories))
+	mux.Handle("PUT /api/merchants/{id}", s.protect(s.putMerchantAlias))
 	mux.Handle("POST /api/imports", s.protect(s.upload))
 	mux.Handle("GET /api/imports/{id}", s.protect(s.get))
 	mux.Handle("POST /api/imports/{id}/commit", s.protect(s.commit))
@@ -165,7 +171,7 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request, id auth.Identity
 }
 
 func (s *Server) get(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	importID, ok := pathID(w, r)
+	importID, ok := pathID(w, r, "import")
 	if !ok {
 		return
 	}
@@ -184,7 +190,7 @@ func (s *Server) get(w http.ResponseWriter, r *http.Request, id auth.Identity) {
 }
 
 func (s *Server) commit(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	importID, ok := pathID(w, r)
+	importID, ok := pathID(w, r, "import")
 	if !ok {
 		return
 	}
@@ -220,7 +226,7 @@ func (s *Server) commit(w http.ResponseWriter, r *http.Request, id auth.Identity
 }
 
 func (s *Server) cancel(w http.ResponseWriter, r *http.Request, id auth.Identity) {
-	importID, ok := pathID(w, r)
+	importID, ok := pathID(w, r, "import")
 	if !ok {
 		return
 	}
@@ -236,10 +242,10 @@ func (s *Server) cancel(w http.ResponseWriter, r *http.Request, id auth.Identity
 	}
 }
 
-func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+func pathID(w http.ResponseWriter, r *http.Request, noun string) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid import id")
+		writeError(w, http.StatusBadRequest, "invalid "+noun+" id")
 		return 0, false
 	}
 	return id, true

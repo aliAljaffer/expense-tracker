@@ -13,6 +13,15 @@ let simulateReadyzUnavailable = false;
 let bnplVariant = "insufficient_data"; // or "ok"
 let reminderEmail = "";
 const suggestionDecisions = new Map();
+let categoryEditFails = false;
+
+const categories = [
+  { id: 1, name: "Housing" },
+  { id: 2, name: "Transport" },
+  { id: 3, name: "Groceries" },
+  { id: 4, name: "Dining" },
+  { id: 5, name: "Utilities" },
+];
 
 const readJsonBody = (req) =>
   new Promise((resolve) => {
@@ -538,6 +547,67 @@ const server = createServer(async (req, res) => {
 
     res.writeHead(200);
     res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (pathname === "/api/categories") {
+    if (!req.headers.authorization) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ categories }));
+    return;
+  }
+
+  const rowEdit = /^\/api\/(transactions|merchants)\/(\d+)$/.exec(pathname);
+  if (rowEdit) {
+    if (!req.headers.authorization) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const body = await readJsonBody(req);
+
+    if (rowEdit[1] === "transactions" && req.method === "PATCH") {
+      if (categoryEditFails) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ error: "could not update category" }));
+        return;
+      }
+      if (!("category_id" in body)) {
+        res.writeHead(422);
+        res.end(JSON.stringify({ error: "category_id is required" }));
+        return;
+      }
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (rowEdit[1] === "merchants" && req.method === "PUT") {
+      if (!("alias" in body) || (typeof body.alias === "string" && body.alias.length > 120)) {
+        res.writeHead(422);
+        res.end(JSON.stringify({ error: "alias must be a string of at most 120 characters" }));
+        return;
+      }
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  if (pathname === "/__category-error") {
+    categoryEditFails = req.method === "POST";
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true, failing: categoryEditFails }));
     return;
   }
 

@@ -77,10 +77,10 @@ version, and an applied version is skipped. Each file runs in its own
 transaction (`internal/migrate/migrate.go`). A failed file rolls back and stops
 the API.
 
-There are four migration pairs at this commit: `0001_init`, `0002_import_preview`,
-`0003_bnpl_detection`, and `0004_settings`. Let the API apply them, or apply
-them by hand before the first start (`docs/API.md`). Do not edit a file that has
-already been applied.
+There are five migration pairs at this commit: `0001_init`, `0002_import_preview`,
+`0003_bnpl_detection`, `0004_settings`, and `0005_merchant_alias`. Let the API
+apply them, or apply them by hand before the first start (`docs/API.md`). Do not
+edit a file that has already been applied.
 
 ## Local run
 

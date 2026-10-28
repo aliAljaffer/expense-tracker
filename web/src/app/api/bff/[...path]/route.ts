@@ -3,6 +3,7 @@ import { proxyToApi } from "@/lib/bff/proxy";
 
 const ALLOWED_ROUTES: Record<string, readonly string[]> = {
   accounts: ["GET"],
+  categories: ["GET"],
   "overview/monthly": ["GET"],
   transactions: ["GET"],
   "suggestions/card-coverage": ["GET"],
@@ -20,6 +21,19 @@ const ALLOWED_ROUTES: Record<string, readonly string[]> = {
   "settings/reminder/test": ["POST"],
 };
 
+// Row-level edits keep the id in the path, so they cannot be listed above.
+const ID_ROUTES: readonly (readonly [RegExp, readonly string[]])[] = [
+  [/^transactions\/\d+$/, ["PATCH"]],
+  [/^merchants\/\d+$/, ["PUT"]],
+];
+
+function allowedMethods(key: string): readonly string[] | undefined {
+  for (const [pattern, methods] of ID_ROUTES) {
+    if (pattern.test(key)) return methods;
+  }
+  return ALLOWED_ROUTES[key];
+}
+
 async function handler(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   const params = await props.params;
   const pathSegments = params.path || [];
@@ -31,7 +45,7 @@ async function handler(request: NextRequest, props: { params: Promise<{ path: st
     return NextResponse.json({ error: "Use /api/imports directly" }, { status: 400 });
   }
 
-  const methods = ALLOWED_ROUTES[key];
+  const methods = allowedMethods(key);
 
   if (!methods) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -57,4 +71,5 @@ async function handler(request: NextRequest, props: { params: Promise<{ path: st
 export const GET = handler;
 export const POST = handler;
 export const PUT = handler;
+export const PATCH = handler;
 export const DELETE = handler;

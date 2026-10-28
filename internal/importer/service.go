@@ -97,6 +97,9 @@ func (s *Service) Upload(ctx context.Context, data []byte) (*Preview, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := s.store.applyMerchantAliases(ctx, rows); err != nil {
+		return nil, err
+	}
 
 	// Parse and normalize period dates from the statement
 	periodStart, err := ParseStatementDate(st.PeriodStart)
