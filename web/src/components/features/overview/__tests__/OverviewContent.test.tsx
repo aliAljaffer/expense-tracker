@@ -4,6 +4,9 @@ import { OverviewContent } from "../OverviewContent";
 import * as overviewApi from "@/lib/api/overview";
 
 vi.mock("@/lib/api/overview");
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 describe("OverviewContent", () => {
   beforeEach(() => {

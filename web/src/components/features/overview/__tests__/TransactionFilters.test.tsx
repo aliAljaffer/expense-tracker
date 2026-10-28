@@ -95,7 +95,7 @@ describe("TransactionFilters", () => {
     );
     render(<TransactionFilters months={months} />);
 
-    expect(screen.getByText(/Showing: February 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Showing: from 2026-02-01 to 2026-02-28/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Clear" }));
 
     const pushed = pushedParams();

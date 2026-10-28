@@ -72,13 +72,19 @@ export function TransactionFilters({ months }: TransactionFiltersProps) {
   const month = currentSearchParams.get("month") ?? "";
   const bucket = currentSearchParams.get("bucket") ?? "";
   const kind = currentSearchParams.get("kind") ?? "";
+  const from = currentSearchParams.get("from") ?? "";
+  const to = currentSearchParams.get("to") ?? "";
 
   const monthOptions = month && !months.includes(month) ? [month, ...months] : months;
   const currentToken = bucket ? `bucket:${bucket}` : kind ? `kind:${kind}` : ALL;
   const activeLabel = FILTER_OPTIONS.find((option) => optionToken(option) === currentToken)?.label;
-  const hasFilter = Boolean(month || bucket || kind);
+  const hasFilter = Boolean(month || bucket || kind || from || to);
+  const dateRange = from === to && from
+    ? from
+    : [from && `from ${from}`, to && `to ${to}`].filter(Boolean).join(" ");
   const activeText = [
-    month ? monthLabel(month) : "",
+    dateRange,
+    dateRange ? "" : month ? monthLabel(month) : "",
     activeLabel && activeLabel !== "All transactions" ? activeLabel : "",
   ]
     .filter(Boolean)

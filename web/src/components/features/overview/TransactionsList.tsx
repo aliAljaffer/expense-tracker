@@ -164,6 +164,15 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
     router.push(`?${params.toString()}`);
   };
 
+  const handleDaySelect = (day: string) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set("from", day);
+    params.set("to", day);
+    params.delete("month");
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
+  };
+
   if (isLoading) {
     return (
       <>
@@ -221,6 +230,7 @@ export function TransactionsList({ searchParams }: TransactionsListProps) {
         from={chart?.from}
         to={chart?.to}
         unavailable={chartUnavailable}
+        onSelectDay={handleDaySelect}
       />
 
       <div className="transactions-table-wrapper">

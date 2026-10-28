@@ -1,5 +1,11 @@
 /* Chart primitives: card shell, tooltip, empty state */
 
+.chart-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .chart-card {
   --chart-plot-height: calc(var(--space-24) * 2.5);
   display: flex;
@@ -140,5 +146,71 @@
   .chart-card {
     --chart-plot-height: calc(var(--space-24) * 3);
     padding: var(--space-6);
+  }
+}
+
+.chart-tooltip__row--total {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.chart-tooltip__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.monthly-chart__plot,
+.spending-chart__plot {
+  cursor: pointer;
+}
+
+.spending-chart__plot {
+  height: 100%;
+}
+
+.chart-months {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.chart-months__label {
+  color: var(--color-text-secondary);
+}
+
+.chart-months__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-months__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-6);
+  color: var(--color-text-link);
+  text-decoration: underline;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.chart-months__link:hover {
+  color: var(--color-text-link-hover);
+}
+
+.chart-months__link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-months__link {
+    transition: none;
   }
 }

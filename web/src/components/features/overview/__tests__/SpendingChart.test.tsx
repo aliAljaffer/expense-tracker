@@ -33,10 +33,10 @@ const rows: Transaction[] = [
 ];
 
 describe("debitByDay", () => {
-  it("sums debit per day in date order and ignores credit-only days", () => {
+  it("sums debit and counts rows per day in date order", () => {
     expect(debitByDay(rows)).toEqual([
-      { day: "2026-03-01", debit: 2500 },
-      { day: "2026-03-02", debit: 1500 },
+      { day: "2026-03-01", debit: 2500, count: 1 },
+      { day: "2026-03-02", debit: 1500, count: 2 },
     ]);
   });
 });
@@ -48,7 +48,11 @@ describe("SpendingChart", () => {
     );
 
     expect(screen.getByText("Spending over time")).toBeInTheDocument();
-    expect(screen.getByText("Debit per day in SAR, 2026-03-01 to 2026-03-31.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Debit per day in SAR, 2026-03-01 to 2026-03-31. Select a day to filter the table.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("says when the chart only sees the newest rows", () => {

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { getAccounts, getMonthlyOverview } from "@/lib/api/overview";
 import { type AccountsResponse, type MonthlyResponse } from "@/lib/api/types";
 import { AccountsTable } from "./AccountsTable";
 import { MonthlyMoneyChart } from "./MonthlyMoneyChart";
 import { MonthlyTable } from "./MonthlyTable";
+import { OverviewSummary } from "./OverviewSummary";
 
 export function OverviewContent() {
   const [accounts, setAccounts] = useState<AccountsResponse | null>(null);
@@ -70,14 +72,18 @@ export function OverviewContent() {
       <div className="overview-empty-state">
         <h2 className="overview-empty-state__title">No accounts yet</h2>
         <p className="overview-empty-state__text">
-          Import a statement to see account balances and spending summary.
+          Import a statement to see balances, monthly flow, and spending.
         </p>
+        <Link href="/imports" className="btn btn--primary overview-empty-state__action">
+          Import a statement
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="overview-sections">
+      <OverviewSummary months={monthly.months} />
       <MonthlyMoneyChart months={monthly.months} />
       <AccountsTable accounts={accounts.accounts} />
       <MonthlyTable months={monthly.months} />
