@@ -197,23 +197,12 @@ test("(f) logout clears session and redirects to /signin", async ({ page }) => {
   let sessionCookies = await getSessionCookies(page);
   expect(sessionCookies.length).toBeGreaterThan(0);
 
-  // Make a logout request without following redirects
-  const response = await page.request.post(`${APP_ORIGIN}/api/auth/logout`, {
-    headers: {
-      "Origin": APP_ORIGIN,
-    },
-    maxRedirects: 0,
-  });
-
-  // Should get a redirect to the issuer's end_session endpoint
-  expect([302, 303, 307]).toContain(response.status());
-  const location = response.headers()["location"];
-  expect(location).toBeTruthy();
-
-  // Navigate to health page - should redirect to signin
+  // Sign out through the form the page renders
   await page.goto("/health");
+  await page.getByRole("button", { name: "Sign out" }).click();
 
-  // Should be redirected to signin
+  // The browser follows the redirect to the issuer and back to /signin
+  await page.waitForURL((url) => url.toString().includes("/signin"), { timeout: 15000 });
   expect(page.url()).toContain("/signin");
 
   // Session cookies should be cleared

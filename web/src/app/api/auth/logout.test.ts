@@ -35,6 +35,55 @@ describe("logout route", () => {
     expect(response.status).toBe(403);
   });
 
+  it("clears session for a same-origin form post that sends Origin: null", async () => {
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", "http://localhost:3000");
+
+    const { clearSession } = await import("@/lib/auth/session");
+
+    const mockRequest = {
+      method: "POST",
+      headers: new Headers({
+        origin: "null",
+        "sec-fetch-site": "same-origin",
+      }),
+      nextUrl: new URL("https://app.example.com/api/auth/logout"),
+    } as unknown as NextRequest;
+
+    const response = await POST(mockRequest);
+
+    expect(vi.mocked(clearSession)).toHaveBeenCalled();
+    expect(response.status).toBe(303);
+  });
+
+  it("returns 403 on a cross-site form post", async () => {
+    vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
+    vi.stubEnv("OIDC_CLIENT_ID", "test-client");
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-deriving-keys");
+    vi.stubEnv("APP_ORIGIN", "https://app.example.com");
+    vi.stubEnv("API_BASE_URL", "http://localhost:3000");
+
+    const { clearSession } = await import("@/lib/auth/session");
+    vi.mocked(clearSession).mockClear();
+
+    const mockRequest = {
+      method: "POST",
+      headers: new Headers({
+        origin: "null",
+        "sec-fetch-site": "cross-site",
+      }),
+      nextUrl: new URL("https://app.example.com/api/auth/logout"),
+    } as unknown as NextRequest;
+
+    const response = await POST(mockRequest);
+
+    expect(response.status).toBe(403);
+    expect(vi.mocked(clearSession)).not.toHaveBeenCalled();
+  });
+
   it("clears session and redirects on same-origin POST", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://example.com/realms/test");
     vi.stubEnv("OIDC_CLIENT_ID", "test-client");

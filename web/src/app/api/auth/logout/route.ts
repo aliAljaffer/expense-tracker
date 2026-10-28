@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
 
   const requestOrigin = new URL(config.appOrigin).origin;
-  if (origin && origin !== requestOrigin) {
+  // Referrer-Policy: no-referrer makes Chrome send Origin: null on same-origin form posts.
+  const sameOriginFormPost = request.headers.get("sec-fetch-site") === "same-origin";
+  if (origin && origin !== requestOrigin && !sameOriginFormPost) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   }
 
