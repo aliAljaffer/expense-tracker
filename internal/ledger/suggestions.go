@@ -2,6 +2,8 @@ package ledger
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -44,6 +46,7 @@ type CardCoverageResult struct {
 	} `json:"evidence"`
 	Limits   string `json:"limits"`
 	NextStep string `json:"next_step"`
+	Decision string `json:"decision"`
 }
 
 func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (CardCoverageResult, error) {
@@ -51,6 +54,11 @@ func (s *Store) CardCoverage(ctx context.Context, fromMonth, toMonth string) (Ca
 	out.Evidence.Months = []CardCoverageMonth{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
+	decision, err := s.SuggestionDecision(ctx, SuggestionCardCoverage)
+	if err != nil {
+		return out, err
+	}
+	out.Decision = decision
 
 	months, err := s.Monthly(ctx, fromMonth, toMonth)
 	if err != nil {
@@ -137,6 +145,7 @@ type RecurringResult struct {
 	} `json:"evidence"`
 	Limits   string `json:"limits"`
 	NextStep string `json:"next_step"`
+	Decision string `json:"decision"`
 }
 
 func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (RecurringResult, error) {
@@ -144,6 +153,12 @@ func (s *Store) Recurring(ctx context.Context, fromMonth, toMonth string) (Recur
 	out.Evidence.Series = []RecurringSeries{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
+
+	decision, err := s.SuggestionDecision(ctx, SuggestionRecurring)
+	if err != nil {
+		return out, err
+	}
+	out.Decision = decision
 
 	from, err := time.Parse("2006-01", fromMonth)
 	if err != nil {
@@ -342,6 +357,7 @@ type BNPLResult struct {
 	} `json:"evidence"`
 	Limits   string `json:"limits"`
 	NextStep string `json:"next_step"`
+	Decision string `json:"decision"`
 }
 
 func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult, error) {
@@ -349,6 +365,12 @@ func (s *Store) BNPL(ctx context.Context, fromMonth, toMonth string) (BNPLResult
 	out.Evidence.Months = []BNPLMonth{}
 	out.Period.From = fromMonth
 	out.Period.To = toMonth
+
+	decision, err := s.SuggestionDecision(ctx, SuggestionBNPL)
+	if err != nil {
+		return out, err
+	}
+	out.Decision = decision
 
 	from, err := time.Parse("2006-01", fromMonth)
 	if err != nil {
@@ -474,4 +496,358 @@ func FormatHalalas(halalas int64) string {
 	}
 	fmt.Fprintf(&b, ".%02d SAR", magnitude%100)
 	return b.String()
+}
+
+const (
+	SuggestionCardCoverage    = "card_coverage"
+	SuggestionRecurring       = "recurring"
+	SuggestionBNPL            = "bnpl"
+	SuggestionSalaryTrend     = "salary_trend"
+	SuggestionTransferMatches = "transfer_matches"
+
+	DecisionAcknowledged = "acknowledged"
+	DecisionDismissed    = "dismissed"
+)
+
+func ValidSuggestionKind(kind string) bool {
+	switch kind {
+	case SuggestionCardCoverage, SuggestionRecurring, SuggestionBNPL,
+		SuggestionSalaryTrend, SuggestionTransferMatches:
+		return true
+	}
+	return false
+}
+
+func ValidSuggestionDecision(decision string) bool {
+	return decision == DecisionAcknowledged || decision == DecisionDismissed
+}
+
+// SuggestionDecision returns "" when the owner has not decided.
+func (s *Store) SuggestionDecision(ctx context.Context, kind string) (string, error) {
+	if !ValidSuggestionKind(kind) {
+		return "", fmt.Errorf("%w: unknown suggestion kind", ErrBadFilter)
+	}
+	var decision string
+	err := s.db.QueryRowContext(ctx, `
+		select payload->>'decision' from user_decision
+		where kind = $1
+		order by created_at desc
+		limit 1`, kind).Scan(&decision)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read suggestion decision: %w", err)
+	}
+	return decision, nil
+}
+
+func (s *Store) SetSuggestionDecision(ctx context.Context, kind, decision string) error {
+	if !ValidSuggestionKind(kind) || !ValidSuggestionDecision(decision) {
+		return fmt.Errorf("%w: unknown suggestion decision", ErrBadFilter)
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin suggestion decision: %w", err)
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
+		return fmt.Errorf("clear suggestion decision: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		insert into user_decision (kind, payload)
+		values ($1, jsonb_build_object('decision', $2::text))`, kind, decision); err != nil {
+		return fmt.Errorf("store suggestion decision: %w", err)
+	}
+	return tx.Commit()
+}
+
+func (s *Store) ClearSuggestionDecision(ctx context.Context, kind string) error {
+	if !ValidSuggestionKind(kind) {
+		return fmt.Errorf("%w: unknown suggestion kind", ErrBadFilter)
+	}
+	if _, err := s.db.ExecContext(ctx, `delete from user_decision where kind = $1`, kind); err != nil {
+		return fmt.Errorf("clear suggestion decision: %w", err)
+	}
+	return nil
+}
+
+func monthBounds(fromMonth, toMonth string) (string, string, error) {
+	from, err := time.Parse("2006-01", fromMonth)
+	if err != nil {
+		return "", "", fmt.Errorf("%w: from must be YYYY-MM", ErrBadFilter)
+	}
+	to, err := time.Parse("2006-01", toMonth)
+	if err != nil {
+		return "", "", fmt.Errorf("%w: to must be YYYY-MM", ErrBadFilter)
+	}
+	if from.After(to) {
+		return "", "", fmt.Errorf("%w: from month is after to month", ErrBadFilter)
+	}
+	first := from.Format("2006-01-02")
+	last := time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.UTC).
+		AddDate(0, 1, 0).AddDate(0, 0, -1).Format("2006-01-02")
+	return first, last, nil
+}
+
+type SalaryMonth struct {
+	Month        string `json:"month"`
+	SalaryTotal  int64  `json:"salary_total"`
+	DepositCount int64  `json:"deposit_count"`
+}
+
+type SalaryTrendResult struct {
+	Status string `json:"status"`
+	Period struct {
+		From string `json:"from"`
+		To   string `json:"to"`
+	} `json:"period"`
+	Summary  string `json:"summary"`
+	Evidence struct {
+		Months []SalaryMonth `json:"months"`
+	} `json:"evidence"`
+	Limits   string `json:"limits"`
+	NextStep string `json:"next_step"`
+	Decision string `json:"decision"`
+}
+
+func (s *Store) SalaryTrend(ctx context.Context, fromMonth, toMonth string) (SalaryTrendResult, error) {
+	var out SalaryTrendResult
+	out.Evidence.Months = []SalaryMonth{}
+	out.Period.From = fromMonth
+	out.Period.To = toMonth
+
+	decision, err := s.SuggestionDecision(ctx, SuggestionSalaryTrend)
+	if err != nil {
+		return out, err
+	}
+	out.Decision = decision
+
+	first, last, err := monthBounds(fromMonth, toMonth)
+	if err != nil {
+		return out, err
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		select to_char(posted_date, 'YYYY-MM'), sum(credit), count(*)
+		from transaction
+		where kind = 'salary' and credit > 0
+		  and posted_date >= $1::date and posted_date <= $2::date
+		group by 1
+		order by 1`, first, last)
+	if err != nil {
+		return out, fmt.Errorf("read salary trend: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m SalaryMonth
+		if err := rows.Scan(&m.Month, &m.SalaryTotal, &m.DepositCount); err != nil {
+			return out, fmt.Errorf("read salary row: %w", err)
+		}
+		out.Evidence.Months = append(out.Evidence.Months, m)
+	}
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
+
+	if len(out.Evidence.Months) < 3 {
+		out.Status = "insufficient_data"
+		out.Summary = "Fewer than 3 months have a salary deposit."
+		out.Limits = "Requires at least 3 months with a transaction recorded as salary income."
+		out.NextStep = "Import more statements so salary months can be compared."
+		return out, nil
+	}
+
+	firstMonth := out.Evidence.Months[0]
+	lastMonth := out.Evidence.Months[len(out.Evidence.Months)-1]
+	var total int64
+	for _, m := range out.Evidence.Months {
+		total += m.SalaryTotal
+	}
+	average := total / int64(len(out.Evidence.Months))
+	change := int64(0)
+	if firstMonth.SalaryTotal > 0 {
+		change = int64(math.Round(float64(lastMonth.SalaryTotal-firstMonth.SalaryTotal) /
+			float64(firstMonth.SalaryTotal) * 100))
+	}
+
+	out.Status = "ok"
+	switch {
+	case change >= 5:
+		out.Summary = fmt.Sprintf("Salary income is rising %d%% from %s to %s across %d months.",
+			change, FormatHalalas(firstMonth.SalaryTotal), FormatHalalas(lastMonth.SalaryTotal),
+			len(out.Evidence.Months))
+	case change <= -5:
+		out.Summary = fmt.Sprintf("Salary income is falling %d%% from %s to %s across %d months.",
+			-change, FormatHalalas(firstMonth.SalaryTotal), FormatHalalas(lastMonth.SalaryTotal),
+			len(out.Evidence.Months))
+	default:
+		out.Summary = fmt.Sprintf("Salary income is steady around %s a month across %d months (%d%% change).",
+			FormatHalalas(average), len(out.Evidence.Months), change)
+	}
+	out.Limits = "Salary detection relies on the statement row being recorded as salary. Months without a salary row are omitted."
+	out.NextStep = "Compare the salary trend with the spending trend before changing a budget."
+	return out, nil
+}
+
+type TransferMatch struct {
+	Amount              int64  `json:"amount"`
+	DebitDate           string `json:"debit_date"`
+	DebitAccount        string `json:"debit_account"`
+	DebitTransactionID  int64  `json:"debit_transaction_id"`
+	CreditDate          string `json:"credit_date"`
+	CreditAccount       string `json:"credit_account"`
+	CreditTransactionID int64  `json:"credit_transaction_id"`
+	CountsAsSpending    bool   `json:"counts_as_spending"`
+}
+
+type TransferMatchesResult struct {
+	Status string `json:"status"`
+	Period struct {
+		From string `json:"from"`
+		To   string `json:"to"`
+	} `json:"period"`
+	Summary  string `json:"summary"`
+	Evidence struct {
+		Matches []TransferMatch `json:"matches"`
+	} `json:"evidence"`
+	Limits   string `json:"limits"`
+	NextStep string `json:"next_step"`
+	Decision string `json:"decision"`
+}
+
+type transferRow struct {
+	id        int64
+	accountID int64
+	date      time.Time
+	amount    int64
+	spending  bool
+	account   string
+}
+
+func (s *Store) TransferMatches(ctx context.Context, fromMonth, toMonth string) (TransferMatchesResult, error) {
+	var out TransferMatchesResult
+	out.Evidence.Matches = []TransferMatch{}
+	out.Period.From = fromMonth
+	out.Period.To = toMonth
+
+	decision, err := s.SuggestionDecision(ctx, SuggestionTransferMatches)
+	if err != nil {
+		return out, err
+	}
+	out.Decision = decision
+
+	first, last, err := monthBounds(fromMonth, toMonth)
+	if err != nil {
+		return out, err
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		select t.id, t.account_id, t.posted_date, t.debit, t.credit, t.counts_as_spending,
+		       a.bank, a.number
+		from transaction t
+		join account a on a.id = t.account_id
+		where t.transfer_pair_id is null
+		  and t.posted_date >= $1::date and t.posted_date <= $2::date
+		  and (t.debit > 0 or t.credit > 0)
+		order by t.posted_date, t.id`, first, last)
+	if err != nil {
+		return out, fmt.Errorf("read transfer candidates: %w", err)
+	}
+	defer rows.Close()
+
+	var debits, credits []transferRow
+	for rows.Next() {
+		var r transferRow
+		var debit, credit int64
+		var spending bool
+		var bank string
+		var number sql.NullString
+		if err := rows.Scan(&r.id, &r.accountID, &r.date, &debit, &credit, &spending,
+			&bank, &number); err != nil {
+			return out, fmt.Errorf("read transfer candidate: %w", err)
+		}
+		r.spending = spending
+		r.account = maskAccount(bank, number)
+		if debit > 0 {
+			r.amount = debit
+			debits = append(debits, r)
+		} else {
+			r.amount = credit
+			credits = append(credits, r)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
+
+	used := map[int64]bool{}
+	for _, d := range debits {
+		best := -1
+		var bestGap int64
+		for i, c := range credits {
+			if used[c.id] || c.accountID == d.accountID || c.amount != d.amount {
+				continue
+			}
+			gap := int64(math.Abs(c.date.Sub(d.date).Hours() / 24))
+			if gap > 3 {
+				continue
+			}
+			if best == -1 || gap < bestGap {
+				best = i
+				bestGap = gap
+			}
+		}
+		if best == -1 {
+			continue
+		}
+		c := credits[best]
+		used[c.id] = true
+		out.Evidence.Matches = append(out.Evidence.Matches, TransferMatch{
+			Amount:              d.amount,
+			DebitDate:           d.date.Format("2006-01-02"),
+			DebitAccount:        d.account,
+			DebitTransactionID:  d.id,
+			CreditDate:          c.date.Format("2006-01-02"),
+			CreditAccount:       c.account,
+			CreditTransactionID: c.id,
+			CountsAsSpending:    d.spending,
+		})
+	}
+
+	if len(out.Evidence.Matches) == 0 {
+		out.Status = "insufficient_data"
+		out.Summary = "No likely internal transfers found in this period."
+		out.Limits = "Pairs need one debit and one credit of the same amount in different accounts within 3 days, neither already matched."
+		out.NextStep = "Import statements for the other accounts so transfers between them can be paired."
+		return out, nil
+	}
+
+	var inflated int64
+	var inflatedCount int
+	for _, m := range out.Evidence.Matches {
+		if m.CountsAsSpending {
+			inflated += m.Amount
+			inflatedCount++
+		}
+	}
+	out.Status = "ok"
+	if inflatedCount > 0 {
+		out.Summary = fmt.Sprintf("%d likely internal transfers found. %d of them count as spending and inflate the spending figure by %s.",
+			len(out.Evidence.Matches), inflatedCount, FormatHalalas(inflated))
+	} else {
+		out.Summary = fmt.Sprintf("%d likely internal transfers found. They are not counted as spending, so the spending figure is not inflated.",
+			len(out.Evidence.Matches))
+	}
+	out.Limits = "Matching uses amount, account and a 3 day window. It cannot tell a transfer from two unrelated payments of the same amount."
+	out.NextStep = "Review each pair and mark it as an internal transfer so it leaves the spending figure."
+	return out, nil
+}
+
+func maskAccount(bank string, number sql.NullString) string {
+	if !number.Valid || number.String == "" {
+		return bank
+	}
+	return bank + " " + MaskNumber(number.String)
 }

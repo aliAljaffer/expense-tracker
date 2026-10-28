@@ -1,22 +1,54 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCardCoverageSuggestion, getRecurringSuggestion, getBnplSuggestion } from "@/lib/api/suggestions";
-import type { CardCoverageResponse, RecurringResponse, BnplResponse } from "@/lib/api/types";
+import {
+  getCardCoverageSuggestion,
+  getRecurringSuggestion,
+  getBnplSuggestion,
+  getSalaryTrendSuggestion,
+  getTransferMatchesSuggestion,
+  setSuggestionDecision,
+  clearSuggestionDecision,
+} from "@/lib/api/suggestions";
+import type {
+  CardCoverageResponse,
+  RecurringResponse,
+  BnplResponse,
+  SalaryTrendResponse,
+  TransferMatchesResponse,
+  SuggestionDecision,
+  SuggestionKind,
+} from "@/lib/api/types";
 import { CreditCardCoverageCard } from "./CreditCardCoverageCard";
 import { RecurringPaymentsCard } from "./RecurringPaymentsCard";
 import { BnplTrendCard } from "./BnplTrendCard";
+import { SalaryTrendCard } from "./SalaryTrendCard";
+import { TransferMatchesCard } from "./TransferMatchesCard";
 
-type LeadSuggestion = "coverage" | "recurring" | "bnpl" | null;
+type LeadSuggestion = "coverage" | "recurring" | "bnpl" | "salary" | "transfers" | null;
+
+const emptyDecisions: Record<SuggestionKind, SuggestionDecision> = {
+  "card-coverage": "",
+  recurring: "",
+  bnpl: "",
+  "salary-trend": "",
+  "transfer-matches": "",
+};
 
 export function leadSuggestion(
   cardCoverage: CardCoverageResponse,
   recurring: RecurringResponse,
-  bnpl: BnplResponse
+  bnpl: BnplResponse,
+  salaryTrend: SalaryTrendResponse,
+  transferMatches: TransferMatchesResponse
 ): LeadSuggestion {
-  if (cardCoverage.status === "ok") return "coverage";
-  if (recurring.status === "ok") return "recurring";
-  if (bnpl.status === "ok") return "bnpl";
+  if (cardCoverage.status === "ok" && cardCoverage.decision !== "dismissed") return "coverage";
+  if (recurring.status === "ok" && recurring.decision !== "dismissed") return "recurring";
+  if (bnpl.status === "ok" && bnpl.decision !== "dismissed") return "bnpl";
+  if (salaryTrend.status === "ok" && salaryTrend.decision !== "dismissed") return "salary";
+  if (transferMatches.status === "ok" && transferMatches.decision !== "dismissed") {
+    return "transfers";
+  }
   return null;
 }
 
@@ -24,6 +56,10 @@ export function SuggestionsContent() {
   const [cardCoverage, setCardCoverage] = useState<CardCoverageResponse | null>(null);
   const [recurring, setRecurring] = useState<RecurringResponse | null>(null);
   const [bnpl, setBnpl] = useState<BnplResponse | null>(null);
+  const [salaryTrend, setSalaryTrend] = useState<SalaryTrendResponse | null>(null);
+  const [transferMatches, setTransferMatches] = useState<TransferMatchesResponse | null>(null);
+  const [decisions, setDecisions] =
+    useState<Record<SuggestionKind, SuggestionDecision>>(emptyDecisions);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,15 +69,26 @@ export function SuggestionsContent() {
         setIsLoading(true);
         setError(null);
 
-        const [coverage, recur, bnplData] = await Promise.all([
+        const [coverage, recur, bnplData, salary, transfers] = await Promise.all([
           getCardCoverageSuggestion(),
           getRecurringSuggestion(),
           getBnplSuggestion(),
+          getSalaryTrendSuggestion(),
+          getTransferMatchesSuggestion(),
         ]);
 
         setCardCoverage(coverage);
         setRecurring(recur);
         setBnpl(bnplData);
+        setSalaryTrend(salary);
+        setTransferMatches(transfers);
+        setDecisions({
+          "card-coverage": coverage.decision ?? "",
+          recurring: recur.decision ?? "",
+          bnpl: bnplData.decision ?? "",
+          "salary-trend": salary.decision ?? "",
+          "transfer-matches": transfers.decision ?? "",
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load suggestions";
         setError(message);
@@ -52,6 +99,21 @@ export function SuggestionsContent() {
 
     loadSuggestions();
   }, []);
+
+  async function decide(kind: SuggestionKind, next: SuggestionDecision) {
+    const previous = decisions[kind];
+    setDecisions((current) => ({ ...current, [kind]: next }));
+    try {
+      if (next === "") {
+        await clearSuggestionDecision(kind);
+      } else {
+        await setSuggestionDecision(kind, next);
+      }
+    } catch (err) {
+      setDecisions((current) => ({ ...current, [kind]: previous }));
+      throw err;
+    }
+  }
 
   if (isLoading) {
     return <div className="stack--normal">Loading...</div>;
@@ -77,17 +139,50 @@ export function SuggestionsContent() {
     );
   }
 
-  if (!cardCoverage || !recurring || !bnpl) {
+  if (!cardCoverage || !recurring || !bnpl || !salaryTrend || !transferMatches) {
     return null;
   }
 
-  const lead = leadSuggestion(cardCoverage, recurring, bnpl);
+  const lead = leadSuggestion(
+    { ...cardCoverage, decision: decisions["card-coverage"] },
+    { ...recurring, decision: decisions.recurring },
+    { ...bnpl, decision: decisions.bnpl },
+    { ...salaryTrend, decision: decisions["salary-trend"] },
+    { ...transferMatches, decision: decisions["transfer-matches"] }
+  );
 
   return (
     <div className="suggestions-cards">
-      <CreditCardCoverageCard data={cardCoverage} lead={lead === "coverage"} />
-      <RecurringPaymentsCard data={recurring} lead={lead === "recurring"} />
-      <BnplTrendCard data={bnpl} lead={lead === "bnpl"} />
+      <CreditCardCoverageCard
+        data={cardCoverage}
+        lead={lead === "coverage"}
+        decision={decisions["card-coverage"]}
+        onDecide={(next) => decide("card-coverage", next)}
+      />
+      <RecurringPaymentsCard
+        data={recurring}
+        lead={lead === "recurring"}
+        decision={decisions.recurring}
+        onDecide={(next) => decide("recurring", next)}
+      />
+      <BnplTrendCard
+        data={bnpl}
+        lead={lead === "bnpl"}
+        decision={decisions.bnpl}
+        onDecide={(next) => decide("bnpl", next)}
+      />
+      <SalaryTrendCard
+        data={salaryTrend}
+        lead={lead === "salary"}
+        decision={decisions["salary-trend"]}
+        onDecide={(next) => decide("salary-trend", next)}
+      />
+      <TransferMatchesCard
+        data={transferMatches}
+        lead={lead === "transfers"}
+        decision={decisions["transfer-matches"]}
+        onDecide={(next) => decide("transfer-matches", next)}
+      />
     </div>
   );
 }

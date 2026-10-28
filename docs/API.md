@@ -420,9 +420,13 @@ Common response shape:
   "summary": "one short plain sentence",
   "evidence": { "varies_by_endpoint": "..." },
   "limits": "what this suggestion does not cover",
-  "next_step": "one recommended action"
+  "next_step": "one recommended action",
+  "decision": ""
 }
 ```
+
+`decision` is `""`, `"acknowledged"`, or `"dismissed"`. A dismissed suggestion
+still returns its data; the interface hides it behind a dismissed state.
 
 ### GET /api/suggestions/card-coverage
 
@@ -525,6 +529,85 @@ the 3-month average.
 Insufficient_data when no merchants are marked as BNPL or fewer than 3 months
 of BNPL transactions exist. Returns ok with all months (rising and flat/falling)
 when 3+ months of data exist.
+
+### GET /api/suggestions/salary-trend
+
+Groups salary income by month. Per month: salary total and the count of salary
+deposits. Summary compares the first and last month with a salary row and calls
+income steady (under 5% change), rising, or falling, with the change percentage.
+
+```json
+{
+  "status": "ok",
+  "period": {"from": "2026-01", "to": "2026-03"},
+  "summary": "Salary income is rising 20% from 3,500.00 SAR to 4,200.00 SAR across 3 months.",
+  "evidence": {
+    "months": [
+      {"month": "2026-01", "salary_total": 350000, "deposit_count": 1},
+      {"month": "2026-02", "salary_total": 350000, "deposit_count": 1},
+      {"month": "2026-03", "salary_total": 420000, "deposit_count": 1}
+    ]
+  },
+  "limits": "Salary detection relies on the statement row being recorded as salary. Months without a salary row are omitted.",
+  "next_step": "Compare the salary trend with the spending trend before changing a budget.",
+  "decision": ""
+}
+```
+
+Insufficient_data when fewer than 3 months have a salary row.
+
+### GET /api/suggestions/transfer-matches
+
+Finds likely internal transfers: one debit and one credit of the same amount in
+different accounts, at most 3 days apart, with neither row already matched.
+Accounts are masked to the last four characters. The endpoint only reads; it
+never writes a pairing to the transaction table.
+
+```json
+{
+  "status": "ok",
+  "period": {"from": "2026-02", "to": "2026-03"},
+  "summary": "2 likely internal transfers found. They are not counted as spending, so the spending figure is not inflated.",
+  "evidence": {
+    "matches": [
+      {
+        "amount": 50000,
+        "debit_date": "2026-02-10",
+        "debit_account": "Alinma **********0040",
+        "debit_transaction_id": 26,
+        "credit_date": "2026-02-11",
+        "credit_account": "Al Rajhi **********0041",
+        "credit_transaction_id": 40,
+        "counts_as_spending": false
+      }
+    ]
+  },
+  "limits": "Matching uses amount, account and a 3 day window. It cannot tell a transfer from two unrelated payments of the same amount.",
+  "next_step": "Review each pair and mark it as an internal transfer so it leaves the spending figure.",
+  "decision": ""
+}
+```
+
+Insufficient_data when no pair matches. The summary states whether any matched
+debit currently counts as spending and, if so, by how much it inflates the
+spending figure.
+
+### POST /api/suggestions/{kind}/decision
+
+Stores the owner decision for one suggestion in `user_decision`. `kind` is one
+of `card-coverage`, `recurring`, `bnpl`, `salary-trend`, or `transfer-matches`.
+
+```json
+{"decision": "dismissed"}
+```
+
+`decision` is `dismissed` or `acknowledged`. Unknown kinds and unknown decisions
+return 422. Success returns 200 with `{"decision": "dismissed"}`.
+
+### DELETE /api/suggestions/{kind}/decision
+
+Clears the stored decision for that suggestion and returns 204. An unknown kind
+returns 422. Both decision routes return 503 when the database is not reachable.
 
 ## Settings and the monthly reminder
 

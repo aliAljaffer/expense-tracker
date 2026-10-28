@@ -12,6 +12,7 @@ let lastHeaders = {
 let simulateReadyzUnavailable = false;
 let bnplVariant = "insufficient_data"; // or "ok"
 let reminderEmail = "";
+const suggestionDecisions = new Map();
 
 const readJsonBody = (req) =>
   new Promise((resolve) => {
@@ -576,6 +577,7 @@ const server = createServer(async (req, res) => {
       },
       limits: "Does not account for manually entered card statements or categories.",
       next_step: "Import the card statement for Feb 2026.",
+      decision: suggestionDecisions.get("card-coverage") || "",
     }));
     return;
   }
@@ -636,6 +638,7 @@ const server = createServer(async (req, res) => {
       },
       limits: "Recurring series must appear in at least 3 distinct months with stable amounts and consistent cadence.",
       next_step: "Review and categorize the recurring payments.",
+      decision: suggestionDecisions.get("recurring") || "",
     }));
     return;
   }
@@ -658,6 +661,7 @@ const server = createServer(async (req, res) => {
         evidence: {},
         limits: "BNPL identification requires at least 3 months of BNPL transactions.",
         next_step: "Import more statements to analyze BNPL spending trends.",
+        decision: suggestionDecisions.get("bnpl") || "",
       }));
     } else {
       res.writeHead(200);
@@ -698,9 +702,121 @@ const server = createServer(async (req, res) => {
         },
         limits: "BNPL identification uses known provider names (Tabby, Tamara, Postpay, Spotii, Cashew) and manual merchant tagging.",
         next_step: "Review upcoming BNPL payment dates and plan repayment.",
+        decision: suggestionDecisions.get("bnpl") || "",
       }));
     }
     return;
+  }
+
+
+  // Suggestions: salary trend endpoint
+  if (pathname === "/api/suggestions/salary-trend") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({
+      status: "ok",
+      period: { from: "2025-10", to: "2026-03" },
+      summary: "Salary income is rising 20% from 3,500.00 SAR to 4,200.00 SAR across 3 months.",
+      evidence: {
+        months: [
+          { month: "2026-01", salary_total: 350000, deposit_count: 1 },
+          { month: "2026-02", salary_total: 350000, deposit_count: 1 },
+          { month: "2026-03", salary_total: 420000, deposit_count: 1 },
+        ],
+      },
+      limits: "Salary detection relies on the statement row being recorded as salary. Months without a salary row are omitted.",
+      next_step: "Compare the salary trend with the spending trend before changing a budget.",
+      decision: suggestionDecisions.get("salary-trend") || "",
+    }));
+    return;
+  }
+
+  // Suggestions: transfer matches endpoint
+  if (pathname === "/api/suggestions/transfer-matches") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    res.writeHead(200);
+    res.end(JSON.stringify({
+      status: "ok",
+      period: { from: "2025-10", to: "2026-03" },
+      summary: "2 likely internal transfers found. They are not counted as spending, so the spending figure is not inflated.",
+      evidence: {
+        matches: [
+          {
+            amount: 50000,
+            debit_date: "2026-02-10",
+            debit_account: "Alinma **********0040",
+            debit_transaction_id: 26,
+            credit_date: "2026-02-11",
+            credit_account: "Al Rajhi **********0041",
+            credit_transaction_id: 40,
+            counts_as_spending: false,
+          },
+          {
+            amount: 120000,
+            debit_date: "2026-03-02",
+            debit_account: "Alinma **********0040",
+            debit_transaction_id: 41,
+            credit_date: "2026-03-02",
+            credit_account: "Al Rajhi **********0041",
+            credit_transaction_id: 42,
+            counts_as_spending: false,
+          },
+        ],
+      },
+      limits: "Matching uses amount, account and a 3 day window. It cannot tell a transfer from two unrelated payments of the same amount.",
+      next_step: "Review each pair and mark it as an internal transfer so it leaves the spending figure.",
+      decision: suggestionDecisions.get("transfer-matches") || "",
+    }));
+    return;
+  }
+
+  // Suggestion decisions
+  if (pathname.startsWith("/api/suggestions/") && pathname.endsWith("/decision")) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const kind = pathname.split("/")[3];
+    if (!["card-coverage", "recurring", "bnpl", "salary-trend", "transfer-matches"].includes(kind)) {
+      res.writeHead(422);
+      res.end(JSON.stringify({ error: "unknown suggestion kind" }));
+      return;
+    }
+
+    if (req.method === "POST") {
+      const body = await readJsonBody(req);
+      if (!["dismissed", "acknowledged"].includes(body.decision)) {
+        res.writeHead(422);
+        res.end(JSON.stringify({ error: "decision must be dismissed or acknowledged" }));
+        return;
+      }
+      suggestionDecisions.set(kind, body.decision);
+      res.writeHead(200);
+      res.end(JSON.stringify({ decision: body.decision }));
+      return;
+    }
+
+    if (req.method === "DELETE") {
+      suggestionDecisions.delete(kind);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
   }
 
   // Control endpoint for BNPL variant

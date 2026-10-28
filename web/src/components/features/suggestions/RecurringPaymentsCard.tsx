@@ -11,7 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import { displaySAR } from "@/lib/api/types";
-import type { RecurringResponse } from "@/lib/api/types";
+import type { RecurringResponse, SuggestionDecision } from "@/lib/api/types";
+import { DismissedSuggestionCard } from "./DismissedSuggestionCard";
+import { SuggestionDecisionBar } from "./SuggestionDecisionBar";
 import {
   ChartCard,
   ChartEmpty,
@@ -23,6 +25,8 @@ import {
 interface RecurringPaymentsCardProps {
   data: RecurringResponse;
   lead?: boolean;
+  decision?: SuggestionDecision;
+  onDecide?: (decision: SuggestionDecision) => Promise<void>;
 }
 
 const MAX_SERIES = 5;
@@ -34,7 +38,16 @@ function truncateMerchant(value: string): string {
     : value;
 }
 
-export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsCardProps) {
+export function RecurringPaymentsCard({
+  data,
+  lead = false,
+  decision = "",
+  onDecide = async () => {},
+}: RecurringPaymentsCardProps) {
+  if (decision === "dismissed") {
+    return <DismissedSuggestionCard title="Recurring payments" onDecide={onDecide} />;
+  }
+
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -45,6 +58,7 @@ export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsC
           </p>
           <p className="suggestion-insufficient-data__reason">{data.next_step}</p>
         </div>
+        <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
       </div>
     );
   }
@@ -60,6 +74,8 @@ export function RecurringPaymentsCard({ data, lead = false }: RecurringPaymentsC
         <h3 className="suggestion-card__title">Recurring payments</h3>
         <p className="suggestion-card__summary">{data.summary}</p>
       </div>
+
+      <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
 
       <div className="suggestion-card__body">
         <ChartCard

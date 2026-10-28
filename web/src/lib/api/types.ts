@@ -203,6 +203,15 @@ export interface SuggestionPeriod {
   to: string;
 }
 
+export type SuggestionDecision = "" | "acknowledged" | "dismissed";
+
+export type SuggestionKind =
+  | "card-coverage"
+  | "recurring"
+  | "bnpl"
+  | "salary-trend"
+  | "transfer-matches";
+
 export interface CardCoverageMonth {
   month: string;
   card_payments: number;
@@ -223,6 +232,7 @@ export interface CardCoverageResponse {
   evidence: CardCoverageEvidence;
   limits: string;
   next_step: string;
+  decision?: SuggestionDecision;
 }
 
 export interface RecurringSeries {
@@ -249,6 +259,7 @@ export interface RecurringResponse {
   evidence: RecurringEvidence;
   limits: string;
   next_step: string;
+  decision?: SuggestionDecision;
 }
 
 export interface BnplMonth {
@@ -272,4 +283,50 @@ export interface BnplResponse {
   evidence: BnplEvidence;
   limits: string;
   next_step: string;
+  decision?: SuggestionDecision;
+}
+
+export interface SalaryMonth {
+  month: string;
+  salary_total: number;
+  deposit_count: number;
+}
+
+export interface SalaryTrendEvidence {
+  months: SalaryMonth[];
+}
+
+export interface SalaryTrendResponse {
+  status: "ok" | "insufficient_data";
+  period: SuggestionPeriod;
+  summary: string;
+  evidence: SalaryTrendEvidence;
+  limits: string;
+  next_step: string;
+  decision?: SuggestionDecision;
+}
+
+export interface TransferMatch {
+  amount: number;
+  debit_date: string;
+  debit_account: string;
+  debit_transaction_id: number;
+  credit_date: string;
+  credit_account: string;
+  credit_transaction_id: number;
+  counts_as_spending: boolean;
+}
+
+export interface TransferMatchesEvidence {
+  matches: TransferMatch[];
+}
+
+export interface TransferMatchesResponse {
+  status: "ok" | "insufficient_data";
+  period: SuggestionPeriod;
+  summary: string;
+  evidence: TransferMatchesEvidence;
+  limits: string;
+  next_step: string;
+  decision?: SuggestionDecision;
 }

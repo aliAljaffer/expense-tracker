@@ -2,14 +2,27 @@
 
 import Link from "next/link";
 import { displaySAR } from "@/lib/api/types";
-import type { CardCoverageResponse } from "@/lib/api/types";
+import type { CardCoverageResponse, SuggestionDecision } from "@/lib/api/types";
+import { DismissedSuggestionCard } from "./DismissedSuggestionCard";
+import { SuggestionDecisionBar } from "./SuggestionDecisionBar";
 
 interface CreditCardCoverageCardProps {
   data: CardCoverageResponse;
   lead?: boolean;
+  decision?: SuggestionDecision;
+  onDecide?: (decision: SuggestionDecision) => Promise<void>;
 }
 
-export function CreditCardCoverageCard({ data, lead = false }: CreditCardCoverageCardProps) {
+export function CreditCardCoverageCard({
+  data,
+  lead = false,
+  decision = "",
+  onDecide = async () => {},
+}: CreditCardCoverageCardProps) {
+  if (decision === "dismissed") {
+    return <DismissedSuggestionCard title="Credit card coverage" onDecide={onDecide} />;
+  }
+
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -20,6 +33,7 @@ export function CreditCardCoverageCard({ data, lead = false }: CreditCardCoverag
           </p>
           <p className="suggestion-insufficient-data__reason">{data.next_step}</p>
         </div>
+        <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
       </div>
     );
   }
@@ -33,6 +47,8 @@ export function CreditCardCoverageCard({ data, lead = false }: CreditCardCoverag
         <h3 className="suggestion-card__title">Credit card coverage</h3>
         <p className="suggestion-card__summary">{data.summary}</p>
       </div>
+
+      <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
 
       <div className="suggestion-card__body">
         <div className="suggestion-card__period">

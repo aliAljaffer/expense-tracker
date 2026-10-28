@@ -11,7 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import { displaySAR } from "@/lib/api/types";
-import type { BnplResponse } from "@/lib/api/types";
+import type { BnplResponse, SuggestionDecision } from "@/lib/api/types";
+import { DismissedSuggestionCard } from "./DismissedSuggestionCard";
+import { SuggestionDecisionBar } from "./SuggestionDecisionBar";
 import {
   ChartCard,
   ChartEmpty,
@@ -23,13 +25,24 @@ import {
 interface BnplTrendCardProps {
   data: BnplResponse;
   lead?: boolean;
+  decision?: SuggestionDecision;
+  onDecide?: (decision: SuggestionDecision) => Promise<void>;
 }
 
 function axisSAR(value: number): string {
   return String(Math.round(value / 100));
 }
 
-export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
+export function BnplTrendCard({
+  data,
+  lead = false,
+  decision = "",
+  onDecide = async () => {},
+}: BnplTrendCardProps) {
+  if (decision === "dismissed") {
+    return <DismissedSuggestionCard title="BNPL trend" onDecide={onDecide} />;
+  }
+
   if (data.status === "insufficient_data") {
     return (
       <div className="suggestion-card suggestion-card--insufficient-data">
@@ -40,6 +53,7 @@ export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
           </p>
           <p className="suggestion-insufficient-data__reason">{data.next_step}</p>
         </div>
+        <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
       </div>
     );
   }
@@ -53,6 +67,8 @@ export function BnplTrendCard({ data, lead = false }: BnplTrendCardProps) {
         <h3 className="suggestion-card__title">BNPL trend</h3>
         <p className="suggestion-card__summary">{data.summary}</p>
       </div>
+
+      <SuggestionDecisionBar decision={decision} onDecide={onDecide} />
 
       <div className="suggestion-card__body">
         <ChartCard
