@@ -75,11 +75,13 @@ func testStore(t *testing.T) *Store {
 }
 
 type txOpts struct {
-	time       string
-	merchantID *int64
-	categoryID *int64
-	fxCurrency string
-	fxAmount   *int64
+	time          string
+	merchantID    *int64
+	categoryID    *int64
+	fxCurrency    string
+	fxAmount      *int64
+	billerCode    string
+	billerAccount string
 }
 
 func seedAccount(t *testing.T, s *Store, number string) int64 {
@@ -114,13 +116,14 @@ func seedTransaction(t *testing.T, s *Store, accountID, importID int64,
 		insert into transaction (
 			account_id, import_id, posted_date, posted_time, description_raw,
 			debit, credit, balance_after, kind, merchant_id, category_id,
-			fx_currency, fx_amount
+			fx_currency, fx_amount, biller_code, biller_account
 		) values (
 			$1, $2, $3, coalesce(nullif($4, ''), '00:00')::time, $5, $6, $7, $8, $9,
-			$10, $11, nullif($12, ''), $13
+			$10, $11, nullif($12, ''), $13, nullif($14, ''), nullif($15, '')
 		) returning id`,
 		accountID, importID, date, o.time, kind+" row", debit, credit,
 		balanceAfter, kind, o.merchantID, o.categoryID, o.fxCurrency, o.fxAmount,
+		o.billerCode, o.billerAccount,
 	).Scan(&id); err != nil {
 		t.Fatalf("seed transaction: %v", err)
 	}
@@ -357,6 +360,57 @@ func TestSpendingByTimeGroupsHoursAndSeparatesUntimed(t *testing.T) {
 		t.Fatalf("21:00 bucket = %+v", got)
 	}
 	if result.TimedCount != 3 || result.UntimedCount != 2 {
+		t.Fatalf("timed = %d, untimed = %d", result.TimedCount, result.UntimedCount)
+	}
+	if result.FromMonth != "2026-06" || result.ToMonth != "2026-06" {
+		t.Fatalf("range = %s..%s", result.FromMonth, result.ToMonth)
+	}
+}
+
+func TestSpendingByTimeSkipsMerchantsFlaggedForTheChart(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	acc := seedAccount(t, s, "00000000000006")
+	imp := seedImport(t, s, acc)
+
+	var zainID int64
+	if err := s.db.QueryRow(ctx, `
+		insert into merchant (canonical_name, exclude_from_time_spend)
+		values ('Zain', true) returning id`).Scan(&zainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(ctx, `
+		insert into merchant (canonical_name, biller_account, exclude_from_time_spend)
+		values ('999 - SAMPLE BILLER', '9990001112', true)`); err != nil {
+		t.Fatal(err)
+	}
+	var keptID int64
+	if err := s.db.QueryRow(ctx, `
+		insert into merchant (canonical_name) values ('Kept') returning id`).Scan(&keptID); err != nil {
+		t.Fatal(err)
+	}
+
+	seedTransaction(t, s, acc, imp, "2026-06-01", 1000, 0, "card_purchase", idp(0), txOpts{time: "09:15:00"})
+	seedTransaction(t, s, acc, imp, "2026-06-02", 239, 0, "online_purchase", idp(0),
+		txOpts{time: "09:30:00", merchantID: &zainID})
+	seedTransaction(t, s, acc, imp, "2026-06-03", 5000, 0, "bill_payment", idp(0),
+		txOpts{time: "09:45:00", billerCode: "999", billerAccount: "9990001112"})
+	seedTransaction(t, s, acc, imp, "2026-06-04", 300, 0, "card_purchase", idp(0),
+		txOpts{time: "10:00:00", merchantID: &keptID})
+	seedTransaction(t, s, acc, imp, "2026-06-05", 239, 0, "bill_payment", idp(0),
+		txOpts{merchantID: &zainID})
+
+	result, err := s.SpendingByTime(ctx, "2026-06", "2026-06")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := result.Hours[9]; got.Debit != 1000 || got.Count != 1 {
+		t.Fatalf("09:00 bucket = %+v, want the unflagged row only", got)
+	}
+	if got := result.Hours[10]; got.Debit != 300 || got.Count != 1 {
+		t.Fatalf("10:00 bucket = %+v", got)
+	}
+	if result.TimedCount != 2 || result.UntimedCount != 0 {
 		t.Fatalf("timed = %d, untimed = %d", result.TimedCount, result.UntimedCount)
 	}
 }

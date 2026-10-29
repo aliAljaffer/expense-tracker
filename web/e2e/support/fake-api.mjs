@@ -541,7 +541,15 @@ const server = createServer(async (req, res) => {
     hours[16] = { hour: 16, debit: 1750, count: 1 };
 
     res.writeHead(200);
-    res.end(JSON.stringify({ hours, timed_count: 6, untimed_count: 2 }));
+    res.end(
+      JSON.stringify({
+        from_month: "2025-11",
+        to_month: "2026-10",
+        hours,
+        timed_count: 6,
+        untimed_count: 2,
+      }),
+    );
     return;
   }
 

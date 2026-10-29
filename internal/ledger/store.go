@@ -214,10 +214,25 @@ type TimeBucket struct {
 // TimeOfDay is spending grouped by hour. UntimedCount covers spending rows
 // whose statement carried no time, which are stored as midnight.
 type TimeOfDay struct {
+	FromMonth    string       `json:"from_month"`
+	ToMonth      string       `json:"to_month"`
 	Hours        []TimeBucket `json:"hours"`
 	TimedCount   int64        `json:"timed_count"`
 	UntimedCount int64        `json:"untimed_count"`
 }
+
+// timeSpendExclusionSQL drops rows whose merchant is flagged
+// exclude_from_time_spend. Bill rows often carry no merchant_id, so the
+// merchant is matched on the biller account too. A NULL biller_code on the
+// merchant matches any code, because Alinma stores only the account.
+const timeSpendExclusionSQL = `not exists (
+	select 1 from merchant m
+	where m.exclude_from_time_spend
+	  and (m.id = t.merchant_id
+	       or (t.biller_account <> ''
+	           and m.biller_account = t.biller_account
+	           and (m.biller_code is null or m.biller_code = t.biller_code)))
+)`
 
 // SpendingByTime groups spending by hour of day over the months fromMonth to
 // toMonth inclusive. Midnight is treated as untimed because the Alinma export
@@ -228,19 +243,20 @@ func (s *Store) SpendingByTime(ctx context.Context, fromMonth, toMonth string) (
 		return TimeOfDay{}, err
 	}
 
-	out := TimeOfDay{Hours: make([]TimeBucket, 24)}
+	out := TimeOfDay{FromMonth: fromMonth, ToMonth: toMonth, Hours: make([]TimeBucket, 24)}
 	for hour := range out.Hours {
 		out.Hours[hour].Hour = hour
 	}
 
 	rows, err := s.db.Query(ctx, `
-		select extract(hour from posted_time)::int,
-		       coalesce(sum(debit), 0),
+		select extract(hour from t.posted_time)::int,
+		       coalesce(sum(t.debit), 0),
 		       count(*)
-		from transaction
-		where posted_date >= $1 and posted_date <= $2
-		  and counts_as_spending and debit > 0
-		  and posted_time <> '00:00'
+		from transaction t
+		where t.posted_date >= $1 and t.posted_date <= $2
+		  and t.counts_as_spending and t.debit > 0
+		  and t.posted_time <> '00:00'
+		  and `+timeSpendExclusionSQL+`
 		group by 1
 		order by 1`, first, last)
 	if err != nil {
@@ -264,10 +280,11 @@ func (s *Store) SpendingByTime(ctx context.Context, fromMonth, toMonth string) (
 
 	if err := s.db.QueryRow(ctx, `
 		select count(*)
-		from transaction
-		where posted_date >= $1 and posted_date <= $2
-		  and counts_as_spending and debit > 0
-		  and posted_time = '00:00'`, first, last).Scan(&out.UntimedCount); err != nil {
+		from transaction t
+		where t.posted_date >= $1 and t.posted_date <= $2
+		  and t.counts_as_spending and t.debit > 0
+		  and t.posted_time = '00:00'
+		  and `+timeSpendExclusionSQL, first, last).Scan(&out.UntimedCount); err != nil {
 		return TimeOfDay{}, fmt.Errorf("read untimed spending: %w", err)
 	}
 	return out, nil

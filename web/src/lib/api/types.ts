@@ -183,6 +183,8 @@ export interface TimeBucket {
 }
 
 export interface SpendingByTimeResponse {
+  from_month: string;
+  to_month: string;
   hours: TimeBucket[];
   timed_count: number;
   untimed_count: number;

@@ -20,6 +20,16 @@ import {
 
 const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21];
 
+const monthFormat = new Intl.DateTimeFormat("en-GB", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function monthLabel(month: string): string {
+  return monthFormat.format(new Date(`${month}-01T00:00:00Z`));
+}
+
 function hourLabel(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
@@ -34,13 +44,13 @@ function axisMoney(halalas: number): string {
   return String(Math.round(riyals));
 }
 
-function coverageLede(timed: number, untimed: number): string {
+function coverageLede(timed: number, untimed: number, from: string, to: string): string {
   const total = timed + untimed;
-  if (total === 0) return "Debit in SAR by hour of day.";
-  if (untimed === 0) {
-    return `Debit in SAR by hour of day. Every spending row in this range carries a time.`;
-  }
-  return `Debit in SAR by hour of day. ${timed} of ${total} spending rows carry a time.`;
+  const range = from && to ? `, ${monthLabel(from)} to ${monthLabel(to)}` : "";
+  const basis = `Debit in SAR by hour of day${range}. Each bar sums the spending in that hour over the range.`;
+  if (total === 0) return basis;
+  if (untimed === 0) return `${basis} All ${total} spending rows carry a time.`;
+  return `${basis} ${timed} of ${total} spending rows carry a time.`;
 }
 
 interface HourTooltipProps {
@@ -78,7 +88,13 @@ function HourTooltip({ active, label, points }: HourTooltipProps) {
 }
 
 export interface SpendingByTimeChartProps {
-  data: { hours: TimeBucket[]; timed_count: number; untimed_count: number } | null;
+  data: {
+    from_month: string;
+    to_month: string;
+    hours: TimeBucket[];
+    timed_count: number;
+    untimed_count: number;
+  } | null;
   unavailable?: boolean;
 }
 
@@ -88,7 +104,10 @@ export function SpendingByTimeChart({ data, unavailable }: SpendingByTimeChartPr
   const untimed = data?.untimed_count ?? 0;
 
   return (
-    <ChartCard title="Spending by time" lede={coverageLede(timed, untimed)}>
+    <ChartCard
+      title="Spending by time"
+      lede={coverageLede(timed, untimed, data?.from_month ?? "", data?.to_month ?? "")}
+    >
       {unavailable ? (
         <ChartEmpty
           message="Spending by time unavailable"

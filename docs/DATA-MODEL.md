@@ -64,6 +64,7 @@ Minimum schema to support the Tier 1 and Tier 2 features.
 | `default_category_id` | |
 | `biller_code`, `biller_account` | Sadad. More reliable than the name |
 | `is_bnpl` | |
+| `exclude_from_time_spend` | Skip this merchant in spending by time only |
 
 ## recurring_series
 

@@ -12,6 +12,8 @@ describe("OverviewContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(overviewApi.getSpendingByTime).mockResolvedValue({
+      from_month: "2025-11",
+      to_month: "2026-10",
       hours: [],
       timed_count: 0,
       untimed_count: 0,

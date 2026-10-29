@@ -11,24 +11,38 @@ function hours(overrides: Partial<TimeBucket>[] = []): TimeBucket[] {
 }
 
 describe("SpendingByTimeChart", () => {
-  it("reports how many spending rows carry a time", () => {
+  it("reports the range and how many spending rows carry a time", () => {
     render(
       <SpendingByTimeChart
-        data={{ hours: hours([{ hour: 9, debit: 1500, count: 2 }]), timed_count: 2, untimed_count: 3 }}
+        data={{
+          from_month: "2025-11",
+          to_month: "2026-10",
+          hours: hours([{ hour: 9, debit: 1500, count: 2 }]),
+          timed_count: 2,
+          untimed_count: 3,
+        }}
       />,
     );
 
     expect(screen.getByText("Spending by time")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Debit in SAR by hour of day. 2 of 5 spending rows carry a time.",
+        "Debit in SAR by hour of day, Nov 2025 to Oct 2026. Each bar sums the spending in that hour over the range. 2 of 5 spending rows carry a time.",
       ),
     ).toBeInTheDocument();
   });
 
   it("shows the empty state when no row carries a time", () => {
     render(
-      <SpendingByTimeChart data={{ hours: hours(), timed_count: 0, untimed_count: 4 }} />,
+      <SpendingByTimeChart
+        data={{
+          from_month: "2025-11",
+          to_month: "2026-10",
+          hours: hours(),
+          timed_count: 0,
+          untimed_count: 4,
+        }}
+      />,
     );
 
     expect(screen.getByText("No transaction times yet")).toBeInTheDocument();

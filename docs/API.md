@@ -244,13 +244,18 @@ Spending grouped by hour of day.
 | `from` | no | First month, `YYYY-MM`. Default: 11 months before the current month |
 | `to` | no | Last month, `YYYY-MM`. Default: the current month |
 
-Set both or neither. The response always has 24 entries, `hour` 0 to 23.
-`timed_count` is the number of spending rows with a time. `untimed_count` is the
-number without one, stored as `00:00`, so the midnight bucket is not plotted.
+Set both or neither. The response always has 24 entries, `hour` 0 to 23, plus
+the resolved `from_month` and `to_month`. `timed_count` is the number of
+spending rows with a time. `untimed_count` is the number without one, stored as
+`00:00`, so the midnight bucket is not plotted. Rows whose merchant is flagged
+`exclude_from_time_spend` are skipped by this endpoint only; the monthly totals
+still count them.
 Example, abbreviated:
 
 ```json
 {
+  "from_month": "2025-11",
+  "to_month": "2026-10",
   "hours": [
     {"hour": 0, "debit": 0, "count": 0},
     {"hour": 9, "debit": 1500, "count": 2}
