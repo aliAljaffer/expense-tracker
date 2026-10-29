@@ -15,6 +15,42 @@ in plain language.
 Go for parsing, storage, and suggestions. Next.js for the interface.
 PostgreSQL for storage. No statement data leaves the deployment.
 
+## What it does
+
+- **Safe imports.** Upload an Alinma XLSX or Al Rajhi PDF. grooszy parses it in
+  memory, checks the six header figures, and refuses the file if any check
+  fails. It hashes the bytes and blocks a file it has already imported. A
+  pending import can be resumed later.
+- **Row review.** Before you commit, see every row with duplicate and anomaly
+  scores. Pick the rows you want and commit them in one transaction.
+- **Overview.** Balances, monthly income and outflow, spending by category and
+  by time of day, plus a summary for the latest month.
+- **Transactions.** Filter by month, kind, account, or merchant; paginate the
+  table; edit a category or a merchant alias in place.
+- **Suggestions.** Recurring payments, card coverage, BNPL plans, salary trend,
+  and transfer matches. Acknowledge or dismiss each one, and grooszy remembers
+  the decision.
+- **Chat and explainers.** Ask Gersz about the figures in plain language. The
+  model gets aggregates only, never transaction rows, merchant names, account
+  numbers, or balances.
+- **Monthly reminder.** On the first of the month, the API emails you to upload
+  the latest statements.
+- **Owner only.** Keycloak OIDC with a single allowed subject. The browser talks
+  to Next.js, and the web server forwards your token to the API.
+
+## Screenshots
+
+All screenshots use the synthetic two-year statements in `screenshots/`. No real
+statement data appears in them.
+
+| Overview | Import review |
+|:---:|:---:|
+| ![Overview](screenshots/overview.png) | ![Import review](screenshots/import-review.png) |
+
+| Suggestions | Transactions |
+|:---:|:---:|
+| ![Suggestions](screenshots/suggestions.png) | ![Transactions](screenshots/transactions.png) |
+
 ## Status
 
 Working single-owner deployment. The Go parsers, the import and read API, and
@@ -59,9 +95,27 @@ npm run dev
 ```
 
 `docs/OPERATIONS.md` covers the rest: a local test issuer, Kubernetes, health
-checks, and logs. `docs/API.md` lists every environment variable.
+checks, and logs.
 
-## Tests
+## Deployment
+
+The API and web containers are defined in `Dockerfile.api` and `web/Dockerfile`.
+`docs/OPERATIONS.md` covers the local stack, Kubernetes, health checks, and logs.
+
+## Configuration
+
+- **Required.** `DATABASE_URL`, `OIDC_ISSUER`, and `OIDC_OWNER_SUBJECT`. The web
+  app also needs `OIDC_CLIENT_ID`, `SESSION_SECRET`, `APP_ORIGIN`, and
+  `API_BASE_URL`.
+- **AI.** `GROOSZY_EXPLAIN_*` configures a provider for explainers, or
+  `GROOSZY_CHAT_URL` and `GROOSZY_CHAT_API_KEY` use the shared chat service.
+  See `docs/EXPLAINERS.md` and `docs/CHAT.md`.
+- **Reminder.** `SMTP_*` and `REMINDER_TZ` set up the monthly email. See
+  `docs/REMINDERS.md`.
+
+`docs/API.md` lists every variable and endpoint.
+
+## Development
 
 ```bash
 DATABASE_URL="$DATABASE_URL" go test -race ./...
@@ -115,9 +169,10 @@ not edit `theme.css` by hand.
 ## Privacy
 
 Real statements live in `statements/`, which Git ignores. Every example in
-`docs/` is synthetic. `scripts/check-leaks.py` refuses a commit that carries a
-real identifier, and the hook runs it before every commit. `docs/PRIVACY.md`
-lists exactly what is stored, logged, and sent out of the process.
+`docs/` is synthetic, and the screenshots use the mock statements in
+`screenshots/`. `scripts/check-leaks.py` refuses a commit that carries a real
+identifier, and the hook runs it before every commit. `docs/PRIVACY.md` lists
+exactly what is stored, logged, and sent out of the process.
 
 ## Licence
 
