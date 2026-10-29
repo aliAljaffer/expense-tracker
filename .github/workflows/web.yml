@@ -171,7 +171,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          latest=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          latest=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r .sha)
           if [ "$latest" != "$GITHUB_SHA" ]; then
             echo "Skipping: main moved to $latest."
             exit 0
