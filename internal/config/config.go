@@ -17,6 +17,8 @@ type Config struct {
 	OIDCAudience   string
 	OwnerSubject   string
 	MaxUploadBytes int64
+	// MetricsAddr enables the Prometheus listener when set (e.g. ":9090").
+	MetricsAddr string
 }
 
 func Load() (Config, error) {
@@ -27,6 +29,7 @@ func Load() (Config, error) {
 		OIDCAudience:   envOr("OIDC_AUDIENCE", "grooszy"),
 		OwnerSubject:   os.Getenv("OIDC_OWNER_SUBJECT"),
 		MaxUploadBytes: 16 << 20,
+		MetricsAddr:    os.Getenv("METRICS_ADDR"),
 	}
 	if v := os.Getenv("MAX_UPLOAD_BYTES"); v != "" {
 		n, err := strconv.ParseInt(v, 10, 64)

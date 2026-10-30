@@ -10,6 +10,7 @@ statements stay in `statements/`, which Git ignores.
 | `docs/BACKUPS.md` | What a backup must contain, how a restore works, and the missing backup schedule |
 | `docs/DATA-MODEL.md` | Tables and fields for the Tier 1 and Tier 2 features |
 | `docs/FEATURES.md` | Prioritized feature list with the rationale for each tier |
+| `docs/INSTALLATION_GUIDE.md` | Setup, configuration, integrations, and feature details |
 | `docs/KEYCLOAK-CLIENT.md` | Whether the KeycloakOIDCClient CRD can create the app client, and what must be enabled first |
 | `docs/OPERATIONS.md` | Running the API and web app locally and on Kubernetes, health checks, logs, and what is missing |
 | `docs/PARSING-NOTES.md` | Format gotchas per bank, with synthetic examples that keep the real layout |

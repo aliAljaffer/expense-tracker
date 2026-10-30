@@ -20,6 +20,7 @@ import (
 	"github.com/aliAljaffer/grooszy/internal/httpapi"
 	"github.com/aliAljaffer/grooszy/internal/importer"
 	"github.com/aliAljaffer/grooszy/internal/ledger"
+	"github.com/aliAljaffer/grooszy/internal/metrics"
 	"github.com/aliAljaffer/grooszy/internal/migrate"
 	"github.com/aliAljaffer/grooszy/internal/reminder"
 )
@@ -47,6 +48,15 @@ func run(log *slog.Logger) error {
 	defer store.Close()
 
 	led := ledger.New(store.Pool())
+	metricsHandler := metrics.New(led)
+	if cfg.MetricsAddr != "" {
+		go func() {
+			log.Info("metrics listening", "addr", cfg.MetricsAddr)
+			if err := http.ListenAndServe(cfg.MetricsAddr, metricsHandler.Handler()); err != nil {
+				log.Error("metrics server stopped", "error", err)
+			}
+		}()
+	}
 
 	if err := migrate.Apply(ctx, store.Pool(), migrations.FS); err != nil {
 		dbURL := cfg.DatabaseURL
@@ -92,7 +102,7 @@ func run(log *slog.Logger) error {
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, explainer, &remCfg.Mailer, log),
+		Handler:           metricsHandler.Middleware(httpapi.New(svc, led, verifier, cfg.MaxUploadBytes, explainer, &remCfg.Mailer, log)),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      120 * time.Second,
